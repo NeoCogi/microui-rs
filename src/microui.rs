@@ -4,7 +4,6 @@ pub type _IO_codecvt = libc::c_int;
 pub type _IO_marker = libc::c_int;
 extern "C" {
     static mut stderr: *mut FILE;
-    fn fprintf(_: *mut FILE, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char) -> libc::c_double;
     fn abort() -> !;
@@ -599,17 +598,7 @@ pub unsafe extern "C" fn mu_init(mut ctx: *mut mu_Context) {
 }
 #[no_mangle]
 pub unsafe extern "C" fn mu_begin(mut ctx: *mut mu_Context) {
-    if !(((*ctx).text_width).is_some() && ((*ctx).text_height).is_some()) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            139 as libc::c_int,
-            b"ctx->text_width && ctx->text_height\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!(((*ctx).text_width).is_some() && ((*ctx).text_height).is_some());
     (*ctx).command_list.idx = 0 as libc::c_int;
     (*ctx).root_list.idx = 0 as libc::c_int;
     (*ctx).text_stack.idx = 0 as libc::c_int;
@@ -631,50 +620,10 @@ unsafe extern "C" fn compare_zindex(
 pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
     let mut i: libc::c_int = 0;
     let mut n: libc::c_int = 0;
-    if !((*ctx).container_stack.idx == 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            160 as libc::c_int,
-            b"ctx->container_stack.idx == 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
-    if !((*ctx).clip_stack.idx == 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            161 as libc::c_int,
-            b"ctx->clip_stack.idx == 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
-    if !((*ctx).id_stack.idx == 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            162 as libc::c_int,
-            b"ctx->id_stack.idx == 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
-    if !((*ctx).layout_stack.idx == 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            163 as libc::c_int,
-            b"ctx->layout_stack.idx == 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).container_stack.idx == 0 as libc::c_int);
+    assert!((*ctx).clip_stack.idx == 0 as libc::c_int);
+    assert!((*ctx).id_stack.idx == 0 as libc::c_int);
+    assert!((*ctx).layout_stack.idx == 0 as libc::c_int);
     if !((*ctx).scroll_target).is_null() {
         (*(*ctx).scroll_target).scroll.x += (*ctx).scroll_delta.x;
         (*(*ctx).scroll_target).scroll.y += (*ctx).scroll_delta.y;
@@ -712,30 +661,9 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
         let mut cnt: *mut mu_Container = (*ctx).root_list.items[i as usize];
         if i == 0 as libc::c_int {
             let mut cmd: *mut mu_Command = ((*ctx).command_list.items).as_mut_ptr();
-            if !((*cmd).type_0 == MU_COMMAND_JUMP as libc::c_int) {
-                fprintf(
-                    stderr,
-                    b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                        as *const libc::c_char,
-                    b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                    201 as libc::c_int,
-                    b"cmd->type == MU_COMMAND_JUMP\0" as *const u8 as *const libc::c_char,
-                );
-                abort();
-            }
+            assert!((*cmd).type_0 == MU_COMMAND_JUMP as libc::c_int);
             (*cmd).jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
-            if !((*cmd).jump.dst_idx < 4096 as libc::c_int) {
-                fprintf(
-                    stderr,
-                    b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                        as *const libc::c_char,
-                    b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                    203 as libc::c_int,
-                    b"cmd->jump.dst_idx < MU_COMMANDLIST_SIZE\0" as *const u8
-                        as *const libc::c_char,
-                );
-                abort();
-            }
+            assert!((*cmd).jump.dst_idx < 4096 as libc::c_int);
         } else {
             let mut prev: *mut mu_Container = (*ctx)
                 .root_list
@@ -747,32 +675,9 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
                 .dst_idx = (*cnt).head_idx + 1 as libc::c_int;
         }
         if i == n - 1 as libc::c_int {
-            if !((*cnt).tail_idx < 4096 as libc::c_int) {
-                fprintf(
-                    stderr,
-                    b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                        as *const libc::c_char,
-                    b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                    210 as libc::c_int,
-                    b"cnt->tail_idx < MU_COMMANDLIST_SIZE\0" as *const u8
-                        as *const libc::c_char,
-                );
-                abort();
-            }
-            if !((*ctx).command_list.items[(*cnt).tail_idx as usize].type_0
-                == MU_COMMAND_JUMP as libc::c_int)
-            {
-                fprintf(
-                    stderr,
-                    b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                        as *const libc::c_char,
-                    b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                    211 as libc::c_int,
-                    b"ctx->command_list.items[cnt->tail_idx].type == MU_COMMAND_JUMP\0"
-                        as *const u8 as *const libc::c_char,
-                );
-                abort();
-            }
+            assert!((*cnt).tail_idx < 4096 as libc::c_int);
+            assert!((*ctx).command_list.items[(*cnt).tail_idx as usize].type_0
+                == MU_COMMAND_JUMP as libc::c_int);
             (*ctx)
                 .command_list
                 .items[(*cnt).tail_idx as usize]
@@ -827,59 +732,25 @@ pub unsafe extern "C" fn mu_push_id(
     mut data: *const libc::c_void,
     mut size: libc::c_int,
 ) {
-    if !((*ctx).id_stack.idx
+    assert!((*ctx).id_stack.idx
         < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            245 as libc::c_int,
-            b"(ctx->id_stack).idx < (int) (sizeof((ctx->id_stack).items) / sizeof(*(ctx->id_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = mu_get_id(ctx, data, size);
     (*ctx).id_stack.idx += 1;
 }
 #[no_mangle]
 pub unsafe extern "C" fn mu_pop_id(mut ctx: *mut mu_Context) {
-    if !((*ctx).id_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            250 as libc::c_int,
-            b"(ctx->id_stack).idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).id_stack.idx > 0 as libc::c_int);
     (*ctx).id_stack.idx -= 1;
 }
 #[no_mangle]
 pub unsafe extern "C" fn mu_push_clip_rect(mut ctx: *mut mu_Context, mut rect: mu_Rect) {
     let mut last: mu_Rect = mu_get_clip_rect(ctx);
-    if !((*ctx).clip_stack.idx
+    assert!((*ctx).clip_stack.idx
         < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            256 as libc::c_int,
-            b"(ctx->clip_stack).idx < (int) (sizeof((ctx->clip_stack).items) / sizeof(*(ctx->clip_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx)
         .clip_stack
         .items[(*ctx).clip_stack.idx as usize] = intersect_rects(rect, last);
@@ -887,32 +758,12 @@ pub unsafe extern "C" fn mu_push_clip_rect(mut ctx: *mut mu_Context, mut rect: m
 }
 #[no_mangle]
 pub unsafe extern "C" fn mu_pop_clip_rect(mut ctx: *mut mu_Context) {
-    if !((*ctx).clip_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            261 as libc::c_int,
-            b"(ctx->clip_stack).idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).clip_stack.idx > 0 as libc::c_int);
     (*ctx).clip_stack.idx -= 1;
 }
 #[no_mangle]
 pub unsafe extern "C" fn mu_get_clip_rect(mut ctx: *mut mu_Context) -> mu_Rect {
-    if !((*ctx).clip_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            266 as libc::c_int,
-            b"ctx->clip_stack.idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).clip_stack.idx > 0 as libc::c_int);
     return (*ctx).clip_stack.items[((*ctx).clip_stack.idx - 1 as libc::c_int) as usize];
 }
 #[no_mangle]
@@ -956,22 +807,10 @@ unsafe extern "C" fn push_layout(
     );
     layout.body = mu_rect(body.x - scroll.x, body.y - scroll.y, body.w, body.h);
     layout.max = mu_vec2(-(0x1000000 as libc::c_int), -(0x1000000 as libc::c_int));
-    if !((*ctx).layout_stack.idx
+    assert!((*ctx).layout_stack.idx
         < (::core::mem::size_of::<[mu_Layout; 16]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<mu_Layout>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            287 as libc::c_int,
-            b"(ctx->layout_stack).idx < (int) (sizeof((ctx->layout_stack).items) / sizeof(*(ctx->layout_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).layout_stack.items[(*ctx).layout_stack.idx as usize] = layout;
     (*ctx).layout_stack.idx += 1;
     mu_layout_row(ctx, 1 as libc::c_int, &mut width, 0 as libc::c_int);
@@ -986,29 +825,9 @@ unsafe extern "C" fn pop_container(mut ctx: *mut mu_Context) {
     let mut layout: *mut mu_Layout = get_layout(ctx);
     (*cnt).content_size.x = (*layout).max.x - (*layout).body.x;
     (*cnt).content_size.y = (*layout).max.y - (*layout).body.y;
-    if !((*ctx).container_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            303 as libc::c_int,
-            b"(ctx->container_stack).idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).container_stack.idx > 0 as libc::c_int);
     (*ctx).container_stack.idx -= 1;
-    if !((*ctx).layout_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            304 as libc::c_int,
-            b"(ctx->layout_stack).idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).layout_stack.idx > 0 as libc::c_int);
     (*ctx).layout_stack.idx -= 1;
     mu_pop_id(ctx);
 }
@@ -1016,17 +835,7 @@ unsafe extern "C" fn pop_container(mut ctx: *mut mu_Context) {
 pub unsafe extern "C" fn mu_get_current_container(
     mut ctx: *mut mu_Context,
 ) -> *mut mu_Container {
-    if !((*ctx).container_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            310 as libc::c_int,
-            b"ctx->container_stack.idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).container_stack.idx > 0 as libc::c_int);
     return (*ctx)
         .container_stack
         .items[((*ctx).container_stack.idx - 1 as libc::c_int) as usize];
@@ -1107,17 +916,7 @@ pub unsafe extern "C" fn mu_pool_init(
         }
         i += 1;
     }
-    if !(n > -(1 as libc::c_int)) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            361 as libc::c_int,
-            b"n > -1\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!(n > -(1 as libc::c_int));
     (*items.offset(n as isize)).id = id;
     mu_pool_update(ctx, items, n);
     return n;
@@ -1205,20 +1004,8 @@ pub unsafe extern "C" fn mu_input_text(
     let mut len: libc::c_int = strlen(((*ctx).input_text).as_mut_ptr()) as libc::c_int;
     let mut size: libc::c_int = (strlen(text))
         .wrapping_add(1 as libc::c_int as libc::c_ulong) as libc::c_int;
-    if !(len + size
-        <= ::core::mem::size_of::<[libc::c_char; 32]>() as libc::c_ulong as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            425 as libc::c_int,
-            b"len + size <= (int) sizeof(ctx->input_text)\0" as *const u8
-                as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!(len + size
+        <= ::core::mem::size_of::<[libc::c_char; 32]>() as libc::c_ulong as libc::c_int);
     memcpy(
         ((*ctx).input_text).as_mut_ptr().offset(len as isize) as *mut libc::c_void,
         text as *const libc::c_void,
@@ -1233,18 +1020,7 @@ pub unsafe extern "C" fn mu_push_command(
     let mut cmd: *mut mu_Command = &mut *((*ctx).command_list.items)
         .as_mut_ptr()
         .offset((*ctx).command_list.idx as isize) as *mut mu_Command;
-    if !((*ctx).command_list.idx < 4096 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            436 as libc::c_int,
-            b"ctx->command_list.idx < MU_COMMANDLIST_SIZE\0" as *const u8
-                as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).command_list.idx < 4096 as libc::c_int);
     (*cmd).base.type_0 = type_0;
     (*ctx).command_list.idx += 1 as libc::c_int;
     return cmd;
@@ -1258,22 +1034,10 @@ pub unsafe extern "C" fn mu_push_text(
     let mut str_start: *mut libc::c_char = &mut *((*ctx).text_stack.items)
         .as_mut_ptr()
         .offset((*ctx).text_stack.idx as isize) as *mut libc::c_char;
-    if !(((*ctx).text_stack.idx as libc::c_ulong)
+    assert!(((*ctx).text_stack.idx as libc::c_ulong)
         .wrapping_add(len)
         .wrapping_add(1 as libc::c_int as libc::c_ulong)
-        < 65536 as libc::c_int as libc::c_ulong)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            444 as libc::c_int,
-            b"ctx->text_stack.idx + len + 1 < MU_CONTEXT_TEXT_SIZE\0" as *const u8
-                as *const libc::c_char,
-        );
-        abort();
-    }
+        < 65536 as libc::c_int as libc::c_ulong);
     memcpy(str_start as *mut libc::c_void, str as *const libc::c_void, len);
     *str_start.offset(len as isize) = '\0' as i32 as libc::c_char;
     (*ctx)
@@ -1314,23 +1078,11 @@ unsafe extern "C" fn push_jump(
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
     cmd = mu_push_command(ctx, MU_COMMAND_JUMP as libc::c_int);
     (*cmd).jump.dst_idx = dst_idx;
-    if !(cmd
+    assert!(cmd
         == &mut *((*ctx).command_list.items)
             .as_mut_ptr()
             .offset(((*ctx).command_list.idx - 1 as libc::c_int) as isize)
-            as *mut mu_Command)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            470 as libc::c_int,
-            b"cmd == &ctx->command_list.items[ctx->command_list.idx - 1]\0" as *const u8
-                as *const libc::c_char,
-        );
-        abort();
-    }
+            as *mut mu_Command);
     return (*ctx).command_list.idx - 1 as libc::c_int;
 }
 #[no_mangle]
@@ -1454,17 +1206,7 @@ pub unsafe extern "C" fn mu_layout_end_column(mut ctx: *mut mu_Context) {
     let mut a: *mut mu_Layout = 0 as *mut mu_Layout;
     let mut b: *mut mu_Layout = 0 as *mut mu_Layout;
     b = get_layout(ctx);
-    if !((*ctx).layout_stack.idx > 0 as libc::c_int) {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            554 as libc::c_int,
-            b"(ctx->layout_stack).idx > 0\0" as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+    assert!((*ctx).layout_stack.idx > 0 as libc::c_int);
     (*ctx).layout_stack.idx -= 1;
     a = get_layout(ctx);
     (*a)
@@ -1492,17 +1234,7 @@ pub unsafe extern "C" fn mu_layout_row(
 ) {
     let mut layout: *mut mu_Layout = get_layout(ctx);
     if !widths.is_null() {
-        if !(items <= 16 as libc::c_int) {
-            fprintf(
-                stderr,
-                b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                    as *const libc::c_char,
-                b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                567 as libc::c_int,
-                b"items <= MU_MAX_WIDTHS\0" as *const u8 as *const libc::c_char,
-            );
-            abort();
-        }
+        assert!(items <= 16 as libc::c_int);
         memcpy(
             ((*layout).widths).as_mut_ptr() as *mut libc::c_void,
             widths as *const libc::c_void,
@@ -2193,22 +1925,10 @@ pub unsafe extern "C" fn mu_begin_treenode_ex(
     let mut res: libc::c_int = header(ctx, label, 1 as libc::c_int, opt);
     if res & MU_RES_ACTIVE as libc::c_int != 0 {
         (*get_layout(ctx)).indent += (*(*ctx).style).indent;
-        if !((*ctx).id_stack.idx
+        assert!((*ctx).id_stack.idx
             < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
                 .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-                as libc::c_int)
-        {
-            fprintf(
-                stderr,
-                b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                    as *const libc::c_char,
-                b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-                992 as libc::c_int,
-                b"(ctx->id_stack).idx < (int) (sizeof((ctx->id_stack).items) / sizeof(*(ctx->id_stack).items))\0"
-                    as *const u8 as *const libc::c_char,
-            );
-            abort();
-        }
+                as libc::c_int);
         (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = (*ctx).last_id;
         (*ctx).id_stack.idx += 1;
     }
@@ -2359,40 +2079,16 @@ unsafe extern "C" fn begin_root_container(
     mut ctx: *mut mu_Context,
     mut cnt: *mut mu_Container,
 ) {
-    if !((*ctx).container_stack.idx
+    assert!((*ctx).container_stack.idx
         < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            1068 as libc::c_int,
-            b"(ctx->container_stack).idx < (int) (sizeof((ctx->container_stack).items) / sizeof(*(ctx->container_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).container_stack.items[(*ctx).container_stack.idx as usize] = cnt;
     (*ctx).container_stack.idx += 1;
-    if !((*ctx).root_list.idx
+    assert!((*ctx).root_list.idx
         < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            1070 as libc::c_int,
-            b"(ctx->root_list).idx < (int) (sizeof((ctx->root_list).items) / sizeof(*(ctx->root_list).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).root_list.items[(*ctx).root_list.idx as usize] = cnt;
     (*ctx).root_list.idx += 1;
     (*cnt).head_idx = push_jump(ctx, -(1 as libc::c_int));
@@ -2402,22 +2098,10 @@ unsafe extern "C" fn begin_root_container(
     {
         (*ctx).next_hover_root = cnt;
     }
-    if !((*ctx).clip_stack.idx
+    assert!((*ctx).clip_stack.idx
         < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            1082 as libc::c_int,
-            b"(ctx->clip_stack).idx < (int) (sizeof((ctx->clip_stack).items) / sizeof(*(ctx->clip_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).clip_stack.items[(*ctx).clip_stack.idx as usize] = unclipped_rect;
     (*ctx).clip_stack.idx += 1;
 }
@@ -2449,22 +2133,10 @@ pub unsafe extern "C" fn mu_begin_window_ex(
     if cnt.is_null() || (*cnt).open == 0 {
         return 0 as libc::c_int;
     }
-    if !((*ctx).id_stack.idx
+    assert!((*ctx).id_stack.idx
         < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            1103 as libc::c_int,
-            b"(ctx->id_stack).idx < (int) (sizeof((ctx->id_stack).items) / sizeof(*(ctx->id_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = id;
     (*ctx).id_stack.idx += 1;
     if (*cnt).rect.w == 0 as libc::c_int {
@@ -2628,22 +2300,10 @@ pub unsafe extern "C" fn mu_begin_panel_ex(
                 "non-null function pointer",
             )(ctx, (*cnt).rect, MU_COLOR_PANELBG as libc::c_int);
     }
-    if !((*ctx).container_stack.idx
+    assert!((*ctx).container_stack.idx
         < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-            as libc::c_int)
-    {
-        fprintf(
-            stderr,
-            b"Fatal error: %s:%d: assertion '%s' failed\n\0" as *const u8
-                as *const libc::c_char,
-            b"../src/microui.c\0" as *const u8 as *const libc::c_char,
-            1214 as libc::c_int,
-            b"(ctx->container_stack).idx < (int) (sizeof((ctx->container_stack).items) / sizeof(*(ctx->container_stack).items))\0"
-                as *const u8 as *const libc::c_char,
-        );
-        abort();
-    }
+            as libc::c_int);
     (*ctx).container_stack.items[(*ctx).container_stack.idx as usize] = cnt;
     (*ctx).container_stack.idx += 1;
     push_container_body(ctx, cnt, (*cnt).rect, opt);
