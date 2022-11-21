@@ -1,6 +1,8 @@
 use ::libc;
+
+pub type SDL_Window = libc::c_int;
+
 extern "C" {
-    pub type SDL_Window;
     fn memcpy(
         _: *mut libc::c_void,
         _: *const libc::c_void,

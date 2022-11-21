@@ -5,7 +5,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(unused_assignments)]
 #![allow(unused_mut)]
-#![feature(extern_types)]
 
 
 extern crate libc;
@@ -13,10 +12,10 @@ extern crate libc;
 pub mod microui;
 #[path = "./renderer.rs"]
 pub mod renderer;
+pub type SDL_SysWMmsg = libc::c_int;
 
 //use ::libc;
 extern "C" {
-    pub type SDL_SysWMmsg;
     fn strlen(_: *const libc::c_char) -> libc::c_ulong;
     fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
     fn exit(_: libc::c_int) -> !;

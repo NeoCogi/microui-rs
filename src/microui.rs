@@ -1,8 +1,8 @@
 use ::libc;
+pub type _IO_wide_data = libc::c_int;
+pub type _IO_codecvt = libc::c_int;
+pub type _IO_marker = libc::c_int;
 extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
     static mut stderr: *mut FILE;
     fn fprintf(_: *mut FILE, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
