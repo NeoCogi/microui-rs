@@ -1,0 +1,9 @@
+[package]
+name = "microui-demo"
+authors = ["Wael El Oraiby"]
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+libc= "0.2"
