@@ -34,17 +34,21 @@ pub type __compar_fn_t = Option::<
 #[derive(PartialEq)]
 pub enum Clip {
     None = 0,
-    All = 2,
     Part = 1,
+    All = 2,
 }
 
-pub type C2RustUnnamed_0 = libc::c_uint;
-pub const MU_COMMAND_MAX: C2RustUnnamed_0 = 6;
-pub const MU_COMMAND_ICON: C2RustUnnamed_0 = 5;
-pub const MU_COMMAND_TEXT: C2RustUnnamed_0 = 4;
-pub const MU_COMMAND_RECT: C2RustUnnamed_0 = 3;
-pub const MU_COMMAND_CLIP: C2RustUnnamed_0 = 2;
-pub const MU_COMMAND_JUMP: C2RustUnnamed_0 = 1;
+#[derive(PartialEq, Copy, Clone)]
+pub enum Command {
+    None = 0,
+    Jump = 1,
+    Clip = 2,
+    Rect = 3,
+    Text = 4,
+    Icon = 5,
+    Max = 6,
+}
+
 pub type C2RustUnnamed_1 = libc::c_uint;
 pub const MU_COLOR_MAX: C2RustUnnamed_1 = 14;
 pub const MU_COLOR_SCROLLTHUMB: C2RustUnnamed_1 = 13;
@@ -232,7 +236,7 @@ pub struct C2RustUnnamed_13 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union mu_Command {
-    pub type_0: libc::c_int,
+    pub type_0: Command,
     pub base: mu_BaseCommand,
     pub jump: mu_JumpCommand,
     pub clip: mu_ClipCommand,
@@ -259,7 +263,7 @@ pub struct mu_Color {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_BaseCommand {
-    pub type_0: libc::c_int,
+    pub type_0: Command,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -630,7 +634,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
         let mut cnt: *mut mu_Container = (*ctx).root_list.items[i as usize];
         if i == 0 as libc::c_int {
             let mut cmd: *mut mu_Command = ((*ctx).command_list.items).as_mut_ptr();
-            assert!((*cmd).type_0 == MU_COMMAND_JUMP as libc::c_int);
+            assert!((*cmd).type_0 == Command::Jump);
             (*cmd).jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
             assert!((*cmd).jump.dst_idx < 4096 as libc::c_int);
         } else {
@@ -646,7 +650,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
         if i == n - 1 as libc::c_int {
             assert!((*cnt).tail_idx < 4096 as libc::c_int);
             assert!((*ctx).command_list.items[(*cnt).tail_idx as usize].type_0
-                == MU_COMMAND_JUMP as libc::c_int);
+                == Command::Jump);
             (*ctx)
                 .command_list
                 .items[(*cnt).tail_idx as usize]
@@ -984,7 +988,7 @@ pub unsafe extern "C" fn mu_input_text(
 #[no_mangle]
 pub unsafe extern "C" fn mu_push_command(
     mut ctx: *mut mu_Context,
-    mut type_0: libc::c_int,
+    mut type_0: Command,
 ) -> *mut mu_Command {
     let mut cmd: *mut mu_Command = &mut *((*ctx).command_list.items)
         .as_mut_ptr()
@@ -1031,7 +1035,7 @@ pub unsafe extern "C" fn mu_next_command(
             .as_mut_ptr()
             .offset((*ctx).command_list.idx as isize) as *mut mu_Command
     {
-        if (**cmd).type_0 != MU_COMMAND_JUMP as libc::c_int {
+        if (**cmd).type_0 != Command::Jump {
             return 1 as libc::c_int;
         }
         *cmd = &mut *((*ctx).command_list.items)
@@ -1045,7 +1049,7 @@ unsafe extern "C" fn push_jump(
     mut dst_idx: libc::c_int,
 ) -> libc::c_int {
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-    cmd = mu_push_command(ctx, MU_COMMAND_JUMP as libc::c_int);
+    cmd = mu_push_command(ctx, Command::Jump);
     (*cmd).jump.dst_idx = dst_idx;
     assert!(cmd
         == &mut *((*ctx).command_list.items)
@@ -1057,7 +1061,7 @@ unsafe extern "C" fn push_jump(
 #[no_mangle]
 pub unsafe extern "C" fn mu_set_clip(mut ctx: *mut mu_Context, mut rect: mu_Rect) {
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-    cmd = mu_push_command(ctx, MU_COMMAND_CLIP as libc::c_int);
+    cmd = mu_push_command(ctx, Command::Clip);
     (*cmd).clip.rect = rect;
 }
 #[no_mangle]
@@ -1069,7 +1073,7 @@ pub unsafe extern "C" fn mu_draw_rect(
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
     rect = intersect_rects(rect, mu_get_clip_rect(ctx));
     if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
-        cmd = mu_push_command(ctx, MU_COMMAND_RECT as libc::c_int);
+        cmd = mu_push_command(ctx, Command::Rect);
         (*cmd).rect.rect = rect;
         (*cmd).rect.color = color;
     }
@@ -1134,7 +1138,7 @@ pub unsafe extern "C" fn mu_draw_text(
         len = strlen(str) as libc::c_int;
     }
     let mut str_start: *mut libc::c_char = mu_push_text(ctx, str, len as size_t);
-    cmd = mu_push_command(ctx, MU_COMMAND_TEXT as libc::c_int);
+    cmd = mu_push_command(ctx, Command::Text);
     (*cmd).text.str_0 = str_start;
     (*cmd).text.pos = pos;
     (*cmd).text.color = color;
@@ -1157,7 +1161,7 @@ pub unsafe extern "C" fn mu_draw_icon(
         Clip::Part => mu_set_clip(ctx, mu_get_clip_rect(ctx)),
         _ => (),
     }
-    cmd = mu_push_command(ctx, MU_COMMAND_ICON as libc::c_int);
+    cmd = mu_push_command(ctx, Command::Icon);
     (*cmd).icon.id = id;
     (*cmd).icon.rect = rect;
     (*cmd).icon.color = color;
