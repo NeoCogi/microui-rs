@@ -3,10 +3,8 @@ pub type _IO_wide_data = libc::c_int;
 pub type _IO_codecvt = libc::c_int;
 pub type _IO_marker = libc::c_int;
 extern "C" {
-    static mut stderr: *mut FILE;
     fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char) -> libc::c_double;
-    fn abort() -> !;
     fn qsort(
         __base: *mut libc::c_void,
         __nmemb: size_t,
@@ -28,47 +26,18 @@ extern "C" {
 pub type size_t = libc::c_ulong;
 pub type __off_t = libc::c_long;
 pub type __off64_t = libc::c_long;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _IO_FILE {
-    pub _flags: libc::c_int,
-    pub _IO_read_ptr: *mut libc::c_char,
-    pub _IO_read_end: *mut libc::c_char,
-    pub _IO_read_base: *mut libc::c_char,
-    pub _IO_write_base: *mut libc::c_char,
-    pub _IO_write_ptr: *mut libc::c_char,
-    pub _IO_write_end: *mut libc::c_char,
-    pub _IO_buf_base: *mut libc::c_char,
-    pub _IO_buf_end: *mut libc::c_char,
-    pub _IO_save_base: *mut libc::c_char,
-    pub _IO_backup_base: *mut libc::c_char,
-    pub _IO_save_end: *mut libc::c_char,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
-    pub _fileno: libc::c_int,
-    pub _flags2: libc::c_int,
-    pub _old_offset: __off_t,
-    pub _cur_column: libc::c_ushort,
-    pub _vtable_offset: libc::c_schar,
-    pub _shortbuf: [libc::c_char; 1],
-    pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
-    pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: size_t,
-    pub _mode: libc::c_int,
-    pub _unused2: [libc::c_char; 20],
-}
-pub type _IO_lock_t = ();
-pub type FILE = _IO_FILE;
+
 pub type __compar_fn_t = Option::<
     unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int,
 >;
-pub type C2RustUnnamed = libc::c_uint;
-pub const MU_CLIP_ALL: C2RustUnnamed = 2;
-pub const MU_CLIP_PART: C2RustUnnamed = 1;
+
+#[derive(PartialEq)]
+pub enum Clip {
+    None = 0,
+    All = 2,
+    Part = 1,
+}
+
 pub type C2RustUnnamed_0 = libc::c_uint;
 pub const MU_COMMAND_MAX: C2RustUnnamed_0 = 6;
 pub const MU_COMMAND_ICON: C2RustUnnamed_0 = 5;
@@ -770,16 +739,16 @@ pub unsafe extern "C" fn mu_get_clip_rect(mut ctx: *mut mu_Context) -> mu_Rect {
 pub unsafe extern "C" fn mu_check_clip(
     mut ctx: *mut mu_Context,
     mut r: mu_Rect,
-) -> libc::c_int {
+) -> Clip {
     let mut cr: mu_Rect = mu_get_clip_rect(ctx);
     if r.x > cr.x + cr.w || r.x + r.w < cr.x || r.y > cr.y + cr.h || r.y + r.h < cr.y {
-        return MU_CLIP_ALL as libc::c_int;
+        return Clip::All;
     }
     if r.x >= cr.x && r.x + r.w <= cr.x + cr.w && r.y >= cr.y && r.y + r.h <= cr.y + cr.h
     {
-        return 0 as libc::c_int;
+        return Clip::None;
     }
-    return MU_CLIP_PART as libc::c_int;
+    return Clip::Part;
 }
 unsafe extern "C" fn push_layout(
     mut ctx: *mut mu_Context,
@@ -1154,13 +1123,13 @@ pub unsafe extern "C" fn mu_draw_text(
         ((*ctx).text_width).expect("non-null function pointer")(font, str, len),
         ((*ctx).text_height).expect("non-null function pointer")(font),
     );
-    let mut clipped: libc::c_int = mu_check_clip(ctx, rect);
-    if clipped == MU_CLIP_ALL as libc::c_int {
-        return;
+    let clipped = mu_check_clip(ctx, rect);
+    match clipped {
+        Clip::All => return,
+        Clip::Part => mu_set_clip(ctx, mu_get_clip_rect(ctx)),
+        _ => ()
     }
-    if clipped == MU_CLIP_PART as libc::c_int {
-        mu_set_clip(ctx, mu_get_clip_rect(ctx));
-    }
+
     if len < 0 as libc::c_int {
         len = strlen(str) as libc::c_int;
     }
@@ -1170,7 +1139,7 @@ pub unsafe extern "C" fn mu_draw_text(
     (*cmd).text.pos = pos;
     (*cmd).text.color = color;
     (*cmd).text.font = font;
-    if clipped != 0 {
+    if clipped != Clip::None {
         mu_set_clip(ctx, unclipped_rect);
     }
 }
@@ -1182,18 +1151,17 @@ pub unsafe extern "C" fn mu_draw_icon(
     mut color: mu_Color,
 ) {
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-    let mut clipped: libc::c_int = mu_check_clip(ctx, rect);
-    if clipped == MU_CLIP_ALL as libc::c_int {
-        return;
-    }
-    if clipped == MU_CLIP_PART as libc::c_int {
-        mu_set_clip(ctx, mu_get_clip_rect(ctx));
+    let clipped = mu_check_clip(ctx, rect);
+    match clipped {
+        Clip::All => return,
+        Clip::Part => mu_set_clip(ctx, mu_get_clip_rect(ctx)),
+        _ => (),
     }
     cmd = mu_push_command(ctx, MU_COMMAND_ICON as libc::c_int);
     (*cmd).icon.id = id;
     (*cmd).icon.rect = rect;
     (*cmd).icon.color = color;
-    if clipped != 0 {
+    if clipped != Clip::None {
         mu_set_clip(ctx, unclipped_rect);
     }
 }

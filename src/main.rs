@@ -6,6 +6,9 @@
 #![allow(unused_assignments)]
 #![allow(unused_mut)]
 
+//#![no_std]
+
+use core::alloc::*;
 
 extern crate libc;
 #[path = "./microui.rs"]
@@ -2212,124 +2215,104 @@ unsafe extern "C" fn text_width(
 unsafe extern "C" fn text_height(mut font: mu_Font) -> libc::c_int {
     return r_get_text_height();
 }
-unsafe fn main_0(
-    mut argc: libc::c_int,
-    mut argv: *mut *mut libc::c_char,
-) -> libc::c_int {
-    SDL_Init(
-        0x1 as libc::c_uint | 0x10 as libc::c_uint | 0x20 as libc::c_uint
-            | 0x4000 as libc::c_uint | 0x200 as libc::c_uint | 0x1000 as libc::c_uint
-            | 0x2000 as libc::c_uint | 0x8000 as libc::c_uint,
-    );
-    r_init();
-    let mut ctx: *mut mu_Context = malloc(
-        ::core::mem::size_of::<mu_Context>() as libc::c_ulong,
-    ) as *mut mu_Context;
-    mu_init(ctx);
-    (*ctx)
-        .text_width = Some(
-        text_width
-            as unsafe extern "C" fn(
+pub fn main() {
+    unsafe {
+        SDL_Init(
+            0x1 as libc::c_uint | 0x10 as libc::c_uint | 0x20 as libc::c_uint
+                | 0x4000 as libc::c_uint | 0x200 as libc::c_uint | 0x1000 as libc::c_uint
+                | 0x2000 as libc::c_uint | 0x8000 as libc::c_uint,
+        );
+        r_init();
+        let mut ctx: *mut mu_Context = malloc(
+            ::core::mem::size_of::<mu_Context>() as libc::c_ulong,
+        ) as *mut mu_Context;
+        mu_init(ctx);
+        (*ctx)
+            .text_width = Some(
+            text_width
+                as unsafe extern "C" fn(
                 mu_Font,
                 *const libc::c_char,
                 libc::c_int,
             ) -> libc::c_int,
-    );
-    (*ctx)
-        .text_height = Some(text_height as unsafe extern "C" fn(mu_Font) -> libc::c_int);
-    loop {
-        let mut e: SDL_Event = SDL_Event { type_0: 0 };
-        while SDL_PollEvent(&mut e) != 0 {
-            match e.type_0 {
-                256 => {
-                    exit(0 as libc::c_int);
-                }
-                1024 => {
-                    mu_input_mousemove(ctx, e.motion.x, e.motion.y);
-                }
-                1027 => {
-                    mu_input_scroll(
-                        ctx,
-                        0 as libc::c_int,
-                        e.wheel.y * -(30 as libc::c_int),
-                    );
-                }
-                771 => {
-                    mu_input_text(ctx, (e.text.text).as_mut_ptr());
-                }
-                1025 | 1026 => {
-                    let mut b: libc::c_int = button_map[(e.button.button as libc::c_int
-                        & 0xff as libc::c_int) as usize] as libc::c_int;
-                    if b != 0
-                        && e.type_0 == SDL_MOUSEBUTTONDOWN as libc::c_int as libc::c_uint
-                    {
-                        mu_input_mousedown(ctx, e.button.x, e.button.y, b);
-                    }
-                    if b != 0
-                        && e.type_0 == SDL_MOUSEBUTTONUP as libc::c_int as libc::c_uint
-                    {
-                        mu_input_mouseup(ctx, e.button.x, e.button.y, b);
-                    }
-                }
-                768 | 769 => {
-                    let mut c: libc::c_int = key_map[(e.key.keysym.sym
-                        & 0xff as libc::c_int) as usize] as libc::c_int;
-                    if c != 0 && e.type_0 == SDL_KEYDOWN as libc::c_int as libc::c_uint {
-                        mu_input_keydown(ctx, c);
-                    }
-                    if c != 0 && e.type_0 == SDL_KEYUP as libc::c_int as libc::c_uint {
-                        mu_input_keyup(ctx, c);
-                    }
-                }
-                _ => {}
-            }
-        }
-        process_frame(ctx);
-        r_clear(
-            mu_color(
-                bg[0 as libc::c_int as usize] as libc::c_int,
-                bg[1 as libc::c_int as usize] as libc::c_int,
-                bg[2 as libc::c_int as usize] as libc::c_int,
-                255 as libc::c_int,
-            ),
         );
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-        while mu_next_command(ctx, &mut cmd) != 0 {
-            match (*cmd).type_0 {
-                4 => {
-                    r_draw_text((*cmd).text.str_0, (*cmd).text.pos, (*cmd).text.color);
+        (*ctx)
+            .text_height = Some(text_height as unsafe extern "C" fn(mu_Font) -> libc::c_int);
+        loop {
+            let mut e: SDL_Event = SDL_Event { type_0: 0 };
+            while SDL_PollEvent(&mut e) != 0 {
+                match e.type_0 {
+                    256 => {
+                        exit(0 as libc::c_int);
+                    }
+                    1024 => {
+                        mu_input_mousemove(ctx, e.motion.x, e.motion.y);
+                    }
+                    1027 => {
+                        mu_input_scroll(
+                            ctx,
+                            0 as libc::c_int,
+                            e.wheel.y * -(30 as libc::c_int),
+                        );
+                    }
+                    771 => {
+                        mu_input_text(ctx, (e.text.text).as_mut_ptr());
+                    }
+                    1025 | 1026 => {
+                        let mut b: libc::c_int = button_map[(e.button.button as libc::c_int
+                            & 0xff as libc::c_int) as usize] as libc::c_int;
+                        if b != 0
+                            && e.type_0 == SDL_MOUSEBUTTONDOWN as libc::c_int as libc::c_uint
+                        {
+                            mu_input_mousedown(ctx, e.button.x, e.button.y, b);
+                        }
+                        if b != 0
+                            && e.type_0 == SDL_MOUSEBUTTONUP as libc::c_int as libc::c_uint
+                        {
+                            mu_input_mouseup(ctx, e.button.x, e.button.y, b);
+                        }
+                    }
+                    768 | 769 => {
+                        let mut c: libc::c_int = key_map[(e.key.keysym.sym
+                            & 0xff as libc::c_int) as usize] as libc::c_int;
+                        if c != 0 && e.type_0 == SDL_KEYDOWN as libc::c_int as libc::c_uint {
+                            mu_input_keydown(ctx, c);
+                        }
+                        if c != 0 && e.type_0 == SDL_KEYUP as libc::c_int as libc::c_uint {
+                            mu_input_keyup(ctx, c);
+                        }
+                    }
+                    _ => {}
                 }
-                3 => {
-                    r_draw_rect((*cmd).rect.rect, (*cmd).rect.color);
-                }
-                5 => {
-                    r_draw_icon((*cmd).icon.id, (*cmd).icon.rect, (*cmd).icon.color);
-                }
-                2 => {
-                    r_set_clip_rect((*cmd).clip.rect);
-                }
-                _ => {}
             }
-        }
-        r_present();
-    };
-}
-pub fn main() {
-    let mut args: Vec::<*mut libc::c_char> = Vec::new();
-    for arg in ::std::env::args() {
-        args.push(
-            (::std::ffi::CString::new(arg))
-                .expect("Failed to convert argument into CString.")
-                .into_raw(),
-        );
-    }
-    args.push(::core::ptr::null_mut());
-    unsafe {
-        ::std::process::exit(
-            main_0(
-                (args.len() - 1) as libc::c_int,
-                args.as_mut_ptr() as *mut *mut libc::c_char,
-            ) as i32,
-        )
+            process_frame(ctx);
+            r_clear(
+                mu_color(
+                    bg[0 as libc::c_int as usize] as libc::c_int,
+                    bg[1 as libc::c_int as usize] as libc::c_int,
+                    bg[2 as libc::c_int as usize] as libc::c_int,
+                    255 as libc::c_int,
+                ),
+            );
+            let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
+            while mu_next_command(ctx, &mut cmd) != 0 {
+                match (*cmd).type_0 {
+                    4 => {
+                        r_draw_text((*cmd).text.str_0, (*cmd).text.pos, (*cmd).text.color);
+                    }
+                    3 => {
+                        r_draw_rect((*cmd).rect.rect, (*cmd).rect.color);
+                    }
+                    5 => {
+                        r_draw_icon((*cmd).icon.id, (*cmd).icon.rect, (*cmd).icon.color);
+                    }
+                    2 => {
+                        r_set_clip_rect((*cmd).clip.rect);
+                    }
+                    _ => {}
+                }
+            }
+            r_present();
+        };
     }
 }
