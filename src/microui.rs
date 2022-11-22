@@ -87,11 +87,39 @@ pub enum Icon {
     None = 0,
 }
 
-pub type C2RustUnnamed_3 = libc::c_uint;
+#[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
+pub enum ResourceState {
+    Change = 4,
+    Submit = 2,
+    Active = 1,
+    None = 0,
+}
 
-pub const MU_RES_CHANGE: C2RustUnnamed_3 = 4;
-pub const MU_RES_SUBMIT: C2RustUnnamed_3 = 2;
-pub const MU_RES_ACTIVE: C2RustUnnamed_3 = 1;
+impl ResourceState {
+    pub fn is_changed(&self) -> bool { *self as u32 & ResourceState::Change as u32 != 0 }
+    pub fn is_submitted(&self) -> bool { *self as u32 & ResourceState::Submit as u32 != 0 }
+    pub fn is_active(&self) -> bool { *self as u32 & ResourceState::Active as u32 != 0 }
+    pub fn is_none(&self) -> bool { *self as u32 == 0 }
+
+    pub fn change(&mut self) {
+        let u0 = *self as u32;
+        let u1 = Self::Change as u32;
+        *self = unsafe { std::mem::transmute(u0 | u1)}
+    }
+
+    pub fn submit(&mut self) {
+        let u0 = *self as u32;
+        let u1 = Self::Submit as u32;
+        *self = unsafe { std::mem::transmute(u0 | u1)}
+    }
+
+    pub fn active(&mut self) {
+        let u0 = *self as u32;
+        let u1 = Self::Active as u32;
+        *self = unsafe { std::mem::transmute(u0 | u1)}
+    }
+}
 
 pub type C2RustUnnamed_4 = libc::c_uint;
 
@@ -168,8 +196,8 @@ pub struct mu_Context {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_Vec2 {
-    pub x: libc::c_int,
-    pub y: libc::c_int,
+    pub x: i32,
+    pub y: i32,
 }
 
 #[derive(Copy, Clone)]
@@ -179,7 +207,7 @@ pub struct mu_PoolItem {
     pub last_update: libc::c_int,
 }
 
-pub type mu_Id = libc::c_uint;
+pub type mu_Id = u32;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -197,10 +225,10 @@ pub struct mu_Container {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_Rect {
-    pub x: libc::c_int,
-    pub y: libc::c_int,
-    pub w: libc::c_int,
-    pub h: libc::c_int,
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
 }
 
 #[derive(Copy, Clone)]
@@ -1619,8 +1647,8 @@ pub unsafe extern "C" fn mu_button_ex(
     mut label: *const libc::c_char,
     mut icon: Icon,
     mut opt: libc::c_int,
-) -> libc::c_int {
-    let mut res: libc::c_int = 0 as libc::c_int;
+) -> ResourceState {
+    let mut res = ResourceState::None;
     let mut id: mu_Id = if !label.is_null() {
         mu_get_id(
             ctx,
@@ -1637,7 +1665,7 @@ pub unsafe extern "C" fn mu_button_ex(
     let mut r: mu_Rect = mu_layout_next(ctx);
     mu_update_control(ctx, id, r, opt);
     if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && (*ctx).focus == id {
-        res |= MU_RES_SUBMIT as libc::c_int;
+        res.submit();
     }
     mu_draw_control_frame(ctx, id, r, ControlColor::Button, opt);
     if !label.is_null() {
@@ -1659,8 +1687,8 @@ pub unsafe extern "C" fn mu_checkbox(
     mut ctx: *mut mu_Context,
     mut label: *const libc::c_char,
     mut state: *mut libc::c_int,
-) -> libc::c_int {
-    let mut res: libc::c_int = 0 as libc::c_int;
+) -> ResourceState {
+    let mut res = ResourceState::None;
     let mut id: mu_Id = mu_get_id(
         ctx,
         &mut state as *mut *mut libc::c_int as *const libc::c_void,
@@ -1670,7 +1698,7 @@ pub unsafe extern "C" fn mu_checkbox(
     let mut box_0: mu_Rect = mu_rect(r.x, r.y, r.h, r.h);
     mu_update_control(ctx, id, r, 0 as libc::c_int);
     if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && (*ctx).focus == id {
-        res |= MU_RES_CHANGE as libc::c_int;
+        res.change();
         *state = (*state == 0) as libc::c_int;
     }
     mu_draw_control_frame(ctx, id, box_0, ControlColor::Base, 0 as libc::c_int);
@@ -1695,8 +1723,8 @@ pub unsafe extern "C" fn mu_textbox_raw(
     mut id: mu_Id,
     mut r: mu_Rect,
     mut opt: libc::c_int,
-) -> libc::c_int {
-    let mut res: libc::c_int = 0 as libc::c_int;
+) -> ResourceState {
+    let mut res = ResourceState::None;
     mu_update_control(ctx, id, r, opt | MU_OPT_HOLDFOCUS as libc::c_int);
     if (*ctx).focus == id {
         let mut len: libc::c_int = strlen(buf) as libc::c_int;
@@ -1715,7 +1743,7 @@ pub unsafe extern "C" fn mu_textbox_raw(
             );
             len += n;
             *buf.offset(len as isize) = '\0' as i32 as libc::c_char;
-            res |= MU_RES_CHANGE as libc::c_int;
+            res.change()
         }
         if (*ctx).key_pressed & MU_KEY_BACKSPACE as libc::c_int != 0 && len > 0 as libc::c_int {
             loop {
@@ -1728,11 +1756,11 @@ pub unsafe extern "C" fn mu_textbox_raw(
                 }
             }
             *buf.offset(len as isize) = '\0' as i32 as libc::c_char;
-            res |= MU_RES_CHANGE as libc::c_int;
+            res.change();
         }
         if (*ctx).key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
             mu_set_focus(ctx, 0 as libc::c_int as mu_Id);
-            res |= MU_RES_SUBMIT as libc::c_int;
+            res.submit();
         }
     }
     mu_draw_control_frame(ctx, id, r, ControlColor::Base, opt);
@@ -1790,7 +1818,7 @@ unsafe extern "C" fn number_textbox(
         );
     }
     if (*ctx).number_edit == id {
-        let mut res: libc::c_int = mu_textbox_raw(
+        let mut res: ResourceState = mu_textbox_raw(
             ctx,
             ((*ctx).number_edit_buf).as_mut_ptr(),
             ::core::mem::size_of::<[libc::c_char; 127]>() as libc::c_ulong as libc::c_int,
@@ -1798,7 +1826,7 @@ unsafe extern "C" fn number_textbox(
             r,
             0 as libc::c_int,
         );
-        if res & MU_RES_SUBMIT as libc::c_int != 0 || (*ctx).focus != id {
+        if res.is_submitted() || (*ctx).focus != id {
             *value = strtod(
                 ((*ctx).number_edit_buf).as_mut_ptr(),
                 0 as *mut *mut libc::c_char,
@@ -1817,7 +1845,7 @@ pub unsafe extern "C" fn mu_textbox_ex(
     mut buf: *mut libc::c_char,
     mut bufsz: libc::c_int,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     let mut id: mu_Id = mu_get_id(
         ctx,
         &mut buf as *mut *mut libc::c_char as *const libc::c_void,
@@ -1836,7 +1864,7 @@ pub unsafe extern "C" fn mu_slider_ex(
     mut step: mu_Real,
     mut fmt: *const libc::c_char,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     let mut buf: [libc::c_char; 128] = [0; 128];
     let mut thumb: mu_Rect = mu_Rect {
         x: 0,
@@ -1846,7 +1874,7 @@ pub unsafe extern "C" fn mu_slider_ex(
     };
     let mut x: libc::c_int = 0;
     let mut w: libc::c_int = 0;
-    let mut res: libc::c_int = 0 as libc::c_int;
+    let mut res = ResourceState::None;
     let mut last: mu_Real = *value;
     let mut v: mu_Real = last;
     let mut id: mu_Id = mu_get_id(
@@ -1878,7 +1906,7 @@ pub unsafe extern "C" fn mu_slider_ex(
     };
     *value = v;
     if last != v {
-        res |= MU_RES_CHANGE as libc::c_int;
+        res.change();
     }
     mu_draw_control_frame(ctx, id, base, ControlColor::Base, opt);
     w = (*(*ctx).style).thumb_size;
@@ -1897,9 +1925,9 @@ pub unsafe extern "C" fn mu_number_ex(
     mut step: mu_Real,
     mut fmt: *const libc::c_char,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     let mut buf: [libc::c_char; 128] = [0; 128];
-    let mut res: libc::c_int = 0 as libc::c_int;
+    let mut res = ResourceState::None;
     let mut id: mu_Id = mu_get_id(
         ctx,
         &mut value as *mut *mut mu_Real as *const libc::c_void,
@@ -1915,7 +1943,7 @@ pub unsafe extern "C" fn mu_number_ex(
         *value += (*ctx).mouse_delta.x as libc::c_float * step;
     }
     if *value != last {
-        res |= MU_RES_CHANGE as libc::c_int;
+        res.change();
     }
     mu_draw_control_frame(ctx, id, base, ControlColor::Base, opt);
     sprintf(buf.as_mut_ptr(), fmt, *value as libc::c_double);
@@ -1928,7 +1956,7 @@ unsafe extern "C" fn header(
     mut label: *const libc::c_char,
     mut istreenode: libc::c_int,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     let mut r: mu_Rect = mu_Rect {
         x: 0,
         y: 0,
@@ -2004,9 +2032,9 @@ unsafe extern "C" fn header(
     r.w -= r.h - (*(*ctx).style).padding;
     mu_draw_control_text(ctx, label, r, ControlColor::Text, 0 as libc::c_int);
     return if expanded != 0 {
-        MU_RES_ACTIVE as libc::c_int
+        ResourceState::Active
     } else {
-        0 as libc::c_int
+        ResourceState::None
     };
 }
 
@@ -2015,7 +2043,7 @@ pub unsafe extern "C" fn mu_header_ex(
     mut ctx: *mut mu_Context,
     mut label: *const libc::c_char,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     return header(ctx, label, 0 as libc::c_int, opt);
 }
 
@@ -2024,9 +2052,9 @@ pub unsafe extern "C" fn mu_begin_treenode_ex(
     mut ctx: *mut mu_Context,
     mut label: *const libc::c_char,
     mut opt: libc::c_int,
-) -> libc::c_int {
-    let mut res: libc::c_int = header(ctx, label, 1 as libc::c_int, opt);
-    if res & MU_RES_ACTIVE as libc::c_int != 0 {
+) -> ResourceState {
+    let mut res = header(ctx, label, 1 as libc::c_int, opt);
+    if res.is_active() {
         (*get_layout(ctx)).indent += (*(*ctx).style).indent;
         assert!(
             (*ctx).id_stack.idx
@@ -2253,7 +2281,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
     mut title: *const libc::c_char,
     mut rect: mu_Rect,
     mut opt: libc::c_int,
-) -> libc::c_int {
+) -> ResourceState {
     let mut body: mu_Rect = mu_Rect {
         x: 0,
         y: 0,
@@ -2267,7 +2295,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
     );
     let mut cnt: *mut mu_Container = get_container(ctx, id, opt);
     if cnt.is_null() || (*cnt).open == 0 {
-        return 0 as libc::c_int;
+        return ResourceState::None;
     }
     assert!(
         (*ctx).id_stack.idx
@@ -2360,7 +2388,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
         (*cnt).open = 0 as libc::c_int;
     }
     mu_push_clip_rect(ctx, (*cnt).body);
-    return MU_RES_ACTIVE as libc::c_int;
+    return ResourceState::Active;
 }
 
 #[no_mangle]
@@ -2388,7 +2416,7 @@ pub unsafe extern "C" fn mu_open_popup(mut ctx: *mut mu_Context, mut name: *cons
 pub unsafe extern "C" fn mu_begin_popup(
     mut ctx: *mut mu_Context,
     mut name: *const libc::c_char,
-) -> libc::c_int {
+) -> ResourceState {
     let mut opt: libc::c_int = MU_OPT_POPUP as libc::c_int
         | MU_OPT_AUTOSIZE as libc::c_int
         | MU_OPT_NORESIZE as libc::c_int
