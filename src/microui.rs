@@ -77,13 +77,15 @@ impl ControlColor {
     }
 }
 
-pub type C2RustUnnamed_2 = libc::c_uint;
-
-pub const MU_ICON_MAX: C2RustUnnamed_2 = 5;
-pub const MU_ICON_EXPANDED: C2RustUnnamed_2 = 4;
-pub const MU_ICON_COLLAPSED: C2RustUnnamed_2 = 3;
-pub const MU_ICON_CHECK: C2RustUnnamed_2 = 2;
-pub const MU_ICON_CLOSE: C2RustUnnamed_2 = 1;
+#[derive(PartialEq, Copy, Clone)]
+pub enum Icon {
+    Max = 5,
+    Expanded = 4,
+    Collapsed = 3,
+    Check = 2,
+    Close = 1,
+    None = 0,
+}
 
 pub type C2RustUnnamed_3 = libc::c_uint;
 
@@ -283,7 +285,7 @@ pub union mu_Command {
 pub struct mu_IconCommand {
     pub base: mu_BaseCommand,
     pub rect: mu_Rect,
-    pub id: libc::c_int,
+    pub id: Icon,
     pub color: mu_Color,
 }
 
@@ -744,7 +746,7 @@ unsafe extern "C" fn hash(
 #[no_mangle]
 pub unsafe extern "C" fn mu_get_id(
     mut ctx: *mut mu_Context,
-    mut data: *const libc::c_void,
+    data: *const libc::c_void,
     mut size: libc::c_int,
 ) -> mu_Id {
     let mut idx: libc::c_int = (*ctx).id_stack.idx;
@@ -1249,7 +1251,7 @@ pub unsafe extern "C" fn mu_draw_text(
 #[no_mangle]
 pub unsafe extern "C" fn mu_draw_icon(
     mut ctx: *mut mu_Context,
-    mut id: libc::c_int,
+    mut id: Icon,
     mut rect: mu_Rect,
     mut color: mu_Color,
 ) {
@@ -1615,7 +1617,7 @@ pub unsafe extern "C" fn mu_label(mut ctx: *mut mu_Context, mut text: *const lib
 pub unsafe extern "C" fn mu_button_ex(
     mut ctx: *mut mu_Context,
     mut label: *const libc::c_char,
-    mut icon: libc::c_int,
+    mut icon: Icon,
     mut opt: libc::c_int,
 ) -> libc::c_int {
     let mut res: libc::c_int = 0 as libc::c_int;
@@ -1628,7 +1630,7 @@ pub unsafe extern "C" fn mu_button_ex(
     } else {
         mu_get_id(
             ctx,
-            &mut icon as *mut libc::c_int as *const libc::c_void,
+            &icon as *const Icon as *const libc::c_int as *const libc::c_void,
             ::core::mem::size_of::<libc::c_int>() as libc::c_ulong as libc::c_int,
         )
     };
@@ -1641,7 +1643,7 @@ pub unsafe extern "C" fn mu_button_ex(
     if !label.is_null() {
         mu_draw_control_text(ctx, label, r, ControlColor::Text, opt);
     }
-    if icon != 0 {
+    if icon != Icon::None {
         mu_draw_icon(
             ctx,
             icon,
@@ -1675,7 +1677,7 @@ pub unsafe extern "C" fn mu_checkbox(
     if *state != 0 {
         mu_draw_icon(
             ctx,
-            MU_ICON_CHECK as libc::c_int,
+            Icon::Check,
             box_0,
             (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize],
         );
@@ -1991,9 +1993,9 @@ unsafe extern "C" fn header(
     mu_draw_icon(
         ctx,
         if expanded != 0 {
-            MU_ICON_EXPANDED as libc::c_int
+            Icon::Expanded
         } else {
-            MU_ICON_COLLAPSED as libc::c_int
+            Icon::Collapsed
         },
         mu_rect(r.x, r.y, r.h, r.h),
         (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize],
@@ -2313,7 +2315,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
             tr.w -= r.w;
             mu_draw_icon(
                 ctx,
-                MU_ICON_CLOSE as libc::c_int,
+                Icon::Close,
                 r,
                 (*(*ctx).style).colors[ControlColor::TitleText as libc::c_int as usize],
             );

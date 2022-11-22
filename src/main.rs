@@ -17,6 +17,10 @@ pub mod microui;
 pub mod renderer;
 pub type SDL_SysWMmsg = libc::c_int;
 
+use microui::*;
+use renderer::*;
+
+
 //use ::libc;
 extern "C" {
     fn strlen(_: *const libc::c_char) -> libc::c_ulong;
@@ -26,124 +30,6 @@ extern "C" {
     fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn SDL_Init(flags: Uint32) -> libc::c_int;
     fn SDL_PollEvent(event: *mut SDL_Event) -> libc::c_int;
-    fn mu_rect(
-        x: libc::c_int,
-        y: libc::c_int,
-        w: libc::c_int,
-        h: libc::c_int,
-    ) -> mu_Rect;
-    fn mu_color(
-        r: libc::c_int,
-        g: libc::c_int,
-        b: libc::c_int,
-        a: libc::c_int,
-    ) -> mu_Color;
-    fn mu_init(ctx: *mut mu_Context);
-    fn mu_begin(ctx: *mut mu_Context);
-    fn mu_end(ctx: *mut mu_Context);
-    fn mu_set_focus(ctx: *mut mu_Context, id: mu_Id);
-    fn mu_push_id(ctx: *mut mu_Context, data: *const libc::c_void, size: libc::c_int);
-    fn mu_pop_id(ctx: *mut mu_Context);
-    fn mu_get_current_container(ctx: *mut mu_Context) -> *mut mu_Container;
-    fn mu_input_mousemove(ctx: *mut mu_Context, x: libc::c_int, y: libc::c_int);
-    fn mu_input_mousedown(
-        ctx: *mut mu_Context,
-        x: libc::c_int,
-        y: libc::c_int,
-        btn: libc::c_int,
-    );
-    fn mu_input_mouseup(
-        ctx: *mut mu_Context,
-        x: libc::c_int,
-        y: libc::c_int,
-        btn: libc::c_int,
-    );
-    fn mu_input_scroll(ctx: *mut mu_Context, x: libc::c_int, y: libc::c_int);
-    fn mu_input_keydown(ctx: *mut mu_Context, key: libc::c_int);
-    fn mu_input_keyup(ctx: *mut mu_Context, key: libc::c_int);
-    fn mu_input_text(ctx: *mut mu_Context, text: *const libc::c_char);
-    fn mu_next_command(ctx: *mut mu_Context, cmd: *mut *mut mu_Command) -> libc::c_int;
-    fn mu_draw_rect(ctx: *mut mu_Context, rect: mu_Rect, color: mu_Color);
-    fn mu_layout_row(
-        ctx: *mut mu_Context,
-        items: libc::c_int,
-        widths: *const libc::c_int,
-        height: libc::c_int,
-    );
-    fn mu_layout_begin_column(ctx: *mut mu_Context);
-    fn mu_layout_end_column(ctx: *mut mu_Context);
-    fn mu_layout_next(ctx: *mut mu_Context) -> mu_Rect;
-    fn mu_draw_control_text(
-        ctx: *mut mu_Context,
-        str: *const libc::c_char,
-        rect: mu_Rect,
-        colorid: libc::c_int,
-        opt: libc::c_int,
-    );
-    fn mu_text(ctx: *mut mu_Context, text: *const libc::c_char);
-    fn mu_label(ctx: *mut mu_Context, text: *const libc::c_char);
-    fn mu_button_ex(
-        ctx: *mut mu_Context,
-        label: *const libc::c_char,
-        icon: libc::c_int,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_checkbox(
-        ctx: *mut mu_Context,
-        label: *const libc::c_char,
-        state: *mut libc::c_int,
-    ) -> libc::c_int;
-    fn mu_textbox_ex(
-        ctx: *mut mu_Context,
-        buf: *mut libc::c_char,
-        bufsz: libc::c_int,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_slider_ex(
-        ctx: *mut mu_Context,
-        value: *mut mu_Real,
-        low: mu_Real,
-        high: mu_Real,
-        step: mu_Real,
-        fmt: *const libc::c_char,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_header_ex(
-        ctx: *mut mu_Context,
-        label: *const libc::c_char,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_begin_treenode_ex(
-        ctx: *mut mu_Context,
-        label: *const libc::c_char,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_end_treenode(ctx: *mut mu_Context);
-    fn mu_begin_window_ex(
-        ctx: *mut mu_Context,
-        title: *const libc::c_char,
-        rect: mu_Rect,
-        opt: libc::c_int,
-    ) -> libc::c_int;
-    fn mu_end_window(ctx: *mut mu_Context);
-    fn mu_open_popup(ctx: *mut mu_Context, name: *const libc::c_char);
-    fn mu_begin_popup(ctx: *mut mu_Context, name: *const libc::c_char) -> libc::c_int;
-    fn mu_end_popup(ctx: *mut mu_Context);
-    fn mu_begin_panel_ex(
-        ctx: *mut mu_Context,
-        name: *const libc::c_char,
-        opt: libc::c_int,
-    );
-    fn r_get_text_width(text: *const libc::c_char, len: libc::c_int) -> libc::c_int;
-    fn r_present();
-    fn mu_end_panel(ctx: *mut mu_Context);
-    fn r_init();
-    fn r_draw_rect(rect: mu_Rect, color: mu_Color);
-    fn r_draw_text(text: *const libc::c_char, pos: mu_Vec2, color: mu_Color);
-    fn r_draw_icon(id: libc::c_int, rect: mu_Rect, color: mu_Color);
-    fn r_get_text_height() -> libc::c_int;
-    fn r_set_clip_rect(rect: mu_Rect);
-    fn r_clear(color: mu_Color);
 }
 pub type __uint8_t = libc::c_uchar;
 pub type __int16_t = libc::c_short;
@@ -778,271 +664,13 @@ pub union SDL_Event {
     pub drop: SDL_DropEvent,
     pub padding: [Uint8; 56],
 }
-pub type C2RustUnnamed_0 = libc::c_uint;
-pub const MU_COMMAND_MAX: C2RustUnnamed_0 = 6;
-pub const MU_COMMAND_ICON: C2RustUnnamed_0 = 5;
-pub const MU_COMMAND_TEXT: C2RustUnnamed_0 = 4;
-pub const MU_COMMAND_RECT: C2RustUnnamed_0 = 3;
-pub const MU_COMMAND_CLIP: C2RustUnnamed_0 = 2;
-pub const MU_COMMAND_JUMP: C2RustUnnamed_0 = 1;
-pub type C2RustUnnamed_1 = libc::c_uint;
-pub const MU_COLOR_MAX: C2RustUnnamed_1 = 14;
-pub const MU_COLOR_SCROLLTHUMB: C2RustUnnamed_1 = 13;
-pub const MU_COLOR_SCROLLBASE: C2RustUnnamed_1 = 12;
-pub const MU_COLOR_BASEFOCUS: C2RustUnnamed_1 = 11;
-pub const MU_COLOR_BASEHOVER: C2RustUnnamed_1 = 10;
-pub const MU_COLOR_BASE: C2RustUnnamed_1 = 9;
-pub const MU_COLOR_BUTTONFOCUS: C2RustUnnamed_1 = 8;
-pub const MU_COLOR_BUTTONHOVER: C2RustUnnamed_1 = 7;
-pub const MU_COLOR_BUTTON: C2RustUnnamed_1 = 6;
-pub const MU_COLOR_PANELBG: C2RustUnnamed_1 = 5;
-pub const MU_COLOR_TITLETEXT: C2RustUnnamed_1 = 4;
-pub const MU_COLOR_TITLEBG: C2RustUnnamed_1 = 3;
-pub const MU_COLOR_WINDOWBG: C2RustUnnamed_1 = 2;
-pub const MU_COLOR_BORDER: C2RustUnnamed_1 = 1;
-pub const MU_COLOR_TEXT: C2RustUnnamed_1 = 0;
-pub type C2RustUnnamed_2 = libc::c_uint;
-pub const MU_RES_CHANGE: C2RustUnnamed_2 = 4;
-pub const MU_RES_SUBMIT: C2RustUnnamed_2 = 2;
-pub const MU_RES_ACTIVE: C2RustUnnamed_2 = 1;
-pub type C2RustUnnamed_3 = libc::c_uint;
-pub const MU_OPT_EXPANDED: C2RustUnnamed_3 = 4096;
-pub const MU_OPT_CLOSED: C2RustUnnamed_3 = 2048;
-pub const MU_OPT_POPUP: C2RustUnnamed_3 = 1024;
-pub const MU_OPT_AUTOSIZE: C2RustUnnamed_3 = 512;
-pub const MU_OPT_HOLDFOCUS: C2RustUnnamed_3 = 256;
-pub const MU_OPT_NOTITLE: C2RustUnnamed_3 = 128;
-pub const MU_OPT_NOCLOSE: C2RustUnnamed_3 = 64;
-pub const MU_OPT_NOSCROLL: C2RustUnnamed_3 = 32;
-pub const MU_OPT_NORESIZE: C2RustUnnamed_3 = 16;
-pub const MU_OPT_NOFRAME: C2RustUnnamed_3 = 8;
-pub const MU_OPT_NOINTERACT: C2RustUnnamed_3 = 4;
-pub const MU_OPT_ALIGNRIGHT: C2RustUnnamed_3 = 2;
-pub const MU_OPT_ALIGNCENTER: C2RustUnnamed_3 = 1;
-pub type C2RustUnnamed_4 = libc::c_uint;
-pub const MU_MOUSE_MIDDLE: C2RustUnnamed_4 = 4;
-pub const MU_MOUSE_RIGHT: C2RustUnnamed_4 = 2;
-pub const MU_MOUSE_LEFT: C2RustUnnamed_4 = 1;
-pub type C2RustUnnamed_5 = libc::c_uint;
-pub const MU_KEY_RETURN: C2RustUnnamed_5 = 16;
-pub const MU_KEY_BACKSPACE: C2RustUnnamed_5 = 8;
-pub const MU_KEY_ALT: C2RustUnnamed_5 = 4;
-pub const MU_KEY_CTRL: C2RustUnnamed_5 = 2;
-pub const MU_KEY_SHIFT: C2RustUnnamed_5 = 1;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Context {
-    pub text_width: Option::<
-        unsafe extern "C" fn(mu_Font, *const libc::c_char, libc::c_int) -> libc::c_int,
-    >,
-    pub text_height: Option::<unsafe extern "C" fn(mu_Font) -> libc::c_int>,
-    pub draw_frame: Option::<
-        unsafe extern "C" fn(*mut mu_Context, mu_Rect, libc::c_int) -> (),
-    >,
-    pub _style: mu_Style,
-    pub style: *mut mu_Style,
-    pub hover: mu_Id,
-    pub focus: mu_Id,
-    pub last_id: mu_Id,
-    pub last_rect: mu_Rect,
-    pub last_zindex: libc::c_int,
-    pub updated_focus: libc::c_int,
-    pub frame: libc::c_int,
-    pub hover_root: *mut mu_Container,
-    pub next_hover_root: *mut mu_Container,
-    pub scroll_target: *mut mu_Container,
-    pub number_edit_buf: [libc::c_char; 127],
-    pub number_edit: mu_Id,
-    pub command_list: C2RustUnnamed_12,
-    pub root_list: C2RustUnnamed_11,
-    pub container_stack: C2RustUnnamed_10,
-    pub clip_stack: C2RustUnnamed_9,
-    pub id_stack: C2RustUnnamed_8,
-    pub layout_stack: C2RustUnnamed_7,
-    pub text_stack: C2RustUnnamed_6,
-    pub container_pool: [mu_PoolItem; 48],
-    pub containers: [mu_Container; 48],
-    pub treenode_pool: [mu_PoolItem; 48],
-    pub mouse_pos: mu_Vec2,
-    pub last_mouse_pos: mu_Vec2,
-    pub mouse_delta: mu_Vec2,
-    pub scroll_delta: mu_Vec2,
-    pub mouse_down: libc::c_int,
-    pub mouse_pressed: libc::c_int,
-    pub key_down: libc::c_int,
-    pub key_pressed: libc::c_int,
-    pub input_text: [libc::c_char; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Vec2 {
-    pub x: libc::c_int,
-    pub y: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_PoolItem {
-    pub id: mu_Id,
-    pub last_update: libc::c_int,
-}
-pub type mu_Id = libc::c_uint;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Container {
-    pub head_idx: libc::c_int,
-    pub tail_idx: libc::c_int,
-    pub rect: mu_Rect,
-    pub body: mu_Rect,
-    pub content_size: mu_Vec2,
-    pub scroll: mu_Vec2,
-    pub zindex: libc::c_int,
-    pub open: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Rect {
-    pub x: libc::c_int,
-    pub y: libc::c_int,
-    pub w: libc::c_int,
-    pub h: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_6 {
-    pub idx: libc::c_int,
-    pub items: [libc::c_char; 65536],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_7 {
-    pub idx: libc::c_int,
-    pub items: [mu_Layout; 16],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Layout {
-    pub body: mu_Rect,
-    pub next: mu_Rect,
-    pub position: mu_Vec2,
-    pub size: mu_Vec2,
-    pub max: mu_Vec2,
-    pub widths: [libc::c_int; 16],
-    pub items: libc::c_int,
-    pub item_index: libc::c_int,
-    pub next_row: libc::c_int,
-    pub next_type: libc::c_int,
-    pub indent: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_8 {
-    pub idx: libc::c_int,
-    pub items: [mu_Id; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_9 {
-    pub idx: libc::c_int,
-    pub items: [mu_Rect; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_10 {
-    pub idx: libc::c_int,
-    pub items: [*mut mu_Container; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_11 {
-    pub idx: libc::c_int,
-    pub items: [*mut mu_Container; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_12 {
-    pub idx: libc::c_int,
-    pub items: [mu_Command; 4096],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union mu_Command {
-    pub type_0: libc::c_int,
-    pub base: mu_BaseCommand,
-    pub jump: mu_JumpCommand,
-    pub clip: mu_ClipCommand,
-    pub rect: mu_RectCommand,
-    pub text: mu_TextCommand,
-    pub icon: mu_IconCommand,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_IconCommand {
-    pub base: mu_BaseCommand,
-    pub rect: mu_Rect,
-    pub id: libc::c_int,
-    pub color: mu_Color,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Color {
-    pub r: libc::c_uchar,
-    pub g: libc::c_uchar,
-    pub b: libc::c_uchar,
-    pub a: libc::c_uchar,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_BaseCommand {
-    pub type_0: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_TextCommand {
-    pub base: mu_BaseCommand,
-    pub font: mu_Font,
-    pub pos: mu_Vec2,
-    pub color: mu_Color,
-    pub str_0: *mut libc::c_char,
-}
-pub type mu_Font = *mut libc::c_void;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_RectCommand {
-    pub base: mu_BaseCommand,
-    pub rect: mu_Rect,
-    pub color: mu_Color,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_ClipCommand {
-    pub base: mu_BaseCommand,
-    pub rect: mu_Rect,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_JumpCommand {
-    pub base: mu_BaseCommand,
-    pub dst_idx: libc::c_int,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct mu_Style {
-    pub font: mu_Font,
-    pub size: mu_Vec2,
-    pub padding: libc::c_int,
-    pub spacing: libc::c_int,
-    pub indent: libc::c_int,
-    pub title_height: libc::c_int,
-    pub scrollbar_size: libc::c_int,
-    pub thumb_size: libc::c_int,
-    pub colors: [mu_Color; 14],
-}
+
 pub type mu_Real = libc::c_float;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_13 {
     pub label: *const libc::c_char,
-    pub idx: libc::c_int,
+    pub idx: ControlColor,
 }
 static mut logbuf: [libc::c_char; 64000] = [0; 64000];
 static mut logbuf_updated: libc::c_int = 0 as libc::c_int;
@@ -1134,7 +762,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
             if mu_button_ex(
                 ctx,
                 b"Button 1\0" as *const u8 as *const libc::c_char,
-                0 as libc::c_int,
+                Icon::None,
                 MU_OPT_ALIGNCENTER as libc::c_int,
             ) != 0
             {
@@ -1143,7 +771,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
             if mu_button_ex(
                 ctx,
                 b"Button 2\0" as *const u8 as *const libc::c_char,
-                0 as libc::c_int,
+                Icon::None,
                 MU_OPT_ALIGNCENTER as libc::c_int,
             ) != 0
             {
@@ -1153,7 +781,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
             if mu_button_ex(
                 ctx,
                 b"Button 3\0" as *const u8 as *const libc::c_char,
-                0 as libc::c_int,
+                Icon::None,
                 MU_OPT_ALIGNCENTER as libc::c_int,
             ) != 0
             {
@@ -1162,7 +790,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
             if mu_button_ex(
                 ctx,
                 b"Popup\0" as *const u8 as *const libc::c_char,
-                0 as libc::c_int,
+                Icon::None,
                 MU_OPT_ALIGNCENTER as libc::c_int,
             ) != 0
             {
@@ -1174,13 +802,13 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 mu_button_ex(
                     ctx,
                     b"Hello\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 );
                 mu_button_ex(
                     ctx,
                     b"World\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 );
                 mu_end_popup(ctx);
@@ -1224,7 +852,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                     if mu_button_ex(
                         ctx,
                         b"Button 1\0" as *const u8 as *const libc::c_char,
-                        0 as libc::c_int,
+                        Icon::None,
                         MU_OPT_ALIGNCENTER as libc::c_int,
                     ) != 0
                     {
@@ -1235,7 +863,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                     if mu_button_ex(
                         ctx,
                         b"Button 2\0" as *const u8 as *const libc::c_char,
-                        0 as libc::c_int,
+                        Icon::None,
                         MU_OPT_ALIGNCENTER as libc::c_int,
                     ) != 0
                     {
@@ -1262,7 +890,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 if mu_button_ex(
                     ctx,
                     b"Button 3\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 ) != 0
                 {
@@ -1271,7 +899,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 if mu_button_ex(
                     ctx,
                     b"Button 4\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 ) != 0
                 {
@@ -1280,7 +908,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 if mu_button_ex(
                     ctx,
                     b"Button 5\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 ) != 0
                 {
@@ -1289,7 +917,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 if mu_button_ex(
                     ctx,
                     b"Button 6\0" as *const u8 as *const libc::c_char,
-                    0 as libc::c_int,
+                    Icon::None,
                     MU_OPT_ALIGNCENTER as libc::c_int,
                 ) != 0
                 {
@@ -1413,7 +1041,7 @@ unsafe extern "C" fn test_window(mut ctx: *mut mu_Context) {
                 ctx,
                 buf_0.as_mut_ptr(),
                 r,
-                MU_COLOR_TEXT as libc::c_int,
+                ControlColor::Text,
                 MU_OPT_ALIGNCENTER as libc::c_int,
             );
         }
@@ -1479,7 +1107,7 @@ unsafe extern "C" fn log_window(mut ctx: *mut mu_Context) {
         if mu_button_ex(
             ctx,
             b"Submit\0" as *const u8 as *const libc::c_char,
-            0 as libc::c_int,
+            Icon::None,
             MU_OPT_ALIGNCENTER as libc::c_int,
         ) != 0
         {
@@ -1523,105 +1151,105 @@ unsafe extern "C" fn style_window(mut ctx: *mut mu_Context) {
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"text:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_TEXT as libc::c_int,
+                idx: ControlColor::Text,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"border:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BORDER as libc::c_int,
+                idx: ControlColor::Border,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"windowbg:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_WINDOWBG as libc::c_int,
+                idx: ControlColor::WindowBG,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"titlebg:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_TITLEBG as libc::c_int,
+                idx: ControlColor::TitleBG,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"titletext:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_TITLETEXT as libc::c_int,
+                idx: ControlColor::TitleText,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"panelbg:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_PANELBG as libc::c_int,
+                idx: ControlColor::PanelBG,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"button:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BUTTON as libc::c_int,
+                idx: ControlColor::Button,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"buttonhover:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BUTTONHOVER as libc::c_int,
+                idx: ControlColor::ButtonHover,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"buttonfocus:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BUTTONFOCUS as libc::c_int,
+                idx: ControlColor::ButtonFocus,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"base:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BASE as libc::c_int,
+                idx: ControlColor::Base,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"basehover:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BASEHOVER as libc::c_int,
+                idx: ControlColor::BaseHover,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"basefocus:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_BASEFOCUS as libc::c_int,
+                idx: ControlColor::BaseFocus,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"scrollbase:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_SCROLLBASE as libc::c_int,
+                idx: ControlColor::ScrollBase,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: b"scrollthumb:\0" as *const u8 as *const libc::c_char,
-                idx: MU_COLOR_SCROLLTHUMB as libc::c_int,
+                idx: ControlColor::ScrollThumb,
             };
             init
         },
         {
             let mut init = C2RustUnnamed_13 {
                 label: 0 as *const libc::c_char,
-                idx: 0,
+                idx: ControlColor::Text,
             };
             init
         },
@@ -2297,16 +1925,16 @@ pub fn main() {
             let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
             while mu_next_command(ctx, &mut cmd) != 0 {
                 match (*cmd).type_0 {
-                    4 => {
+                    Command::Text => {
                         r_draw_text((*cmd).text.str_0, (*cmd).text.pos, (*cmd).text.color);
                     }
-                    3 => {
+                    Command::Rect => {
                         r_draw_rect((*cmd).rect.rect, (*cmd).rect.color);
                     }
-                    5 => {
+                    Command::Icon => {
                         r_draw_icon((*cmd).icon.id, (*cmd).icon.rect, (*cmd).icon.color);
                     }
-                    2 => {
+                    Command::Clip => {
                         r_set_clip_rect((*cmd).clip.rect);
                     }
                     _ => {}
