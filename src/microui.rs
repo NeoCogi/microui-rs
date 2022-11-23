@@ -37,9 +37,17 @@ impl<T: Default + Copy, const N: usize> Stack<T, N> {
         self.items[self.idx] = T::default();
     }
 
-    pub fn top(&mut self) -> Option<&T> {
+    pub fn top(&self) -> Option<&T> {
         if self.idx != 0 {
             Some(&self.items[self.idx - 1])
+        } else {
+            None
+        }
+    }
+
+    pub fn top_mut(&mut self) -> Option<&mut T> {
+        if self.idx != 0 {
+            Some(&mut self.items[self.idx - 1])
         } else {
             None
         }
@@ -401,7 +409,7 @@ pub struct mu_Context {
     pub container_stack: C2RustUnnamed_11,
     pub clip_stack: C2RustUnnamed_10,
     pub id_stack: Stack<mu_Id, 32>,
-    pub layout_stack: C2RustUnnamed_8,
+    pub layout_stack: Stack<mu_Layout, 16>,
     pub text_stack: C2RustUnnamed_7,
     pub container_pool: [mu_PoolItem; 48],
     pub containers: [mu_Container; 48],
@@ -417,7 +425,7 @@ pub struct mu_Context {
     pub input_text: [libc::c_char; 32],
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_Vec2 {
     pub x: i32,
@@ -446,7 +454,7 @@ pub struct mu_Container {
     pub open: libc::c_int,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_Rect {
     pub x: i32,
@@ -469,7 +477,7 @@ pub struct C2RustUnnamed_8 {
     pub items: [mu_Layout; 16],
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_Layout {
     pub body: mu_Rect,
@@ -661,11 +669,11 @@ pub fn mu_color(r: u8, g: u8, b: u8, a: u8) -> mu_Color {
     mu_Color { r, g, b, a }
 }
 
-unsafe extern "C" fn expand_rect(mut rect: mu_Rect, mut n: libc::c_int) -> mu_Rect {
-    return mu_rect(rect.x - n, rect.y - n, rect.w + n * 2 as libc::c_int, rect.h + n * 2 as libc::c_int);
+pub fn expand_rect(mut rect: mu_Rect, mut n: libc::c_int) -> mu_Rect {
+    mu_rect(rect.x - n, rect.y - n, rect.w + n * 2 as libc::c_int, rect.h + n * 2 as libc::c_int)
 }
 
-unsafe extern "C" fn intersect_rects(mut r1: mu_Rect, mut r2: mu_Rect) -> mu_Rect {
+pub fn intersect_rects(mut r1: mu_Rect, mut r2: mu_Rect) -> mu_Rect {
     let mut x1: libc::c_int = if r1.x > r2.x { r1.x } else { r2.x };
     let mut y1: libc::c_int = if r1.y > r2.y { r1.y } else { r2.y };
     let mut x2: libc::c_int = if r1.x + r1.w < r2.x + r2.w { r1.x + r1.w } else { r2.x + r2.w };
@@ -679,18 +687,8 @@ unsafe extern "C" fn intersect_rects(mut r1: mu_Rect, mut r2: mu_Rect) -> mu_Rec
     return mu_rect(x1, y1, x2 - x1, y2 - y1);
 }
 
-unsafe extern "C" fn rect_overlaps_vec2(mut r: mu_Rect, mut p: mu_Vec2) -> libc::c_int {
+pub fn rect_overlaps_vec2(mut r: mu_Rect, mut p: mu_Vec2) -> libc::c_int {
     return (p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h) as libc::c_int;
-}
-
-unsafe extern "C" fn draw_frame(mut ctx: *mut mu_Context, mut rect: mu_Rect, mut colorid: ControlColor) {
-    mu_draw_rect(ctx, rect, (*(*ctx).style).colors[colorid as usize]);
-    if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
-        return;
-    }
-    if (*(*ctx).style).colors[ControlColor::Border as usize].a != 0 {
-        mu_draw_box(ctx, expand_rect(rect, 1 as libc::c_int), (*(*ctx).style).colors[ControlColor::Border as usize]);
-    }
 }
 
 #[no_mangle]
@@ -705,7 +703,16 @@ pub unsafe extern "C" fn mu_init(mut ctx: *mut mu_Context) {
     (*ctx).style = &mut (*ctx)._style;
 }
 
-#[no_mangle]
+pub unsafe extern "C" fn draw_frame(mut ctx: *mut mu_Context, mut rect: mu_Rect, mut colorid: ControlColor) {
+    mu_draw_rect(ctx, rect, (*(*ctx).style).colors[colorid as usize]);
+    if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
+        return;
+    }
+    if (*(*ctx).style).colors[ControlColor::Border as usize].a != 0 {
+        mu_draw_box(ctx, expand_rect(rect, 1 as libc::c_int), (*(*ctx).style).colors[ControlColor::Border as usize]);
+    }
+}
+
 pub unsafe extern "C" fn mu_begin(mut ctx: *mut mu_Context) {
     assert!(((*ctx).text_width).is_some() && ((*ctx).text_height).is_some());
     (*ctx).command_list.idx = 0 as libc::c_int;
@@ -727,10 +734,10 @@ unsafe extern "C" fn compare_zindex(mut a: *const libc::c_void, mut b: *const li
 pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
     let mut i: libc::c_int = 0;
     let mut n: libc::c_int = 0;
-    assert!((*ctx).container_stack.idx == 0 as libc::c_int);
-    assert!((*ctx).clip_stack.idx == 0 as libc::c_int);
-    assert!((*ctx).id_stack.len() == 0);
-    assert!((*ctx).layout_stack.idx == 0 as libc::c_int);
+    assert_eq!((*ctx).container_stack.idx, 0);
+    assert_eq!((*ctx).clip_stack.idx, 0);
+    assert_eq!((*ctx).id_stack.len(), 0);
+    assert_eq!((*ctx).layout_stack.len(), 0);
     if !((*ctx).scroll_target).is_null() {
         (*(*ctx).scroll_target).scroll.x += (*ctx).scroll_delta.x;
         (*(*ctx).scroll_target).scroll.y += (*ctx).scroll_delta.y;
@@ -877,30 +884,24 @@ unsafe extern "C" fn push_layout(mut ctx: *mut mu_Context, mut body: mu_Rect, mu
     );
     layout.body = mu_rect(body.x - scroll.x, body.y - scroll.y, body.w, body.h);
     layout.max = mu_vec2(-(0x1000000 as libc::c_int), -(0x1000000 as libc::c_int));
-    assert!(
-        (*ctx).layout_stack.idx
-            < (::core::mem::size_of::<[mu_Layout; 16]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Layout>() as libc::c_ulong) as libc::c_int
-    );
-    (*ctx).layout_stack.items[(*ctx).layout_stack.idx as usize] = layout;
-    (*ctx).layout_stack.idx += 1;
+    (*ctx).layout_stack.push(layout);
     mu_layout_row(ctx, 1 as libc::c_int, &mut width, 0 as libc::c_int);
 }
 
-unsafe extern "C" fn get_layout(mut ctx: *mut mu_Context) -> *mut mu_Layout {
-    return &mut *((*ctx).layout_stack.items)
-        .as_mut_ptr()
-        .offset(((*ctx).layout_stack.idx - 1 as libc::c_int) as isize) as *mut mu_Layout;
+fn get_layout(ctx: &mut mu_Context) -> &mut mu_Layout {
+    return ctx.layout_stack.top_mut().unwrap();
 }
 
 unsafe extern "C" fn pop_container(mut ctx: *mut mu_Context) {
     let mut cnt: *mut mu_Container = mu_get_current_container(ctx);
-    let mut layout: *mut mu_Layout = get_layout(ctx);
-    (*cnt).content_size.x = (*layout).max.x - (*layout).body.x;
-    (*cnt).content_size.y = (*layout).max.y - (*layout).body.y;
+    let layout = get_layout(&mut *ctx);
+    (*cnt).content_size.x = layout.max.x - layout.body.x;
+    (*cnt).content_size.y = layout.max.y - layout.body.y;
+
     assert!((*ctx).container_stack.idx > 0 as libc::c_int);
     (*ctx).container_stack.idx -= 1;
-    assert!((*ctx).layout_stack.idx > 0 as libc::c_int);
-    (*ctx).layout_stack.idx -= 1;
+
+    (*ctx).layout_stack.pop();
     mu_pop_id(ctx);
 }
 
@@ -1186,29 +1187,27 @@ pub unsafe extern "C" fn mu_layout_begin_column(mut ctx: *mut mu_Context) {
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_end_column(mut ctx: *mut mu_Context) {
-    let mut a: *mut mu_Layout = 0 as *mut mu_Layout;
-    let mut b: *mut mu_Layout = 0 as *mut mu_Layout;
-    b = get_layout(ctx);
-    assert!((*ctx).layout_stack.idx > 0 as libc::c_int);
-    (*ctx).layout_stack.idx -= 1;
-    a = get_layout(ctx);
-    (*a).position.x = if (*a).position.x > (*b).position.x + (*b).body.x - (*a).body.x {
-        (*a).position.x
+    let b = get_layout(&mut *ctx);
+    (*ctx).layout_stack.pop();
+
+    let a = get_layout(&mut *ctx);
+    a.position.x = if a.position.x > b.position.x + b.body.x - a.body.x {
+        a.position.x
     } else {
-        (*b).position.x + (*b).body.x - (*a).body.x
+        b.position.x + b.body.x - a.body.x
     };
-    (*a).next_row = if (*a).next_row > (*b).next_row + (*b).body.y - (*a).body.y {
-        (*a).next_row
+    a.next_row = if a.next_row > b.next_row + b.body.y - a.body.y {
+        a.next_row
     } else {
-        (*b).next_row + (*b).body.y - (*a).body.y
+        b.next_row + b.body.y - a.body.y
     };
-    (*a).max.x = if (*a).max.x > (*b).max.x { (*a).max.x } else { (*b).max.x };
-    (*a).max.y = if (*a).max.y > (*b).max.y { (*a).max.y } else { (*b).max.y };
+    a.max.x = if a.max.x > b.max.x { a.max.x } else { b.max.x };
+    a.max.y = if a.max.y > b.max.y { a.max.y } else { b.max.y };
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_row(mut ctx: *mut mu_Context, mut items: libc::c_int, mut widths: *const libc::c_int, mut height: libc::c_int) {
-    let mut layout: *mut mu_Layout = get_layout(ctx);
+    let layout = get_layout(&mut *ctx);
     if !widths.is_null() {
         assert!(items <= 16 as libc::c_int);
         memcpy(
@@ -1225,24 +1224,24 @@ pub unsafe extern "C" fn mu_layout_row(mut ctx: *mut mu_Context, mut items: libc
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_width(mut ctx: *mut mu_Context, mut width: libc::c_int) {
-    (*get_layout(ctx)).size.x = width;
+    (*get_layout(&mut *ctx)).size.x = width;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_height(mut ctx: *mut mu_Context, mut height: libc::c_int) {
-    (*get_layout(ctx)).size.y = height;
+    (*get_layout(&mut *ctx)).size.y = height;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_set_next(mut ctx: *mut mu_Context, mut r: mu_Rect, mut relative: libc::c_int) {
-    let mut layout: *mut mu_Layout = get_layout(ctx);
+    let layout = get_layout(&mut *ctx);
     (*layout).next = r;
     (*layout).next_type = if relative != 0 { RELATIVE as libc::c_int } else { ABSOLUTE as libc::c_int };
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_next(mut ctx: *mut mu_Context) -> mu_Rect {
-    let mut layout: *mut mu_Layout = get_layout(ctx);
+    let layout = get_layout(&mut *ctx);
     let mut style: *mut mu_Style = (*ctx).style;
     let mut res: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
     if (*layout).next_type != 0 {
@@ -1735,7 +1734,7 @@ pub unsafe extern "C" fn mu_header_ex(mut ctx: *mut mu_Context, mut label: *cons
 pub unsafe extern "C" fn mu_begin_treenode_ex(mut ctx: *mut mu_Context, mut label: *const libc::c_char, opt: WidgetOption) -> ResourceState {
     let mut res = header(ctx, label, 1 as libc::c_int, opt);
     if res.is_active() {
-        (*get_layout(ctx)).indent += (*(*ctx).style).indent;
+        (*get_layout(&mut *ctx)).indent += (*(*ctx).style).indent;
         (*ctx).id_stack.push((*ctx).last_id)
     }
     return res;
@@ -1743,7 +1742,7 @@ pub unsafe extern "C" fn mu_begin_treenode_ex(mut ctx: *mut mu_Context, mut labe
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_end_treenode(mut ctx: *mut mu_Context) {
-    (*get_layout(ctx)).indent -= (*(*ctx).style).indent;
+    (*get_layout(&mut *ctx)).indent -= (*(*ctx).style).indent;
     mu_pop_id(ctx);
 }
 
@@ -1959,7 +1958,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(mut ctx: *mut mu_Context, mut title:
         }
     }
     if opt.is_auto_sizing() {
-        let mut r_1: mu_Rect = (*get_layout(ctx)).body;
+        let mut r_1: mu_Rect = (*get_layout(&mut *ctx)).body;
         (*cnt).rect.w = (*cnt).content_size.x + ((*cnt).rect.w - r_1.w);
         (*cnt).rect.h = (*cnt).content_size.y + ((*cnt).rect.h - r_1.h);
     }
