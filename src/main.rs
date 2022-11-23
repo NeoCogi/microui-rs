@@ -6,8 +6,6 @@
 
 //#![no_std]
 
-use core::alloc::*;
-
 extern crate libc;
 #[path = "./microui.rs"]
 pub mod microui;
@@ -676,7 +674,7 @@ static mut bg: [libc::c_float; 3] = [
     95 as libc::c_int as libc::c_float,
     100 as libc::c_int as libc::c_float,
 ];
-unsafe extern "C" fn write_log(mut text: *const libc::c_char) {
+unsafe extern "C" fn write_log(text: *const libc::c_char) {
     if logbuf[0 as libc::c_int as usize] != 0 {
         strcat(logbuf.as_mut_ptr(), b"\n\0" as *const u8 as *const libc::c_char);
     }
@@ -707,7 +705,7 @@ unsafe extern "C" fn test_window(ctx: &mut mu_Context) {
             .mu_header_ex(b"Window Info\0" as *const u8 as *const libc::c_char, WidgetOption::None)
             .is_none()
         {
-            let mut win_0: *mut mu_Container = ctx.mu_get_current_container();
+            let win_0: *mut mu_Container = ctx.mu_get_current_container();
             let mut buf: [libc::c_char; 64] = [0; 64];
             ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_label(b"Position:\0" as *const u8 as *const libc::c_char);
@@ -910,7 +908,7 @@ unsafe extern "C" fn test_window(ctx: &mut mu_Context) {
                 WidgetOption::AlignCenter,
             );
             ctx.mu_layout_end_column();
-            let mut r: mu_Rect = ctx.mu_layout_next();
+            let r: mu_Rect = ctx.mu_layout_next();
             ctx.mu_draw_rect(
                 r,
                 mu_color(
@@ -979,7 +977,7 @@ unsafe extern "C" fn log_window(ctx: &mut mu_Context) {
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, mut value: *mut libc::c_uchar, mut low: libc::c_int, mut high: libc::c_int) -> ResourceState {
+unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, mut value: *mut libc::c_uchar, low: libc::c_int, high: libc::c_int) -> ResourceState {
     static mut tmp: libc::c_float = 0.;
     ctx.mu_push_id(
         &mut value as *mut *mut libc::c_uchar as *const libc::c_void,
@@ -1001,105 +999,105 @@ unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, mut value: *mut libc::c_
 unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     static mut colors: [C2RustUnnamed_13; 15] = [
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"text:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::Text,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"border:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::Border,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"windowbg:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::WindowBG,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"titlebg:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::TitleBG,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"titletext:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::TitleText,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"panelbg:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::PanelBG,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"button:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::Button,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"buttonhover:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::ButtonHover,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"buttonfocus:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::ButtonFocus,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"base:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::Base,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"basehover:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::BaseHover,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"basefocus:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::BaseFocus,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"scrollbase:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::ScrollBase,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: b"scrollthumb:\0" as *const u8 as *const libc::c_char,
                 idx: ControlColor::ScrollThumb,
             };
             init
         },
         {
-            let mut init = C2RustUnnamed_13 {
+            let init = C2RustUnnamed_13 {
                 label: 0 as *const libc::c_char,
                 idx: ControlColor::Text,
             };
@@ -1114,7 +1112,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
         )
         .is_none()
     {
-        let mut sw: libc::c_int = ((*ctx.mu_get_current_container()).body.w as libc::c_double * 0.14f64) as libc::c_int;
+        let sw: libc::c_int = ((*ctx.mu_get_current_container()).body.w as libc::c_double * 0.14f64) as libc::c_int;
         ctx.mu_layout_row(
             6 as libc::c_int,
             [80 as libc::c_int, sw, sw, sw, sw, -(1 as libc::c_int)].as_mut_ptr(),
@@ -1123,7 +1121,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
         let mut i: libc::c_int = 0 as libc::c_int;
         while !(colors[i as usize].label).is_null() {
             ctx.mu_label(colors[i as usize].label);
-            let mut color = ((*(*ctx).style).colors).as_mut_ptr().offset(i as isize);
+            let color = ((*(*ctx).style).colors).as_mut_ptr().offset(i as isize);
             uint8_slider(ctx, &mut (*color).r, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).g, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).b, 0 as libc::c_int, 255 as libc::c_int);
@@ -1402,13 +1400,13 @@ static mut key_map: [libc::c_char; 256] = [
     0,
     0,
 ];
-unsafe extern "C" fn text_width(mut font: mu_Font, mut text: *const libc::c_char, mut len: libc::c_int) -> libc::c_int {
+unsafe extern "C" fn text_width(_font: mu_Font, text: *const libc::c_char, mut len: libc::c_int) -> libc::c_int {
     if len == -(1 as libc::c_int) {
         len = strlen(text) as libc::c_int;
     }
     return r_get_text_width(text, len);
 }
-unsafe extern "C" fn text_height(mut font: mu_Font) -> libc::c_int {
+unsafe extern "C" fn text_height(_font: mu_Font) -> libc::c_int {
     return r_get_text_height();
 }
 pub fn main() {
@@ -1460,7 +1458,7 @@ pub fn main() {
                         }
                     }
                     768 | 769 => {
-                        let mut c: libc::c_int = key_map[(e.key.keysym.sym & 0xff as libc::c_int) as usize] as libc::c_int;
+                        let c: libc::c_int = key_map[(e.key.keysym.sym & 0xff as libc::c_int) as usize] as libc::c_int;
                         if c != 0 && e.type_0 == SDL_KEYDOWN as libc::c_int as libc::c_uint {
                             (*ctx).mu_input_keydown(c);
                         }
