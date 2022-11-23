@@ -745,7 +745,6 @@ impl mu_Context {
         self.frame += 1;
     }
 
-
     #[no_mangle]
     pub unsafe extern "C" fn mu_end(&mut self) {
         let mut i: libc::c_int = 0;
@@ -812,7 +811,7 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_get_id(&mut self, data: *const libc::c_void, size: libc::c_int) -> mu_Id {
         let mut res: mu_Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as mu_Id
+            None => 2166136261 as mu_Id,
         };
         hash(&mut res, data, size);
         self.last_id = res;
@@ -1114,10 +1113,7 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_draw_box(&mut self, mut rect: mu_Rect, mut color: mu_Color) {
-        self.mu_draw_rect(
-            mu_rect(rect.x + 1 as libc::c_int, rect.y, rect.w - 2 as libc::c_int, 1 as libc::c_int),
-            color,
-        );
+        self.mu_draw_rect(mu_rect(rect.x + 1 as libc::c_int, rect.y, rect.w - 2 as libc::c_int, 1 as libc::c_int), color);
         self.mu_draw_rect(
             mu_rect(
                 rect.x + 1 as libc::c_int,
@@ -1153,7 +1149,7 @@ impl mu_Context {
             Clip::Part => {
                 let clip = self.mu_get_clip_rect();
                 self.mu_set_clip(clip)
-            },
+            }
             _ => (),
         }
 
@@ -1180,7 +1176,7 @@ impl mu_Context {
             Clip::Part => {
                 let clip = self.mu_get_clip_rect();
                 self.mu_set_clip(clip)
-            },
+            }
             _ => (),
         }
         cmd = self.mu_push_command(Command::Icon);
@@ -1270,7 +1266,7 @@ impl mu_Context {
                 return self.last_rect;
             }
         } else {
-            let litems= layout.items;
+            let litems = layout.items;
             let lsize_y = layout.size.y;
             let do_layout_row = layout.item_index == layout.items;
             if do_layout_row {
@@ -1345,13 +1341,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_control_text(
-        &mut self,
-        mut str: *const libc::c_char,
-        mut rect: mu_Rect,
-        colorid: ControlColor,
-        opt: WidgetOption,
-    ) {
+    pub unsafe extern "C" fn mu_draw_control_text(&mut self, mut str: *const libc::c_char, mut rect: mu_Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: mu_Vec2 = mu_Vec2 { x: 0, y: 0 };
         let mut font: mu_Font = (*self.style).font;
         let mut tw: libc::c_int = (self.text_width).expect("non-null function pointer")(font, str, -(1 as libc::c_int));
@@ -1412,11 +1402,7 @@ impl mu_Context {
         let mut font: mu_Font = (*self.style).font;
         let mut color: mu_Color = (*self.style).colors[ControlColor::Text as libc::c_int as usize];
         self.mu_layout_begin_column();
-        self.mu_layout_row(
-            1 as libc::c_int,
-            &mut width,
-            (self.text_height).expect("non-null function pointer")(font),
-        );
+        self.mu_layout_row(1 as libc::c_int, &mut width, (self.text_height).expect("non-null function pointer")(font));
         loop {
             let mut r: mu_Rect = self.mu_layout_next();
             let mut w: libc::c_int = 0 as libc::c_int;
@@ -1439,13 +1425,7 @@ impl mu_Context {
                     break;
                 }
             }
-            self.mu_draw_text(
-                font,
-                start,
-                end.offset_from(start) as libc::c_long as libc::c_int,
-                mu_vec2(r.x, r.y),
-                color,
-            );
+            self.mu_draw_text(font, start, end.offset_from(start) as libc::c_long as libc::c_int, mu_vec2(r.x, r.y), color);
             p = end.offset(1 as libc::c_int as isize);
             if !(*end != 0) {
                 break;
@@ -1778,10 +1758,7 @@ impl mu_Context {
         if maxscroll > 0 as libc::c_int && (*body).h > 0 as libc::c_int {
             let mut base: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
-            let mut id: mu_Id = self.mu_get_id(
-                b"!scrollbary\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                11 as libc::c_int,
-            );
+            let mut id: mu_Id = self.mu_get_id(b"!scrollbary\0" as *const u8 as *const libc::c_char as *const libc::c_void, 11 as libc::c_int);
             base = *body;
             base.x = (*body).x + (*body).w;
             base.w = (*self.style).scrollbar_size;
@@ -1791,10 +1768,10 @@ impl mu_Context {
             }
             (*cnt).scroll.y = if maxscroll
                 < (if 0 as libc::c_int > (*cnt).scroll.y {
-                0 as libc::c_int
-            } else {
-                (*cnt).scroll.y
-            }) {
+                    0 as libc::c_int
+                } else {
+                    (*cnt).scroll.y
+                }) {
                 maxscroll
             } else if 0 as libc::c_int > (*cnt).scroll.y {
                 0 as libc::c_int
@@ -1820,10 +1797,7 @@ impl mu_Context {
         if maxscroll_0 > 0 as libc::c_int && (*body).w > 0 as libc::c_int {
             let mut base_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
-            let mut id_0: mu_Id = self.mu_get_id(
-                b"!scrollbarx\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                11 as libc::c_int,
-            );
+            let mut id_0: mu_Id = self.mu_get_id(b"!scrollbarx\0" as *const u8 as *const libc::c_char as *const libc::c_void, 11 as libc::c_int);
             base_0 = *body;
             base_0.y = (*body).y + (*body).h;
             base_0.h = (*self.style).scrollbar_size;
@@ -1833,10 +1807,10 @@ impl mu_Context {
             }
             (*cnt).scroll.x = if maxscroll_0
                 < (if 0 as libc::c_int > (*cnt).scroll.x {
-                0 as libc::c_int
-            } else {
-                (*cnt).scroll.x
-            }) {
+                    0 as libc::c_int
+                } else {
+                    (*cnt).scroll.x
+                }) {
                 maxscroll_0
             } else if 0 as libc::c_int > (*cnt).scroll.x {
                 0 as libc::c_int
@@ -1873,15 +1847,15 @@ impl mu_Context {
     unsafe extern "C" fn begin_root_container(&mut self, mut cnt: *mut mu_Container) {
         assert!(
             self.container_stack.idx
-                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                as libc::c_int
+                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
+                    .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong) as libc::c_int
         );
         self.container_stack.items[self.container_stack.idx as usize] = cnt;
         self.container_stack.idx += 1;
         assert!(
             self.root_list.idx
-                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                as libc::c_int
+                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
+                    .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong) as libc::c_int
         );
         self.root_list.items[self.root_list.idx as usize] = cnt;
         self.root_list.idx += 1;
@@ -2027,8 +2001,8 @@ impl mu_Context {
         }
         assert!(
             self.container_stack.idx
-                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                as libc::c_int
+                < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
+                    .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong) as libc::c_int
         );
         self.container_stack.items[self.container_stack.idx as usize] = cnt;
         self.container_stack.idx += 1;
