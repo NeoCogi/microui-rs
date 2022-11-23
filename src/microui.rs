@@ -37,8 +37,16 @@ impl<T: Default + Copy, const N: usize> Stack<T, N> {
         self.items[self.idx] = T::default();
     }
 
-    pub fn top(&mut self) -> &T {
-        &self.items[self.idx - 1]
+    pub fn top(&mut self) -> Option<&T> {
+        if self.idx != 0 {
+            Some(&self.items[self.idx - 1])
+        } else {
+            None
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.idx
     }
 }
 
@@ -369,7 +377,6 @@ pub const MU_KEY_ALT: u32 = 4;
 pub const MU_KEY_CTRL: u32 = 2;
 pub const MU_KEY_SHIFT: u32 = 1;
 
-#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_Context {
     pub text_width: Option<unsafe extern "C" fn(mu_Font, *const libc::c_char, libc::c_int) -> libc::c_int>,
@@ -393,7 +400,7 @@ pub struct mu_Context {
     pub root_list: C2RustUnnamed_12,
     pub container_stack: C2RustUnnamed_11,
     pub clip_stack: C2RustUnnamed_10,
-    pub id_stack: C2RustUnnamed_9,
+    pub id_stack: Stack<mu_Id, 32>,
     pub layout_stack: C2RustUnnamed_8,
     pub text_stack: C2RustUnnamed_7,
     pub container_pool: [mu_PoolItem; 48],
@@ -476,13 +483,6 @@ pub struct mu_Layout {
     pub next_row: libc::c_int,
     pub next_type: libc::c_int,
     pub indent: libc::c_int,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_9 {
-    pub idx: libc::c_int,
-    pub items: [mu_Id; 32],
 }
 
 #[derive(Copy, Clone)]
@@ -729,7 +729,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
     let mut n: libc::c_int = 0;
     assert!((*ctx).container_stack.idx == 0 as libc::c_int);
     assert!((*ctx).clip_stack.idx == 0 as libc::c_int);
-    assert!((*ctx).id_stack.idx == 0 as libc::c_int);
+    assert!((*ctx).id_stack.len() == 0);
     assert!((*ctx).layout_stack.idx == 0 as libc::c_int);
     if !((*ctx).scroll_target).is_null() {
         (*(*ctx).scroll_target).scroll.x += (*ctx).scroll_delta.x;
@@ -800,32 +800,24 @@ unsafe extern "C" fn hash(mut hash_0: *mut mu_Id, mut data: *const libc::c_void,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_get_id(mut ctx: *mut mu_Context, data: *const libc::c_void, mut size: libc::c_int) -> mu_Id {
-    let mut idx: libc::c_int = (*ctx).id_stack.idx;
-    let mut res: mu_Id = (if idx > 0 as libc::c_int {
-        (*ctx).id_stack.items[(idx - 1 as libc::c_int) as usize] as libc::c_long
-    } else {
-        2166136261 as libc::c_long
-    }) as mu_Id;
+pub unsafe extern "C" fn mu_get_id(mut ctx: *mut mu_Context, data: *const libc::c_void, size: libc::c_int) -> mu_Id {
+    let mut res: mu_Id = match (*ctx).id_stack.top() {
+        Some(id) => *id,
+        None => 2166136261 as mu_Id
+    };
     hash(&mut res, data, size);
     (*ctx).last_id = res;
     return res;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_push_id(mut ctx: *mut mu_Context, mut data: *const libc::c_void, mut size: libc::c_int) {
-    assert!(
-        (*ctx).id_stack.idx
-            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
-    );
-    (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = mu_get_id(ctx, data, size);
-    (*ctx).id_stack.idx += 1;
+pub unsafe extern "C" fn mu_push_id(mut ctx: *mut mu_Context, mut data: *const libc::c_void, size: libc::c_int) {
+    (*ctx).id_stack.push(mu_get_id(ctx, data, size));
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_pop_id(mut ctx: *mut mu_Context) {
-    assert!((*ctx).id_stack.idx > 0 as libc::c_int);
-    (*ctx).id_stack.idx -= 1;
+    (*ctx).id_stack.pop();
 }
 
 #[no_mangle]
@@ -1744,12 +1736,7 @@ pub unsafe extern "C" fn mu_begin_treenode_ex(mut ctx: *mut mu_Context, mut labe
     let mut res = header(ctx, label, 1 as libc::c_int, opt);
     if res.is_active() {
         (*get_layout(ctx)).indent += (*(*ctx).style).indent;
-        assert!(
-            (*ctx).id_stack.idx
-                < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
-        );
-        (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = (*ctx).last_id;
-        (*ctx).id_stack.idx += 1;
+        (*ctx).id_stack.push((*ctx).last_id)
     }
     return res;
 }
@@ -1913,12 +1900,8 @@ pub unsafe extern "C" fn mu_begin_window_ex(mut ctx: *mut mu_Context, mut title:
     if cnt.is_null() || (*cnt).open == 0 {
         return ResourceState::None;
     }
-    assert!(
-        (*ctx).id_stack.idx
-            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
-    );
-    (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = id;
-    (*ctx).id_stack.idx += 1;
+    (*ctx).id_stack.push(id);
+
     if (*cnt).rect.w == 0 as libc::c_int {
         (*cnt).rect = rect;
     }
