@@ -21,6 +21,7 @@ pub type __compar_fn_t =
     Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
 #[derive(PartialEq)]
+#[repr(u32)]
 pub enum Clip {
     None = 0,
     Part = 1,
@@ -28,6 +29,7 @@ pub enum Clip {
 }
 
 #[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
 pub enum Command {
     None = 0,
     Jump = 1,
@@ -39,6 +41,7 @@ pub enum Command {
 }
 
 #[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
 pub enum ControlColor {
     Max = 14,
     ScrollThumb = 13,
@@ -78,6 +81,7 @@ impl ControlColor {
 }
 
 #[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
 pub enum Icon {
     Max = 5,
     Expanded = 4,
@@ -271,11 +275,58 @@ impl WidgetOption {
     }
 }
 
-pub type C2RustUnnamed_5 = libc::c_uint;
+#[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
+pub enum MouseButton {
+    Middle = 4,
+    Right = 2,
+    Left = 1,
+    None = 0,
+}
 
-pub const MU_MOUSE_MIDDLE: C2RustUnnamed_5 = 4;
-pub const MU_MOUSE_RIGHT: C2RustUnnamed_5 = 2;
-pub const MU_MOUSE_LEFT: C2RustUnnamed_5 = 1;
+impl MouseButton {
+    pub fn is_middle(&self) -> bool { *self as u32 & Self::Middle as u32 != 0 }
+    pub fn is_right(&self) -> bool { *self as u32 & Self::Right as u32 != 0 }
+    pub fn is_left(&self) -> bool { *self as u32 & Self::Left as u32 != 0 }
+    pub fn is_none(&self) -> bool { *self as u32 == 0 }
+
+    pub fn with_middle(self) -> Self {
+        let u0 = self as u32;
+        let u1 = Self::Middle as u32;
+        unsafe { std::mem::transmute(u0 | u1) }
+    }
+
+    pub fn with_right(self) -> Self {
+        let u0 = self as u32;
+        let u1 = Self::Right as u32;
+        unsafe { std::mem::transmute(u0 | u1) }
+    }
+
+    pub fn with_left(self) -> Self {
+        let u0 = self as u32;
+        let u1 = Self::Left as u32;
+        unsafe { std::mem::transmute(u0 | u1) }
+    }
+
+    pub fn with(self, btn: Self) -> Self {
+        let u0 = self as u32;
+        let u1 = btn as u32;
+        unsafe { std::mem::transmute(u0 | u1) }
+    }
+
+    pub fn set(&mut self, btn: Self) {
+        let u0 = *self as u32;
+        let u1 = btn as u32;
+        *self = unsafe { std::mem::transmute(u0 | u1) }
+    }
+
+    pub fn clear(&mut self, btn: Self) {
+        let u0 = *self as u32;
+        let u1 = !(btn as u32);
+        *self = unsafe { std::mem::transmute(u0 & u1) }
+    }
+}
+
 
 pub type C2RustUnnamed_6 = libc::c_uint;
 
@@ -320,8 +371,8 @@ pub struct mu_Context {
     pub last_mouse_pos: mu_Vec2,
     pub mouse_delta: mu_Vec2,
     pub scroll_delta: mu_Vec2,
-    pub mouse_down: libc::c_int,
-    pub mouse_pressed: libc::c_int,
+    pub mouse_down: MouseButton,
+    pub mouse_pressed: MouseButton,
     pub key_down: libc::c_int,
     pub key_pressed: libc::c_int,
     pub input_text: [libc::c_char; 32],
@@ -809,7 +860,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
         (*ctx).focus = 0 as libc::c_int as mu_Id;
     }
     (*ctx).updated_focus = 0 as libc::c_int;
-    if (*ctx).mouse_pressed != 0
+    if !(*ctx).mouse_pressed.is_none()
         && !((*ctx).next_hover_root).is_null()
         && (*(*ctx).next_hover_root).zindex < (*ctx).last_zindex
         && (*(*ctx).next_hover_root).zindex >= 0 as libc::c_int
@@ -818,7 +869,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
     }
     (*ctx).key_pressed = 0 as libc::c_int;
     (*ctx).input_text[0 as libc::c_int as usize] = '\0' as i32 as libc::c_char;
-    (*ctx).mouse_pressed = 0 as libc::c_int;
+    (*ctx).mouse_pressed = MouseButton::None;
     (*ctx).scroll_delta = mu_vec2(0 as libc::c_int, 0 as libc::c_int);
     (*ctx).last_mouse_pos = (*ctx).mouse_pos;
     n = (*ctx).root_list.idx;
@@ -1139,8 +1190,8 @@ pub unsafe extern "C" fn mu_pool_update(
 #[no_mangle]
 pub unsafe extern "C" fn mu_input_mousemove(
     mut ctx: *mut mu_Context,
-    mut x: libc::c_int,
-    mut y: libc::c_int,
+    x: i32,
+    y: i32,
 ) {
     (*ctx).mouse_pos = mu_vec2(x, y);
 }
@@ -1148,31 +1199,31 @@ pub unsafe extern "C" fn mu_input_mousemove(
 #[no_mangle]
 pub unsafe extern "C" fn mu_input_mousedown(
     mut ctx: *mut mu_Context,
-    mut x: libc::c_int,
-    mut y: libc::c_int,
-    mut btn: libc::c_int,
+    x: i32,
+    y: i32,
+    btn: MouseButton,
 ) {
     mu_input_mousemove(ctx, x, y);
-    (*ctx).mouse_down |= btn;
-    (*ctx).mouse_pressed |= btn;
+    (*ctx).mouse_down.set(btn);
+    (*ctx).mouse_pressed.set(btn);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_input_mouseup(
     mut ctx: *mut mu_Context,
-    mut x: libc::c_int,
-    mut y: libc::c_int,
-    mut btn: libc::c_int,
+    x: i32,
+    y: i32,
+    btn: MouseButton,
 ) {
     mu_input_mousemove(ctx, x, y);
-    (*ctx).mouse_down &= !btn;
+    (*ctx).mouse_down.clear(btn);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_input_scroll(
     mut ctx: *mut mu_Context,
-    mut x: libc::c_int,
-    mut y: libc::c_int,
+    x: i32,
+    y: i32,
 ) {
     (*ctx).scroll_delta.x += x;
     (*ctx).scroll_delta.y += y;
@@ -1661,19 +1712,19 @@ pub unsafe extern "C" fn mu_update_control(
     if opt.is_not_interactive() {
         return;
     }
-    if mouseover != 0 && (*ctx).mouse_down == 0 {
+    if mouseover != 0 && (*ctx).mouse_down.is_none() {
         (*ctx).hover = id;
     }
     if (*ctx).focus == id {
-        if (*ctx).mouse_pressed != 0 && mouseover == 0 {
+        if !(*ctx).mouse_pressed.is_none() && mouseover == 0 {
             mu_set_focus(ctx, 0 as libc::c_int as mu_Id);
         }
-        if (*ctx).mouse_down == 0 && !opt.is_holding_focus() {
+        if (*ctx).mouse_down.is_none() && !opt.is_holding_focus() {
             mu_set_focus(ctx, 0 as libc::c_int as mu_Id);
         }
     }
     if (*ctx).hover == id {
-        if (*ctx).mouse_pressed != 0 {
+        if !(*ctx).mouse_pressed.is_none() {
             mu_set_focus(ctx, id);
         } else if mouseover == 0 {
             (*ctx).hover = 0 as libc::c_int as mu_Id;
@@ -1775,7 +1826,7 @@ pub unsafe extern "C" fn mu_button_ex(
     };
     let mut r: mu_Rect = mu_layout_next(ctx);
     mu_update_control(ctx, id, r, opt);
-    if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && (*ctx).focus == id {
+    if (*ctx).mouse_pressed.is_left() && (*ctx).focus == id {
         res.submit();
     }
     mu_draw_control_frame(ctx, id, r, ControlColor::Button, opt);
@@ -1808,7 +1859,7 @@ pub unsafe extern "C" fn mu_checkbox(
     let mut r: mu_Rect = mu_layout_next(ctx);
     let mut box_0: mu_Rect = mu_rect(r.x, r.y, r.h, r.h);
     mu_update_control(ctx, id, r, WidgetOption::None);
-    if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && (*ctx).focus == id {
+    if (*ctx).mouse_pressed.is_left() && (*ctx).focus == id {
         res.change();
         *state = (*state == 0) as libc::c_int;
     }
@@ -1917,7 +1968,7 @@ unsafe extern "C" fn number_textbox(
     mut r: mu_Rect,
     mut id: mu_Id,
 ) -> ResourceState {
-    if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int
+    if (*ctx).mouse_pressed.is_left()
         && (*ctx).key_down & MU_KEY_SHIFT as libc::c_int != 0
         && (*ctx).hover == id
     {
@@ -1999,7 +2050,7 @@ pub unsafe extern "C" fn mu_slider_ex(
     }
     mu_update_control(ctx, id, base, opt);
     if (*ctx).focus == id
-        && (*ctx).mouse_down | (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int
+        && (!(*ctx).mouse_down.is_none() | (*ctx).mouse_pressed.is_left())
     {
         v = low
             + ((*ctx).mouse_pos.x - base.x) as libc::c_float * (high - low)
@@ -2050,7 +2101,7 @@ pub unsafe extern "C" fn mu_number_ex(
         return res;
     }
     mu_update_control(ctx, id, base, opt);
-    if (*ctx).focus == id && (*ctx).mouse_down == MU_MOUSE_LEFT as libc::c_int {
+    if (*ctx).focus == id && (*ctx).mouse_down.is_left() {
         *value += (*ctx).mouse_delta.x as libc::c_float * step;
     }
     if *value != last {
@@ -2098,7 +2149,7 @@ unsafe extern "C" fn header(
     r = mu_layout_next(ctx);
     mu_update_control(ctx, id, r, WidgetOption::None);
     active ^=
-        ((*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && (*ctx).focus == id) as libc::c_int;
+        ((*ctx).mouse_pressed.is_left() && (*ctx).focus == id) as libc::c_int;
     if idx >= 0 as libc::c_int {
         if active != 0 {
             mu_pool_update(ctx, ((*ctx).treenode_pool).as_mut_ptr(), idx);
@@ -2224,7 +2275,7 @@ unsafe extern "C" fn scrollbars(
         base.x = (*body).x + (*body).w;
         base.w = (*(*ctx).style).scrollbar_size;
         mu_update_control(ctx, id, base, WidgetOption::None);
-        if (*ctx).focus == id && (*ctx).mouse_down == MU_MOUSE_LEFT as libc::c_int {
+        if (*ctx).focus == id && (*ctx).mouse_down.is_left() {
             (*cnt).scroll.y += (*ctx).mouse_delta.y * cs.y / base.h;
         }
         (*cnt).scroll.y = if maxscroll
@@ -2285,7 +2336,7 @@ unsafe extern "C" fn scrollbars(
         base_0.y = (*body).y + (*body).h;
         base_0.h = (*(*ctx).style).scrollbar_size;
         mu_update_control(ctx, id_0, base_0, WidgetOption::None);
-        if (*ctx).focus == id_0 && (*ctx).mouse_down == MU_MOUSE_LEFT as libc::c_int {
+        if (*ctx).focus == id_0 && (*ctx).mouse_down.is_left() {
             (*cnt).scroll.x += (*ctx).mouse_delta.x * cs.x / base_0.w;
         }
         (*cnt).scroll.x = if maxscroll_0
@@ -2440,7 +2491,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
             );
             mu_update_control(ctx, id_0, tr, opt);
             mu_draw_control_text(ctx, title, tr, ControlColor::TitleText, opt);
-            if id_0 == (*ctx).focus && (*ctx).mouse_down == MU_MOUSE_LEFT as libc::c_int {
+            if id_0 == (*ctx).focus && (*ctx).mouse_down.is_left() {
                 (*cnt).rect.x += (*ctx).mouse_delta.x;
                 (*cnt).rect.y += (*ctx).mouse_delta.y;
             }
@@ -2462,7 +2513,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
                 (*(*ctx).style).colors[ControlColor::TitleText as libc::c_int as usize],
             );
             mu_update_control(ctx, id_1, r, opt);
-            if (*ctx).mouse_pressed == MU_MOUSE_LEFT as libc::c_int && id_1 == (*ctx).focus {
+            if (*ctx).mouse_pressed.is_left() && id_1 == (*ctx).focus {
                 (*cnt).open = 0 as libc::c_int;
             }
         }
@@ -2477,7 +2528,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
         );
         let mut r_0: mu_Rect = mu_rect(rect.x + rect.w - sz, rect.y + rect.h - sz, sz, sz);
         mu_update_control(ctx, id_2, r_0, opt);
-        if id_2 == (*ctx).focus && (*ctx).mouse_down == MU_MOUSE_LEFT as libc::c_int {
+        if id_2 == (*ctx).focus && (*ctx).mouse_down.is_left() {
             (*cnt).rect.w = if 96 as libc::c_int > (*cnt).rect.w + (*ctx).mouse_delta.x {
                 96 as libc::c_int
             } else {
@@ -2495,8 +2546,8 @@ pub unsafe extern "C" fn mu_begin_window_ex(
         (*cnt).rect.w = (*cnt).content_size.x + ((*cnt).rect.w - r_1.w);
         (*cnt).rect.h = (*cnt).content_size.y + ((*cnt).rect.h - r_1.h);
     }
-    println!("after {}", opt.is_popup());
-    if opt.is_popup() && (*ctx).mouse_pressed != 0 && (*ctx).hover_root != cnt {
+
+    if opt.is_popup() && !(*ctx).mouse_pressed.is_none() && (*ctx).hover_root != cnt {
         (*cnt).open = 0 as libc::c_int;
     }
     mu_push_clip_rect(ctx, (*cnt).body);
