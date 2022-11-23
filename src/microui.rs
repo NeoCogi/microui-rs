@@ -17,8 +17,36 @@ pub type size_t = libc::c_ulong;
 pub type __off_t = libc::c_long;
 pub type __off64_t = libc::c_long;
 
-pub type __compar_fn_t =
-    Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
+pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
+
+pub struct Stack<T: Default + Copy, const N: usize> {
+    idx: usize,
+    items: [T; N],
+}
+
+impl<T: Default + Copy, const N: usize> Stack<T, N> {
+    pub fn push(&mut self, t: T) {
+        assert!(self.idx < N - 1);
+        self.items[self.idx] = t;
+        self.idx += 1;
+    }
+
+    pub fn pop(&mut self) {
+        assert!(self.idx > 0);
+        self.idx -= 1;
+        self.items[self.idx] = T::default();
+    }
+
+    pub fn top(&mut self) -> &T {
+        &self.items[self.idx - 1]
+    }
+}
+
+impl<T: Default + Copy, const N: usize> Default for Stack<T, N> {
+    fn default() -> Self {
+        Self { idx: 0, items: [T::default(); N] }
+    }
+}
 
 #[derive(PartialEq)]
 #[repr(u32)]
@@ -285,10 +313,18 @@ pub enum MouseButton {
 }
 
 impl MouseButton {
-    pub fn is_middle(&self) -> bool { *self as u32 & Self::Middle as u32 != 0 }
-    pub fn is_right(&self) -> bool { *self as u32 & Self::Right as u32 != 0 }
-    pub fn is_left(&self) -> bool { *self as u32 & Self::Left as u32 != 0 }
-    pub fn is_none(&self) -> bool { *self as u32 == 0 }
+    pub fn is_middle(&self) -> bool {
+        *self as u32 & Self::Middle as u32 != 0
+    }
+    pub fn is_right(&self) -> bool {
+        *self as u32 & Self::Right as u32 != 0
+    }
+    pub fn is_left(&self) -> bool {
+        *self as u32 & Self::Left as u32 != 0
+    }
+    pub fn is_none(&self) -> bool {
+        *self as u32 == 0
+    }
 
     pub fn with_middle(self) -> Self {
         let u0 = self as u32;
@@ -327,20 +363,16 @@ impl MouseButton {
     }
 }
 
-
-pub type C2RustUnnamed_6 = libc::c_uint;
-
-pub const MU_KEY_RETURN: C2RustUnnamed_6 = 16;
-pub const MU_KEY_BACKSPACE: C2RustUnnamed_6 = 8;
-pub const MU_KEY_ALT: C2RustUnnamed_6 = 4;
-pub const MU_KEY_CTRL: C2RustUnnamed_6 = 2;
-pub const MU_KEY_SHIFT: C2RustUnnamed_6 = 1;
+pub const MU_KEY_RETURN: u32 = 16;
+pub const MU_KEY_BACKSPACE: u32 = 8;
+pub const MU_KEY_ALT: u32 = 4;
+pub const MU_KEY_CTRL: u32 = 2;
+pub const MU_KEY_SHIFT: u32 = 1;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_Context {
-    pub text_width:
-        Option<unsafe extern "C" fn(mu_Font, *const libc::c_char, libc::c_int) -> libc::c_int>,
+    pub text_width: Option<unsafe extern "C" fn(mu_Font, *const libc::c_char, libc::c_int) -> libc::c_int>,
     pub text_height: Option<unsafe extern "C" fn(mu_Font) -> libc::c_int>,
     pub draw_frame: Option<unsafe extern "C" fn(*mut mu_Context, mu_Rect, ControlColor) -> ()>,
     pub _style: mu_Style,
@@ -598,184 +630,46 @@ static mut default_style: mu_Style = {
         scrollbar_size: 12 as libc::c_int,
         thumb_size: 8 as libc::c_int,
         colors: [
-            {
-                let mut init = mu_Color {
-                    r: 230 as libc::c_int as libc::c_uchar,
-                    g: 230 as libc::c_int as libc::c_uchar,
-                    b: 230 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 25 as libc::c_int as libc::c_uchar,
-                    g: 25 as libc::c_int as libc::c_uchar,
-                    b: 25 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 50 as libc::c_int as libc::c_uchar,
-                    g: 50 as libc::c_int as libc::c_uchar,
-                    b: 50 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 25 as libc::c_int as libc::c_uchar,
-                    g: 25 as libc::c_int as libc::c_uchar,
-                    b: 25 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 240 as libc::c_int as libc::c_uchar,
-                    g: 240 as libc::c_int as libc::c_uchar,
-                    b: 240 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 0 as libc::c_int as libc::c_uchar,
-                    g: 0 as libc::c_int as libc::c_uchar,
-                    b: 0 as libc::c_int as libc::c_uchar,
-                    a: 0 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 75 as libc::c_int as libc::c_uchar,
-                    g: 75 as libc::c_int as libc::c_uchar,
-                    b: 75 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 95 as libc::c_int as libc::c_uchar,
-                    g: 95 as libc::c_int as libc::c_uchar,
-                    b: 95 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 115 as libc::c_int as libc::c_uchar,
-                    g: 115 as libc::c_int as libc::c_uchar,
-                    b: 115 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 30 as libc::c_int as libc::c_uchar,
-                    g: 30 as libc::c_int as libc::c_uchar,
-                    b: 30 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 35 as libc::c_int as libc::c_uchar,
-                    g: 35 as libc::c_int as libc::c_uchar,
-                    b: 35 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 40 as libc::c_int as libc::c_uchar,
-                    g: 40 as libc::c_int as libc::c_uchar,
-                    b: 40 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 43 as libc::c_int as libc::c_uchar,
-                    g: 43 as libc::c_int as libc::c_uchar,
-                    b: 43 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
-            {
-                let mut init = mu_Color {
-                    r: 30 as libc::c_int as libc::c_uchar,
-                    g: 30 as libc::c_int as libc::c_uchar,
-                    b: 30 as libc::c_int as libc::c_uchar,
-                    a: 255 as libc::c_int as libc::c_uchar,
-                };
-                init
-            },
+            mu_Color { r: 230, g: 230, b: 230, a: 255 },
+            mu_Color { r: 25, g: 25, b: 25, a: 255 },
+            mu_Color { r: 50, g: 50, b: 50, a: 255 },
+            mu_Color { r: 25, g: 25, b: 25, a: 255 },
+            mu_Color { r: 240, g: 240, b: 240, a: 255 },
+            mu_Color { r: 0, g: 0, b: 0, a: 0 },
+            mu_Color { r: 75, g: 75, b: 75, a: 255 },
+            mu_Color { r: 95, g: 95, b: 95, a: 255 },
+            mu_Color { r: 115, g: 115, b: 115, a: 255 },
+            mu_Color { r: 30, g: 30, b: 30, a: 255 },
+            mu_Color { r: 35, g: 35, b: 35, a: 255 },
+            mu_Color { r: 40, g: 40, b: 40, a: 255 },
+            mu_Color { r: 43, g: 43, b: 43, a: 255 },
+            mu_Color { r: 30, g: 30, b: 30, a: 255 },
         ],
     };
     init
 };
 
-#[no_mangle]
-pub unsafe extern "C" fn mu_vec2(x: i32, y: i32) -> mu_Vec2 {
+pub fn mu_vec2(x: i32, y: i32) -> mu_Vec2 {
     mu_Vec2 { x, y }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mu_rect(x: i32, y: i32, w: i32, h: i32) -> mu_Rect {
+pub fn mu_rect(x: i32, y: i32, w: i32, h: i32) -> mu_Rect {
     mu_Rect { x, y, w, h }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mu_color(
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
-) -> mu_Color {
-    mu_Color {
-        r,
-        g,
-        b,
-        a,
-    }
+pub fn mu_color(r: u8, g: u8, b: u8, a: u8) -> mu_Color {
+    mu_Color { r, g, b, a }
 }
 
 unsafe extern "C" fn expand_rect(mut rect: mu_Rect, mut n: libc::c_int) -> mu_Rect {
-    return mu_rect(
-        rect.x - n,
-        rect.y - n,
-        rect.w + n * 2 as libc::c_int,
-        rect.h + n * 2 as libc::c_int,
-    );
+    return mu_rect(rect.x - n, rect.y - n, rect.w + n * 2 as libc::c_int, rect.h + n * 2 as libc::c_int);
 }
 
 unsafe extern "C" fn intersect_rects(mut r1: mu_Rect, mut r2: mu_Rect) -> mu_Rect {
     let mut x1: libc::c_int = if r1.x > r2.x { r1.x } else { r2.x };
     let mut y1: libc::c_int = if r1.y > r2.y { r1.y } else { r2.y };
-    let mut x2: libc::c_int = if r1.x + r1.w < r2.x + r2.w {
-        r1.x + r1.w
-    } else {
-        r2.x + r2.w
-    };
-    let mut y2: libc::c_int = if r1.y + r1.h < r2.y + r2.h {
-        r1.y + r1.h
-    } else {
-        r2.y + r2.h
-    };
+    let mut x2: libc::c_int = if r1.x + r1.w < r2.x + r2.w { r1.x + r1.w } else { r2.x + r2.w };
+    let mut y2: libc::c_int = if r1.y + r1.h < r2.y + r2.h { r1.y + r1.h } else { r2.y + r2.h };
     if x2 < x1 {
         x2 = x1;
     }
@@ -789,24 +683,13 @@ unsafe extern "C" fn rect_overlaps_vec2(mut r: mu_Rect, mut p: mu_Vec2) -> libc:
     return (p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h) as libc::c_int;
 }
 
-unsafe extern "C" fn draw_frame(
-    mut ctx: *mut mu_Context,
-    mut rect: mu_Rect,
-    mut colorid: ControlColor,
-) {
+unsafe extern "C" fn draw_frame(mut ctx: *mut mu_Context, mut rect: mu_Rect, mut colorid: ControlColor) {
     mu_draw_rect(ctx, rect, (*(*ctx).style).colors[colorid as usize]);
-    if colorid == ControlColor::ScrollBase
-        || colorid == ControlColor::ScrollThumb
-        || colorid == ControlColor::TitleBG
-    {
+    if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
         return;
     }
     if (*(*ctx).style).colors[ControlColor::Border as usize].a != 0 {
-        mu_draw_box(
-            ctx,
-            expand_rect(rect, 1 as libc::c_int),
-            (*(*ctx).style).colors[ControlColor::Border as usize],
-        );
+        mu_draw_box(ctx, expand_rect(rect, 1 as libc::c_int), (*(*ctx).style).colors[ControlColor::Border as usize]);
     }
 }
 
@@ -817,8 +700,7 @@ pub unsafe extern "C" fn mu_init(mut ctx: *mut mu_Context) {
         0 as libc::c_int,
         ::core::mem::size_of::<mu_Context>() as libc::c_ulong,
     );
-    (*ctx).draw_frame =
-        Some(draw_frame as unsafe extern "C" fn(*mut mu_Context, mu_Rect, ControlColor) -> ());
+    (*ctx).draw_frame = Some(draw_frame as unsafe extern "C" fn(*mut mu_Context, mu_Rect, ControlColor) -> ());
     (*ctx)._style = default_style;
     (*ctx).style = &mut (*ctx)._style;
 }
@@ -837,10 +719,7 @@ pub unsafe extern "C" fn mu_begin(mut ctx: *mut mu_Context) {
     (*ctx).frame += 1;
 }
 
-unsafe extern "C" fn compare_zindex(
-    mut a: *const libc::c_void,
-    mut b: *const libc::c_void,
-) -> libc::c_int {
+unsafe extern "C" fn compare_zindex(mut a: *const libc::c_void, mut b: *const libc::c_void) -> libc::c_int {
     return (**(a as *mut *mut mu_Container)).zindex - (**(b as *mut *mut mu_Container)).zindex;
 }
 
@@ -877,10 +756,7 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
         ((*ctx).root_list.items).as_mut_ptr() as *mut libc::c_void,
         n as size_t,
         ::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong,
-        Some(
-            compare_zindex
-                as unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int,
-        ),
+        Some(compare_zindex as unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int),
     );
     i = 0 as libc::c_int;
     while i < n {
@@ -891,18 +767,13 @@ pub unsafe extern "C" fn mu_end(mut ctx: *mut mu_Context) {
             (*cmd).jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
             assert!((*cmd).jump.dst_idx < 4096 as libc::c_int);
         } else {
-            let mut prev: *mut mu_Container =
-                (*ctx).root_list.items[(i - 1 as libc::c_int) as usize];
-            (*ctx).command_list.items[(*prev).tail_idx as usize]
-                .jump
-                .dst_idx = (*cnt).head_idx + 1 as libc::c_int;
+            let mut prev: *mut mu_Container = (*ctx).root_list.items[(i - 1 as libc::c_int) as usize];
+            (*ctx).command_list.items[(*prev).tail_idx as usize].jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
         }
         if i == n - 1 as libc::c_int {
             assert!((*cnt).tail_idx < 4096 as libc::c_int);
             assert!((*ctx).command_list.items[(*cnt).tail_idx as usize].type_0 == Command::Jump);
-            (*ctx).command_list.items[(*cnt).tail_idx as usize]
-                .jump
-                .dst_idx = (*ctx).command_list.idx;
+            (*ctx).command_list.items[(*cnt).tail_idx as usize].jump.dst_idx = (*ctx).command_list.idx;
         }
         i += 1;
     }
@@ -914,11 +785,7 @@ pub unsafe extern "C" fn mu_set_focus(mut ctx: *mut mu_Context, mut id: mu_Id) {
     (*ctx).updated_focus = 1 as libc::c_int;
 }
 
-unsafe extern "C" fn hash(
-    mut hash_0: *mut mu_Id,
-    mut data: *const libc::c_void,
-    mut size: libc::c_int,
-) {
+unsafe extern "C" fn hash(mut hash_0: *mut mu_Id, mut data: *const libc::c_void, mut size: libc::c_int) {
     let mut p: *const libc::c_uchar = data as *const libc::c_uchar;
     loop {
         let fresh0 = size;
@@ -928,17 +795,12 @@ unsafe extern "C" fn hash(
         }
         let fresh1 = p;
         p = p.offset(1);
-        *hash_0 = (*hash_0 ^ *fresh1 as libc::c_uint)
-            .wrapping_mul(16777619 as libc::c_int as libc::c_uint);
+        *hash_0 = (*hash_0 ^ *fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_get_id(
-    mut ctx: *mut mu_Context,
-    data: *const libc::c_void,
-    mut size: libc::c_int,
-) -> mu_Id {
+pub unsafe extern "C" fn mu_get_id(mut ctx: *mut mu_Context, data: *const libc::c_void, mut size: libc::c_int) -> mu_Id {
     let mut idx: libc::c_int = (*ctx).id_stack.idx;
     let mut res: mu_Id = (if idx > 0 as libc::c_int {
         (*ctx).id_stack.items[(idx - 1 as libc::c_int) as usize] as libc::c_long
@@ -951,16 +813,10 @@ pub unsafe extern "C" fn mu_get_id(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_push_id(
-    mut ctx: *mut mu_Context,
-    mut data: *const libc::c_void,
-    mut size: libc::c_int,
-) {
+pub unsafe extern "C" fn mu_push_id(mut ctx: *mut mu_Context, mut data: *const libc::c_void, mut size: libc::c_int) {
     assert!(
         (*ctx).id_stack.idx
-            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-                as libc::c_int
+            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
     );
     (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = mu_get_id(ctx, data, size);
     (*ctx).id_stack.idx += 1;
@@ -977,9 +833,7 @@ pub unsafe extern "C" fn mu_push_clip_rect(mut ctx: *mut mu_Context, mut rect: m
     let mut last: mu_Rect = mu_get_clip_rect(ctx);
     assert!(
         (*ctx).clip_stack.idx
-            < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong)
-                as libc::c_int
+            < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong) as libc::c_int
     );
     (*ctx).clip_stack.items[(*ctx).clip_stack.idx as usize] = intersect_rects(rect, last);
     (*ctx).clip_stack.idx += 1;
@@ -1011,18 +865,8 @@ pub unsafe extern "C" fn mu_check_clip(mut ctx: *mut mu_Context, mut r: mu_Rect)
 
 unsafe extern "C" fn push_layout(mut ctx: *mut mu_Context, mut body: mu_Rect, mut scroll: mu_Vec2) {
     let mut layout: mu_Layout = mu_Layout {
-        body: mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        },
-        next: mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        },
+        body: mu_Rect { x: 0, y: 0, w: 0, h: 0 },
+        next: mu_Rect { x: 0, y: 0, w: 0, h: 0 },
         position: mu_Vec2 { x: 0, y: 0 },
         size: mu_Vec2 { x: 0, y: 0 },
         max: mu_Vec2 { x: 0, y: 0 },
@@ -1043,9 +887,7 @@ unsafe extern "C" fn push_layout(mut ctx: *mut mu_Context, mut body: mu_Rect, mu
     layout.max = mu_vec2(-(0x1000000 as libc::c_int), -(0x1000000 as libc::c_int));
     assert!(
         (*ctx).layout_stack.idx
-            < (::core::mem::size_of::<[mu_Layout; 16]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<mu_Layout>() as libc::c_ulong)
-                as libc::c_int
+            < (::core::mem::size_of::<[mu_Layout; 16]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Layout>() as libc::c_ulong) as libc::c_int
     );
     (*ctx).layout_stack.items[(*ctx).layout_stack.idx as usize] = layout;
     (*ctx).layout_stack.idx += 1;
@@ -1055,8 +897,7 @@ unsafe extern "C" fn push_layout(mut ctx: *mut mu_Context, mut body: mu_Rect, mu
 unsafe extern "C" fn get_layout(mut ctx: *mut mu_Context) -> *mut mu_Layout {
     return &mut *((*ctx).layout_stack.items)
         .as_mut_ptr()
-        .offset(((*ctx).layout_stack.idx - 1 as libc::c_int) as isize)
-        as *mut mu_Layout;
+        .offset(((*ctx).layout_stack.idx - 1 as libc::c_int) as isize) as *mut mu_Layout;
 }
 
 unsafe extern "C" fn pop_container(mut ctx: *mut mu_Context) {
@@ -1077,18 +918,9 @@ pub unsafe extern "C" fn mu_get_current_container(mut ctx: *mut mu_Context) -> *
     return (*ctx).container_stack.items[((*ctx).container_stack.idx - 1 as libc::c_int) as usize];
 }
 
-unsafe extern "C" fn get_container(
-    mut ctx: *mut mu_Context,
-    mut id: mu_Id,
-    opt: WidgetOption,
-) -> *mut mu_Container {
+unsafe extern "C" fn get_container(mut ctx: *mut mu_Context, mut id: mu_Id, opt: WidgetOption) -> *mut mu_Container {
     let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
-    let mut idx: libc::c_int = mu_pool_get(
-        ctx,
-        ((*ctx).container_pool).as_mut_ptr(),
-        48 as libc::c_int,
-        id,
-    );
+    let mut idx: libc::c_int = mu_pool_get(ctx, ((*ctx).container_pool).as_mut_ptr(), 48 as libc::c_int, id);
     if idx >= 0 as libc::c_int {
         if (*ctx).containers[idx as usize].open != 0 || !opt.is_closed() {
             mu_pool_update(ctx, ((*ctx).container_pool).as_mut_ptr(), idx);
@@ -1098,12 +930,7 @@ unsafe extern "C" fn get_container(
     if opt.is_closed() {
         return 0 as *mut mu_Container;
     }
-    idx = mu_pool_init(
-        ctx,
-        ((*ctx).container_pool).as_mut_ptr(),
-        48 as libc::c_int,
-        id,
-    );
+    idx = mu_pool_init(ctx, ((*ctx).container_pool).as_mut_ptr(), 48 as libc::c_int, id);
     cnt = &mut *((*ctx).containers).as_mut_ptr().offset(idx as isize) as *mut mu_Container;
     memset(
         cnt as *mut libc::c_void,
@@ -1118,15 +945,8 @@ unsafe extern "C" fn get_container(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_get_container(
-    mut ctx: *mut mu_Context,
-    mut name: *const libc::c_char,
-) -> *mut mu_Container {
-    let mut id: mu_Id = mu_get_id(
-        ctx,
-        name as *const libc::c_void,
-        strlen(name) as libc::c_int,
-    );
+pub unsafe extern "C" fn mu_get_container(mut ctx: *mut mu_Context, mut name: *const libc::c_char) -> *mut mu_Container {
+    let mut id: mu_Id = mu_get_id(ctx, name as *const libc::c_void, strlen(name) as libc::c_int);
     return get_container(ctx, id, WidgetOption::None);
 }
 
@@ -1137,12 +957,7 @@ pub unsafe extern "C" fn mu_bring_to_front(mut ctx: *mut mu_Context, mut cnt: *m
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_pool_init(
-    mut ctx: *mut mu_Context,
-    mut items: *mut mu_PoolItem,
-    mut len: libc::c_int,
-    mut id: mu_Id,
-) -> libc::c_int {
+pub unsafe extern "C" fn mu_pool_init(mut ctx: *mut mu_Context, mut items: *mut mu_PoolItem, mut len: libc::c_int, mut id: mu_Id) -> libc::c_int {
     let mut i: libc::c_int = 0;
     let mut n: libc::c_int = -(1 as libc::c_int);
     let mut f: libc::c_int = (*ctx).frame;
@@ -1161,12 +976,7 @@ pub unsafe extern "C" fn mu_pool_init(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_pool_get(
-    mut ctx: *mut mu_Context,
-    mut items: *mut mu_PoolItem,
-    mut len: libc::c_int,
-    mut id: mu_Id,
-) -> libc::c_int {
+pub unsafe extern "C" fn mu_pool_get(mut ctx: *mut mu_Context, mut items: *mut mu_PoolItem, mut len: libc::c_int, mut id: mu_Id) -> libc::c_int {
     let mut i: libc::c_int = 0;
     i = 0 as libc::c_int;
     while i < len {
@@ -1179,52 +989,30 @@ pub unsafe extern "C" fn mu_pool_get(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_pool_update(
-    mut ctx: *mut mu_Context,
-    mut items: *mut mu_PoolItem,
-    mut idx: libc::c_int,
-) {
+pub unsafe extern "C" fn mu_pool_update(mut ctx: *mut mu_Context, mut items: *mut mu_PoolItem, mut idx: libc::c_int) {
     (*items.offset(idx as isize)).last_update = (*ctx).frame;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_input_mousemove(
-    mut ctx: *mut mu_Context,
-    x: i32,
-    y: i32,
-) {
+pub unsafe extern "C" fn mu_input_mousemove(mut ctx: *mut mu_Context, x: i32, y: i32) {
     (*ctx).mouse_pos = mu_vec2(x, y);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_input_mousedown(
-    mut ctx: *mut mu_Context,
-    x: i32,
-    y: i32,
-    btn: MouseButton,
-) {
+pub unsafe extern "C" fn mu_input_mousedown(mut ctx: *mut mu_Context, x: i32, y: i32, btn: MouseButton) {
     mu_input_mousemove(ctx, x, y);
     (*ctx).mouse_down.set(btn);
     (*ctx).mouse_pressed.set(btn);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_input_mouseup(
-    mut ctx: *mut mu_Context,
-    x: i32,
-    y: i32,
-    btn: MouseButton,
-) {
+pub unsafe extern "C" fn mu_input_mouseup(mut ctx: *mut mu_Context, x: i32, y: i32, btn: MouseButton) {
     mu_input_mousemove(ctx, x, y);
     (*ctx).mouse_down.clear(btn);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_input_scroll(
-    mut ctx: *mut mu_Context,
-    x: i32,
-    y: i32,
-) {
+pub unsafe extern "C" fn mu_input_scroll(mut ctx: *mut mu_Context, x: i32, y: i32) {
     (*ctx).scroll_delta.x += x;
     (*ctx).scroll_delta.y += y;
 }
@@ -1243,11 +1031,8 @@ pub unsafe extern "C" fn mu_input_keyup(mut ctx: *mut mu_Context, mut key: libc:
 #[no_mangle]
 pub unsafe extern "C" fn mu_input_text(mut ctx: *mut mu_Context, mut text: *const libc::c_char) {
     let mut len: libc::c_int = strlen(((*ctx).input_text).as_mut_ptr()) as libc::c_int;
-    let mut size: libc::c_int =
-        (strlen(text)).wrapping_add(1 as libc::c_int as libc::c_ulong) as libc::c_int;
-    assert!(
-        len + size <= ::core::mem::size_of::<[libc::c_char; 32]>() as libc::c_ulong as libc::c_int
-    );
+    let mut size: libc::c_int = (strlen(text)).wrapping_add(1 as libc::c_int as libc::c_ulong) as libc::c_int;
+    assert!(len + size <= ::core::mem::size_of::<[libc::c_char; 32]>() as libc::c_ulong as libc::c_int);
     memcpy(
         ((*ctx).input_text).as_mut_ptr().offset(len as isize) as *mut libc::c_void,
         text as *const libc::c_void,
@@ -1256,14 +1041,8 @@ pub unsafe extern "C" fn mu_input_text(mut ctx: *mut mu_Context, mut text: *cons
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_push_command(
-    mut ctx: *mut mu_Context,
-    mut type_0: Command,
-) -> *mut mu_Command {
-    let mut cmd: *mut mu_Command = &mut *((*ctx).command_list.items)
-        .as_mut_ptr()
-        .offset((*ctx).command_list.idx as isize)
-        as *mut mu_Command;
+pub unsafe extern "C" fn mu_push_command(mut ctx: *mut mu_Context, mut type_0: Command) -> *mut mu_Command {
+    let mut cmd: *mut mu_Command = &mut *((*ctx).command_list.items).as_mut_ptr().offset((*ctx).command_list.idx as isize) as *mut mu_Command;
     assert!((*ctx).command_list.idx < 4096 as libc::c_int);
     (*cmd).base.type_0 = type_0;
     (*ctx).command_list.idx += 1 as libc::c_int;
@@ -1271,54 +1050,33 @@ pub unsafe extern "C" fn mu_push_command(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_push_text(
-    mut ctx: *mut mu_Context,
-    mut str: *const libc::c_char,
-    mut len: size_t,
-) -> *mut libc::c_char {
-    let mut str_start: *mut libc::c_char = &mut *((*ctx).text_stack.items)
-        .as_mut_ptr()
-        .offset((*ctx).text_stack.idx as isize)
-        as *mut libc::c_char;
+pub unsafe extern "C" fn mu_push_text(mut ctx: *mut mu_Context, mut str: *const libc::c_char, mut len: size_t) -> *mut libc::c_char {
+    let mut str_start: *mut libc::c_char = &mut *((*ctx).text_stack.items).as_mut_ptr().offset((*ctx).text_stack.idx as isize) as *mut libc::c_char;
     assert!(
         ((*ctx).text_stack.idx as libc::c_ulong)
             .wrapping_add(len)
             .wrapping_add(1 as libc::c_int as libc::c_ulong)
             < 65536 as libc::c_int as libc::c_ulong
     );
-    memcpy(
-        str_start as *mut libc::c_void,
-        str as *const libc::c_void,
-        len,
-    );
+    memcpy(str_start as *mut libc::c_void, str as *const libc::c_void, len);
     *str_start.offset(len as isize) = '\0' as i32 as libc::c_char;
-    (*ctx).text_stack.idx = ((*ctx).text_stack.idx as libc::c_ulong)
-        .wrapping_add(len.wrapping_add(1 as libc::c_int as libc::c_ulong))
-        as libc::c_int as libc::c_int;
+    (*ctx).text_stack.idx =
+        ((*ctx).text_stack.idx as libc::c_ulong).wrapping_add(len.wrapping_add(1 as libc::c_int as libc::c_ulong)) as libc::c_int as libc::c_int;
     return str_start;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_next_command(
-    mut ctx: *mut mu_Context,
-    mut cmd: *mut *mut mu_Command,
-) -> libc::c_int {
+pub unsafe extern "C" fn mu_next_command(mut ctx: *mut mu_Context, mut cmd: *mut *mut mu_Command) -> libc::c_int {
     if !(*cmd).is_null() {
         *cmd = (*cmd).offset(1 as libc::c_int as isize);
     } else {
         *cmd = ((*ctx).command_list.items).as_mut_ptr();
     }
-    while *cmd
-        != &mut *((*ctx).command_list.items)
-            .as_mut_ptr()
-            .offset((*ctx).command_list.idx as isize) as *mut mu_Command
-    {
+    while *cmd != &mut *((*ctx).command_list.items).as_mut_ptr().offset((*ctx).command_list.idx as isize) as *mut mu_Command {
         if (**cmd).type_0 != Command::Jump {
             return 1 as libc::c_int;
         }
-        *cmd = &mut *((*ctx).command_list.items)
-            .as_mut_ptr()
-            .offset((**cmd).jump.dst_idx as isize) as *mut mu_Command;
+        *cmd = &mut *((*ctx).command_list.items).as_mut_ptr().offset((**cmd).jump.dst_idx as isize) as *mut mu_Command;
     }
     return 0 as libc::c_int;
 }
@@ -1330,8 +1088,7 @@ unsafe extern "C" fn push_jump(mut ctx: *mut mu_Context, mut dst_idx: libc::c_in
     assert!(
         cmd == &mut *((*ctx).command_list.items)
             .as_mut_ptr()
-            .offset(((*ctx).command_list.idx - 1 as libc::c_int) as isize)
-            as *mut mu_Command
+            .offset(((*ctx).command_list.idx - 1 as libc::c_int) as isize) as *mut mu_Command
     );
     return (*ctx).command_list.idx - 1 as libc::c_int;
 }
@@ -1344,11 +1101,7 @@ pub unsafe extern "C" fn mu_set_clip(mut ctx: *mut mu_Context, mut rect: mu_Rect
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_draw_rect(
-    mut ctx: *mut mu_Context,
-    mut rect: mu_Rect,
-    mut color: mu_Color,
-) {
+pub unsafe extern "C" fn mu_draw_rect(mut ctx: *mut mu_Context, mut rect: mu_Rect, mut color: mu_Color) {
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
     rect = intersect_rects(rect, mu_get_clip_rect(ctx));
     if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
@@ -1359,19 +1112,10 @@ pub unsafe extern "C" fn mu_draw_rect(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_draw_box(
-    mut ctx: *mut mu_Context,
-    mut rect: mu_Rect,
-    mut color: mu_Color,
-) {
+pub unsafe extern "C" fn mu_draw_box(mut ctx: *mut mu_Context, mut rect: mu_Rect, mut color: mu_Color) {
     mu_draw_rect(
         ctx,
-        mu_rect(
-            rect.x + 1 as libc::c_int,
-            rect.y,
-            rect.w - 2 as libc::c_int,
-            1 as libc::c_int,
-        ),
+        mu_rect(rect.x + 1 as libc::c_int, rect.y, rect.w - 2 as libc::c_int, 1 as libc::c_int),
         color,
     );
     mu_draw_rect(
@@ -1384,21 +1128,8 @@ pub unsafe extern "C" fn mu_draw_box(
         ),
         color,
     );
-    mu_draw_rect(
-        ctx,
-        mu_rect(rect.x, rect.y, 1 as libc::c_int, rect.h),
-        color,
-    );
-    mu_draw_rect(
-        ctx,
-        mu_rect(
-            rect.x + rect.w - 1 as libc::c_int,
-            rect.y,
-            1 as libc::c_int,
-            rect.h,
-        ),
-        color,
-    );
+    mu_draw_rect(ctx, mu_rect(rect.x, rect.y, 1 as libc::c_int, rect.h), color);
+    mu_draw_rect(ctx, mu_rect(rect.x + rect.w - 1 as libc::c_int, rect.y, 1 as libc::c_int, rect.h), color);
 }
 
 #[no_mangle]
@@ -1439,12 +1170,7 @@ pub unsafe extern "C" fn mu_draw_text(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_draw_icon(
-    mut ctx: *mut mu_Context,
-    mut id: Icon,
-    mut rect: mu_Rect,
-    mut color: mu_Color,
-) {
+pub unsafe extern "C" fn mu_draw_icon(mut ctx: *mut mu_Context, mut id: Icon, mut rect: mu_Rect, mut color: mu_Color) {
     let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
     let clipped = mu_check_clip(ctx, rect);
     match clipped {
@@ -1463,11 +1189,7 @@ pub unsafe extern "C" fn mu_draw_icon(
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_begin_column(mut ctx: *mut mu_Context) {
-    push_layout(
-        ctx,
-        mu_layout_next(ctx),
-        mu_vec2(0 as libc::c_int, 0 as libc::c_int),
-    );
+    push_layout(ctx, mu_layout_next(ctx), mu_vec2(0 as libc::c_int, 0 as libc::c_int));
 }
 
 #[no_mangle]
@@ -1488,33 +1210,19 @@ pub unsafe extern "C" fn mu_layout_end_column(mut ctx: *mut mu_Context) {
     } else {
         (*b).next_row + (*b).body.y - (*a).body.y
     };
-    (*a).max.x = if (*a).max.x > (*b).max.x {
-        (*a).max.x
-    } else {
-        (*b).max.x
-    };
-    (*a).max.y = if (*a).max.y > (*b).max.y {
-        (*a).max.y
-    } else {
-        (*b).max.y
-    };
+    (*a).max.x = if (*a).max.x > (*b).max.x { (*a).max.x } else { (*b).max.x };
+    (*a).max.y = if (*a).max.y > (*b).max.y { (*a).max.y } else { (*b).max.y };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_layout_row(
-    mut ctx: *mut mu_Context,
-    mut items: libc::c_int,
-    mut widths: *const libc::c_int,
-    mut height: libc::c_int,
-) {
+pub unsafe extern "C" fn mu_layout_row(mut ctx: *mut mu_Context, mut items: libc::c_int, mut widths: *const libc::c_int, mut height: libc::c_int) {
     let mut layout: *mut mu_Layout = get_layout(ctx);
     if !widths.is_null() {
         assert!(items <= 16 as libc::c_int);
         memcpy(
             ((*layout).widths).as_mut_ptr() as *mut libc::c_void,
             widths as *const libc::c_void,
-            (items as libc::c_ulong)
-                .wrapping_mul(::core::mem::size_of::<libc::c_int>() as libc::c_ulong),
+            (items as libc::c_ulong).wrapping_mul(::core::mem::size_of::<libc::c_int>() as libc::c_ulong),
         );
     }
     (*layout).items = items;
@@ -1534,30 +1242,17 @@ pub unsafe extern "C" fn mu_layout_height(mut ctx: *mut mu_Context, mut height: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_layout_set_next(
-    mut ctx: *mut mu_Context,
-    mut r: mu_Rect,
-    mut relative: libc::c_int,
-) {
+pub unsafe extern "C" fn mu_layout_set_next(mut ctx: *mut mu_Context, mut r: mu_Rect, mut relative: libc::c_int) {
     let mut layout: *mut mu_Layout = get_layout(ctx);
     (*layout).next = r;
-    (*layout).next_type = if relative != 0 {
-        RELATIVE as libc::c_int
-    } else {
-        ABSOLUTE as libc::c_int
-    };
+    (*layout).next_type = if relative != 0 { RELATIVE as libc::c_int } else { ABSOLUTE as libc::c_int };
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_layout_next(mut ctx: *mut mu_Context) -> mu_Rect {
     let mut layout: *mut mu_Layout = get_layout(ctx);
     let mut style: *mut mu_Style = (*ctx).style;
-    let mut res: mu_Rect = mu_Rect {
-        x: 0,
-        y: 0,
-        w: 0,
-        h: 0,
-    };
+    let mut res: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
     if (*layout).next_type != 0 {
         let mut type_0: libc::c_int = (*layout).next_type;
         (*layout).next_type = 0 as libc::c_int;
@@ -1568,12 +1263,7 @@ pub unsafe extern "C" fn mu_layout_next(mut ctx: *mut mu_Context) -> mu_Rect {
         }
     } else {
         if (*layout).item_index == (*layout).items {
-            mu_layout_row(
-                ctx,
-                (*layout).items,
-                0 as *const libc::c_int,
-                (*layout).size.y,
-            );
+            mu_layout_row(ctx, (*layout).items, 0 as *const libc::c_int, (*layout).size.y);
         }
         res.x = (*layout).position.x;
         res.y = (*layout).position.y;
@@ -1605,16 +1295,8 @@ pub unsafe extern "C" fn mu_layout_next(mut ctx: *mut mu_Context) -> mu_Rect {
     };
     res.x += (*layout).body.x;
     res.y += (*layout).body.y;
-    (*layout).max.x = if (*layout).max.x > res.x + res.w {
-        (*layout).max.x
-    } else {
-        res.x + res.w
-    };
-    (*layout).max.y = if (*layout).max.y > res.y + res.h {
-        (*layout).max.y
-    } else {
-        res.y + res.h
-    };
+    (*layout).max.x = if (*layout).max.x > res.x + res.w { (*layout).max.x } else { res.x + res.w };
+    (*layout).max.y = if (*layout).max.y > res.y + res.h { (*layout).max.y } else { res.y + res.h };
     (*ctx).last_rect = res;
     return (*ctx).last_rect;
 }
@@ -1638,13 +1320,7 @@ unsafe extern "C" fn in_hover_root(mut ctx: *mut mu_Context) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_draw_control_frame(
-    mut ctx: *mut mu_Context,
-    mut id: mu_Id,
-    mut rect: mu_Rect,
-    mut colorid: ControlColor,
-    opt: WidgetOption,
-) {
+pub unsafe extern "C" fn mu_draw_control_frame(mut ctx: *mut mu_Context, mut id: mu_Id, mut rect: mu_Rect, mut colorid: ControlColor, opt: WidgetOption) {
     if opt.has_no_frame() {
         return;
     }
@@ -1667,12 +1343,9 @@ pub unsafe extern "C" fn mu_draw_control_text(
 ) {
     let mut pos: mu_Vec2 = mu_Vec2 { x: 0, y: 0 };
     let mut font: mu_Font = (*(*ctx).style).font;
-    let mut tw: libc::c_int =
-        ((*ctx).text_width).expect("non-null function pointer")(font, str, -(1 as libc::c_int));
+    let mut tw: libc::c_int = ((*ctx).text_width).expect("non-null function pointer")(font, str, -(1 as libc::c_int));
     mu_push_clip_rect(ctx, rect);
-    pos.y = rect.y
-        + (rect.h - ((*ctx).text_height).expect("non-null function pointer")(font))
-            / 2 as libc::c_int;
+    pos.y = rect.y + (rect.h - ((*ctx).text_height).expect("non-null function pointer")(font)) / 2 as libc::c_int;
     if opt.is_aligned_center() {
         pos.x = rect.x + (rect.w - tw) / 2 as libc::c_int;
     } else if opt.is_aligned_right() {
@@ -1680,31 +1353,18 @@ pub unsafe extern "C" fn mu_draw_control_text(
     } else {
         pos.x = rect.x + (*(*ctx).style).padding;
     }
-    mu_draw_text(
-        ctx,
-        font,
-        str,
-        -(1 as libc::c_int),
-        pos,
-        (*(*ctx).style).colors[colorid as usize],
-    );
+    mu_draw_text(ctx, font, str, -(1 as libc::c_int), pos, (*(*ctx).style).colors[colorid as usize]);
     mu_pop_clip_rect(ctx);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_mouse_over(mut ctx: *mut mu_Context, mut rect: mu_Rect) -> libc::c_int {
-    return (rect_overlaps_vec2(rect, (*ctx).mouse_pos) != 0
-        && rect_overlaps_vec2(mu_get_clip_rect(ctx), (*ctx).mouse_pos) != 0
-        && in_hover_root(ctx) != 0) as libc::c_int;
+    return (rect_overlaps_vec2(rect, (*ctx).mouse_pos) != 0 && rect_overlaps_vec2(mu_get_clip_rect(ctx), (*ctx).mouse_pos) != 0 && in_hover_root(ctx) != 0)
+        as libc::c_int;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_update_control(
-    mut ctx: *mut mu_Context,
-    mut id: mu_Id,
-    mut rect: mu_Rect,
-    opt: WidgetOption,
-) {
+pub unsafe extern "C" fn mu_update_control(mut ctx: *mut mu_Context, mut id: mu_Id, mut rect: mu_Rect, opt: WidgetOption) {
     let mut mouseover: libc::c_int = mu_mouse_over(ctx, rect);
     if (*ctx).focus == id {
         (*ctx).updated_focus = 1 as libc::c_int;
@@ -1754,17 +1414,10 @@ pub unsafe extern "C" fn mu_text(mut ctx: *mut mu_Context, mut text: *const libc
         start = end;
         loop {
             let mut word: *const libc::c_char = p;
-            while *p as libc::c_int != 0
-                && *p as libc::c_int != ' ' as i32
-                && *p as libc::c_int != '\n' as i32
-            {
+            while *p as libc::c_int != 0 && *p as libc::c_int != ' ' as i32 && *p as libc::c_int != '\n' as i32 {
                 p = p.offset(1);
             }
-            w += ((*ctx).text_width).expect("non-null function pointer")(
-                font,
-                word,
-                p.offset_from(word) as libc::c_long as libc::c_int,
-            );
+            w += ((*ctx).text_width).expect("non-null function pointer")(font, word, p.offset_from(word) as libc::c_long as libc::c_int);
             if w > r.w && end != start {
                 break;
             }
@@ -1794,29 +1447,14 @@ pub unsafe extern "C" fn mu_text(mut ctx: *mut mu_Context, mut text: *const libc
 
 #[no_mangle]
 pub unsafe extern "C" fn mu_label(mut ctx: *mut mu_Context, mut text: *const libc::c_char) {
-    mu_draw_control_text(
-        ctx,
-        text,
-        mu_layout_next(ctx),
-        ControlColor::Text,
-        WidgetOption::None,
-    );
+    mu_draw_control_text(ctx, text, mu_layout_next(ctx), ControlColor::Text, WidgetOption::None);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_button_ex(
-    mut ctx: *mut mu_Context,
-    mut label: *const libc::c_char,
-    mut icon: Icon,
-    opt: WidgetOption,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_button_ex(mut ctx: *mut mu_Context, mut label: *const libc::c_char, mut icon: Icon, opt: WidgetOption) -> ResourceState {
     let mut res = ResourceState::None;
     let mut id: mu_Id = if !label.is_null() {
-        mu_get_id(
-            ctx,
-            label as *const libc::c_void,
-            strlen(label) as libc::c_int,
-        )
+        mu_get_id(ctx, label as *const libc::c_void, strlen(label) as libc::c_int)
     } else {
         mu_get_id(
             ctx,
@@ -1834,22 +1472,13 @@ pub unsafe extern "C" fn mu_button_ex(
         mu_draw_control_text(ctx, label, r, ControlColor::Text, opt);
     }
     if icon != Icon::None {
-        mu_draw_icon(
-            ctx,
-            icon,
-            r,
-            (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize],
-        );
+        mu_draw_icon(ctx, icon, r, (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize]);
     }
     return res;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_checkbox(
-    mut ctx: *mut mu_Context,
-    mut label: *const libc::c_char,
-    mut state: *mut libc::c_int,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_checkbox(mut ctx: *mut mu_Context, mut label: *const libc::c_char, mut state: *mut libc::c_int) -> ResourceState {
     let mut res = ResourceState::None;
     let mut id: mu_Id = mu_get_id(
         ctx,
@@ -1865,12 +1494,7 @@ pub unsafe extern "C" fn mu_checkbox(
     }
     mu_draw_control_frame(ctx, id, box_0, ControlColor::Base, WidgetOption::None);
     if *state != 0 {
-        mu_draw_icon(
-            ctx,
-            Icon::Check,
-            box_0,
-            (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize],
-        );
+        mu_draw_icon(ctx, Icon::Check, box_0, (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize]);
     }
     r = mu_rect(r.x + box_0.w, r.y, r.w - box_0.w, r.h);
     mu_draw_control_text(ctx, label, r, ControlColor::Text, WidgetOption::None);
@@ -1890,9 +1514,7 @@ pub unsafe extern "C" fn mu_textbox_raw(
     mu_update_control(ctx, id, r, opt.with_hold_focus());
     if (*ctx).focus == id {
         let mut len: libc::c_int = strlen(buf) as libc::c_int;
-        let mut n: libc::c_int = if (bufsz - len - 1 as libc::c_int)
-            < strlen(((*ctx).input_text).as_mut_ptr()) as libc::c_int
-        {
+        let mut n: libc::c_int = if (bufsz - len - 1 as libc::c_int) < strlen(((*ctx).input_text).as_mut_ptr()) as libc::c_int {
             bufsz - len - 1 as libc::c_int
         } else {
             strlen(((*ctx).input_text).as_mut_ptr()) as libc::c_int
@@ -1910,10 +1532,7 @@ pub unsafe extern "C" fn mu_textbox_raw(
         if (*ctx).key_pressed & MU_KEY_BACKSPACE as libc::c_int != 0 && len > 0 as libc::c_int {
             loop {
                 len -= 1;
-                if !(*buf.offset(len as isize) as libc::c_int & 0xc0 as libc::c_int
-                    == 0x80 as libc::c_int
-                    && len > 0 as libc::c_int)
-                {
+                if !(*buf.offset(len as isize) as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int && len > 0 as libc::c_int) {
                     break;
                 }
             }
@@ -1927,34 +1546,16 @@ pub unsafe extern "C" fn mu_textbox_raw(
     }
     mu_draw_control_frame(ctx, id, r, ControlColor::Base, opt);
     if (*ctx).focus == id {
-        let mut color: mu_Color =
-            (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize];
+        let mut color: mu_Color = (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize];
         let mut font: mu_Font = (*(*ctx).style).font;
-        let mut textw: libc::c_int =
-            ((*ctx).text_width).expect("non-null function pointer")(font, buf, -(1 as libc::c_int));
+        let mut textw: libc::c_int = ((*ctx).text_width).expect("non-null function pointer")(font, buf, -(1 as libc::c_int));
         let mut texth: libc::c_int = ((*ctx).text_height).expect("non-null function pointer")(font);
         let mut ofx: libc::c_int = r.w - (*(*ctx).style).padding - textw - 1 as libc::c_int;
-        let mut textx: libc::c_int = r.x
-            + (if ofx < (*(*ctx).style).padding {
-                ofx
-            } else {
-                (*(*ctx).style).padding
-            });
+        let mut textx: libc::c_int = r.x + (if ofx < (*(*ctx).style).padding { ofx } else { (*(*ctx).style).padding });
         let mut texty: libc::c_int = r.y + (r.h - texth) / 2 as libc::c_int;
         mu_push_clip_rect(ctx, r);
-        mu_draw_text(
-            ctx,
-            font,
-            buf,
-            -(1 as libc::c_int),
-            mu_vec2(textx, texty),
-            color,
-        );
-        mu_draw_rect(
-            ctx,
-            mu_rect(textx + textw, texty, 1 as libc::c_int, texth),
-            color,
-        );
+        mu_draw_text(ctx, font, buf, -(1 as libc::c_int), mu_vec2(textx, texty), color);
+        mu_draw_rect(ctx, mu_rect(textx + textw, texty, 1 as libc::c_int, texth), color);
         mu_pop_clip_rect(ctx);
     } else {
         mu_draw_control_text(ctx, buf, r, ControlColor::Text, opt);
@@ -1962,16 +1563,8 @@ pub unsafe extern "C" fn mu_textbox_raw(
     return res;
 }
 
-unsafe extern "C" fn number_textbox(
-    mut ctx: *mut mu_Context,
-    mut value: *mut mu_Real,
-    mut r: mu_Rect,
-    mut id: mu_Id,
-) -> ResourceState {
-    if (*ctx).mouse_pressed.is_left()
-        && (*ctx).key_down & MU_KEY_SHIFT as libc::c_int != 0
-        && (*ctx).hover == id
-    {
+unsafe extern "C" fn number_textbox(mut ctx: *mut mu_Context, mut value: *mut mu_Real, mut r: mu_Rect, mut id: mu_Id) -> ResourceState {
+    if (*ctx).mouse_pressed.is_left() && (*ctx).key_down & MU_KEY_SHIFT as libc::c_int != 0 && (*ctx).hover == id {
         (*ctx).number_edit = id;
         sprintf(
             ((*ctx).number_edit_buf).as_mut_ptr(),
@@ -1989,10 +1582,7 @@ unsafe extern "C" fn number_textbox(
             WidgetOption::None,
         );
         if res.is_submitted() || (*ctx).focus != id {
-            *value = strtod(
-                ((*ctx).number_edit_buf).as_mut_ptr(),
-                0 as *mut *mut libc::c_char,
-            ) as mu_Real;
+            *value = strtod(((*ctx).number_edit_buf).as_mut_ptr(), 0 as *mut *mut libc::c_char) as mu_Real;
             (*ctx).number_edit = 0 as libc::c_int as mu_Id;
         } else {
             return ResourceState::Active;
@@ -2002,12 +1592,7 @@ unsafe extern "C" fn number_textbox(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_textbox_ex(
-    mut ctx: *mut mu_Context,
-    mut buf: *mut libc::c_char,
-    mut bufsz: libc::c_int,
-    opt: WidgetOption,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_textbox_ex(mut ctx: *mut mu_Context, mut buf: *mut libc::c_char, mut bufsz: libc::c_int, opt: WidgetOption) -> ResourceState {
     let mut id: mu_Id = mu_get_id(
         ctx,
         &mut buf as *mut *mut libc::c_char as *const libc::c_void,
@@ -2028,12 +1613,7 @@ pub unsafe extern "C" fn mu_slider_ex(
     opt: WidgetOption,
 ) -> ResourceState {
     let mut buf: [libc::c_char; 128] = [0; 128];
-    let mut thumb: mu_Rect = mu_Rect {
-        x: 0,
-        y: 0,
-        w: 0,
-        h: 0,
-    };
+    let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
     let mut x: libc::c_int = 0;
     let mut w: libc::c_int = 0;
     let mut res = ResourceState::None;
@@ -2049,12 +1629,8 @@ pub unsafe extern "C" fn mu_slider_ex(
         return res;
     }
     mu_update_control(ctx, id, base, opt);
-    if (*ctx).focus == id
-        && (!(*ctx).mouse_down.is_none() | (*ctx).mouse_pressed.is_left())
-    {
-        v = low
-            + ((*ctx).mouse_pos.x - base.x) as libc::c_float * (high - low)
-                / base.w as libc::c_float;
+    if (*ctx).focus == id && (!(*ctx).mouse_down.is_none() | (*ctx).mouse_pressed.is_left()) {
+        v = low + ((*ctx).mouse_pos.x - base.x) as libc::c_float * (high - low) / base.w as libc::c_float;
         if step != 0. {
             v = (v + step / 2 as libc::c_int as libc::c_float) / step * step;
         }
@@ -2113,116 +1689,64 @@ pub unsafe extern "C" fn mu_number_ex(
     return res;
 }
 
-unsafe extern "C" fn header(
-    mut ctx: *mut mu_Context,
-    mut label: *const libc::c_char,
-    mut istreenode: libc::c_int,
-    opt: WidgetOption,
-) -> ResourceState {
-    let mut r: mu_Rect = mu_Rect {
-        x: 0,
-        y: 0,
-        w: 0,
-        h: 0,
-    };
+unsafe extern "C" fn header(mut ctx: *mut mu_Context, mut label: *const libc::c_char, mut istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
+    let mut r: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
     let mut active: libc::c_int = 0;
     let mut expanded: libc::c_int = 0;
-    let mut id: mu_Id = mu_get_id(
-        ctx,
-        label as *const libc::c_void,
-        strlen(label) as libc::c_int,
-    );
-    let mut idx: libc::c_int = mu_pool_get(
-        ctx,
-        ((*ctx).treenode_pool).as_mut_ptr(),
-        48 as libc::c_int,
-        id,
-    );
+    let mut id: mu_Id = mu_get_id(ctx, label as *const libc::c_void, strlen(label) as libc::c_int);
+    let mut idx: libc::c_int = mu_pool_get(ctx, ((*ctx).treenode_pool).as_mut_ptr(), 48 as libc::c_int, id);
     let mut width: libc::c_int = -(1 as libc::c_int);
     mu_layout_row(ctx, 1 as libc::c_int, &mut width, 0);
     active = (idx >= 0 as libc::c_int) as libc::c_int;
-    expanded = if opt.is_expanded() {
-        (active == 0) as libc::c_int
-    } else {
-        active
-    };
+    expanded = if opt.is_expanded() { (active == 0) as libc::c_int } else { active };
     r = mu_layout_next(ctx);
     mu_update_control(ctx, id, r, WidgetOption::None);
-    active ^=
-        ((*ctx).mouse_pressed.is_left() && (*ctx).focus == id) as libc::c_int;
+    active ^= ((*ctx).mouse_pressed.is_left() && (*ctx).focus == id) as libc::c_int;
     if idx >= 0 as libc::c_int {
         if active != 0 {
             mu_pool_update(ctx, ((*ctx).treenode_pool).as_mut_ptr(), idx);
         } else {
             memset(
-                &mut *((*ctx).treenode_pool).as_mut_ptr().offset(idx as isize) as *mut mu_PoolItem
-                    as *mut libc::c_void,
+                &mut *((*ctx).treenode_pool).as_mut_ptr().offset(idx as isize) as *mut mu_PoolItem as *mut libc::c_void,
                 0 as libc::c_int,
                 ::core::mem::size_of::<mu_PoolItem>() as libc::c_ulong,
             );
         }
     } else if active != 0 {
-        mu_pool_init(
-            ctx,
-            ((*ctx).treenode_pool).as_mut_ptr(),
-            48 as libc::c_int,
-            id,
-        );
+        mu_pool_init(ctx, ((*ctx).treenode_pool).as_mut_ptr(), 48 as libc::c_int, id);
     }
     if istreenode != 0 {
         if (*ctx).hover == id {
-            ((*ctx).draw_frame).expect("non-null function pointer")(
-                ctx,
-                r,
-                ControlColor::ButtonHover,
-            );
+            ((*ctx).draw_frame).expect("non-null function pointer")(ctx, r, ControlColor::ButtonHover);
         }
     } else {
         mu_draw_control_frame(ctx, id, r, ControlColor::Button, WidgetOption::None);
     }
     mu_draw_icon(
         ctx,
-        if expanded != 0 {
-            Icon::Expanded
-        } else {
-            Icon::Collapsed
-        },
+        if expanded != 0 { Icon::Expanded } else { Icon::Collapsed },
         mu_rect(r.x, r.y, r.h, r.h),
         (*(*ctx).style).colors[ControlColor::Text as libc::c_int as usize],
     );
     r.x += r.h - (*(*ctx).style).padding;
     r.w -= r.h - (*(*ctx).style).padding;
     mu_draw_control_text(ctx, label, r, ControlColor::Text, WidgetOption::None);
-    return if expanded != 0 {
-        ResourceState::Active
-    } else {
-        ResourceState::None
-    };
+    return if expanded != 0 { ResourceState::Active } else { ResourceState::None };
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_header_ex(
-    mut ctx: *mut mu_Context,
-    mut label: *const libc::c_char,
-    opt: WidgetOption,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_header_ex(mut ctx: *mut mu_Context, mut label: *const libc::c_char, opt: WidgetOption) -> ResourceState {
     return header(ctx, label, 0 as libc::c_int, opt);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_begin_treenode_ex(
-    mut ctx: *mut mu_Context,
-    mut label: *const libc::c_char,
-    opt: WidgetOption,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_begin_treenode_ex(mut ctx: *mut mu_Context, mut label: *const libc::c_char, opt: WidgetOption) -> ResourceState {
     let mut res = header(ctx, label, 1 as libc::c_int, opt);
     if res.is_active() {
         (*get_layout(ctx)).indent += (*(*ctx).style).indent;
         assert!(
             (*ctx).id_stack.idx
-                < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
-                    .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-                    as libc::c_int
+                < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
         );
         (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = (*ctx).last_id;
         (*ctx).id_stack.idx += 1;
@@ -2236,11 +1760,7 @@ pub unsafe extern "C" fn mu_end_treenode(mut ctx: *mut mu_Context) {
     mu_pop_id(ctx);
 }
 
-unsafe extern "C" fn scrollbars(
-    mut ctx: *mut mu_Context,
-    mut cnt: *mut mu_Container,
-    mut body: *mut mu_Rect,
-) {
+unsafe extern "C" fn scrollbars(mut ctx: *mut mu_Context, mut cnt: *mut mu_Container, mut body: *mut mu_Rect) {
     let mut sz: libc::c_int = (*(*ctx).style).scrollbar_size;
     let mut cs: mu_Vec2 = (*cnt).content_size;
     cs.x += (*(*ctx).style).padding * 2 as libc::c_int;
@@ -2254,18 +1774,8 @@ unsafe extern "C" fn scrollbars(
     }
     let mut maxscroll: libc::c_int = cs.y - (*body).h;
     if maxscroll > 0 as libc::c_int && (*body).h > 0 as libc::c_int {
-        let mut base: mu_Rect = mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        };
-        let mut thumb: mu_Rect = mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        };
+        let mut base: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
+        let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut id: mu_Id = mu_get_id(
             ctx,
             b"!scrollbary\0" as *const u8 as *const libc::c_char as *const libc::c_void,
@@ -2290,11 +1800,7 @@ unsafe extern "C" fn scrollbars(
         } else {
             (*cnt).scroll.y
         };
-        ((*ctx).draw_frame).expect("non-null function pointer")(
-            ctx,
-            base,
-            ControlColor::ScrollBase,
-        );
+        ((*ctx).draw_frame).expect("non-null function pointer")(ctx, base, ControlColor::ScrollBase);
         thumb = base;
         thumb.h = if (*(*ctx).style).thumb_size > base.h * (*body).h / cs.y {
             (*(*ctx).style).thumb_size
@@ -2302,11 +1808,7 @@ unsafe extern "C" fn scrollbars(
             base.h * (*body).h / cs.y
         };
         thumb.y += (*cnt).scroll.y * (base.h - thumb.h) / maxscroll;
-        ((*ctx).draw_frame).expect("non-null function pointer")(
-            ctx,
-            thumb,
-            ControlColor::ScrollThumb,
-        );
+        ((*ctx).draw_frame).expect("non-null function pointer")(ctx, thumb, ControlColor::ScrollThumb);
         if mu_mouse_over(ctx, *body) != 0 {
             (*ctx).scroll_target = cnt;
         }
@@ -2315,18 +1817,8 @@ unsafe extern "C" fn scrollbars(
     }
     let mut maxscroll_0: libc::c_int = cs.x - (*body).w;
     if maxscroll_0 > 0 as libc::c_int && (*body).w > 0 as libc::c_int {
-        let mut base_0: mu_Rect = mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        };
-        let mut thumb_0: mu_Rect = mu_Rect {
-            x: 0,
-            y: 0,
-            w: 0,
-            h: 0,
-        };
+        let mut base_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
+        let mut thumb_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut id_0: mu_Id = mu_get_id(
             ctx,
             b"!scrollbarx\0" as *const u8 as *const libc::c_char as *const libc::c_void,
@@ -2351,11 +1843,7 @@ unsafe extern "C" fn scrollbars(
         } else {
             (*cnt).scroll.x
         };
-        ((*ctx).draw_frame).expect("non-null function pointer")(
-            ctx,
-            base_0,
-            ControlColor::ScrollBase,
-        );
+        ((*ctx).draw_frame).expect("non-null function pointer")(ctx, base_0, ControlColor::ScrollBase);
         thumb_0 = base_0;
         thumb_0.w = if (*(*ctx).style).thumb_size > base_0.w * (*body).w / cs.x {
             (*(*ctx).style).thumb_size
@@ -2363,11 +1851,7 @@ unsafe extern "C" fn scrollbars(
             base_0.w * (*body).w / cs.x
         };
         thumb_0.x += (*cnt).scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
-        ((*ctx).draw_frame).expect("non-null function pointer")(
-            ctx,
-            thumb_0,
-            ControlColor::ScrollThumb,
-        );
+        ((*ctx).draw_frame).expect("non-null function pointer")(ctx, thumb_0, ControlColor::ScrollThumb);
         if mu_mouse_over(ctx, *body) != 0 {
             (*ctx).scroll_target = cnt;
         }
@@ -2377,52 +1861,37 @@ unsafe extern "C" fn scrollbars(
     mu_pop_clip_rect(ctx);
 }
 
-unsafe extern "C" fn push_container_body(
-    mut ctx: *mut mu_Context,
-    mut cnt: *mut mu_Container,
-    body: mu_Rect,
-    opt: WidgetOption,
-) {
+unsafe extern "C" fn push_container_body(mut ctx: *mut mu_Context, mut cnt: *mut mu_Container, body: mu_Rect, opt: WidgetOption) {
     let mut body = body;
     if !opt.has_no_scroll() {
         scrollbars(ctx, cnt, &mut body);
     }
-    push_layout(
-        ctx,
-        expand_rect(body, -(*(*ctx).style).padding),
-        (*cnt).scroll,
-    );
+    push_layout(ctx, expand_rect(body, -(*(*ctx).style).padding), (*cnt).scroll);
     (*cnt).body = body;
 }
 
 unsafe extern "C" fn begin_root_container(mut ctx: *mut mu_Context, mut cnt: *mut mu_Container) {
     assert!(
         (*ctx).container_stack.idx
-            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
+            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
                 as libc::c_int
     );
     (*ctx).container_stack.items[(*ctx).container_stack.idx as usize] = cnt;
     (*ctx).container_stack.idx += 1;
     assert!(
         (*ctx).root_list.idx
-            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
+            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
                 as libc::c_int
     );
     (*ctx).root_list.items[(*ctx).root_list.idx as usize] = cnt;
     (*ctx).root_list.idx += 1;
     (*cnt).head_idx = push_jump(ctx, -(1 as libc::c_int));
-    if rect_overlaps_vec2((*cnt).rect, (*ctx).mouse_pos) != 0
-        && (((*ctx).next_hover_root).is_null() || (*cnt).zindex > (*(*ctx).next_hover_root).zindex)
-    {
+    if rect_overlaps_vec2((*cnt).rect, (*ctx).mouse_pos) != 0 && (((*ctx).next_hover_root).is_null() || (*cnt).zindex > (*(*ctx).next_hover_root).zindex) {
         (*ctx).next_hover_root = cnt;
     }
     assert!(
         (*ctx).clip_stack.idx
-            < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong)
-                as libc::c_int
+            < (::core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Rect>() as libc::c_ulong) as libc::c_int
     );
     (*ctx).clip_stack.items[(*ctx).clip_stack.idx as usize] = unclipped_rect;
     (*ctx).clip_stack.idx += 1;
@@ -2431,40 +1900,22 @@ unsafe extern "C" fn begin_root_container(mut ctx: *mut mu_Context, mut cnt: *mu
 unsafe extern "C" fn end_root_container(mut ctx: *mut mu_Context) {
     let mut cnt: *mut mu_Container = mu_get_current_container(ctx);
     (*cnt).tail_idx = push_jump(ctx, -(1 as libc::c_int));
-    (*ctx).command_list.items[(*cnt).head_idx as usize]
-        .jump
-        .dst_idx = (*ctx).command_list.idx;
+    (*ctx).command_list.items[(*cnt).head_idx as usize].jump.dst_idx = (*ctx).command_list.idx;
     mu_pop_clip_rect(ctx);
     pop_container(ctx);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_begin_window_ex(
-    mut ctx: *mut mu_Context,
-    mut title: *const libc::c_char,
-    mut rect: mu_Rect,
-    opt: WidgetOption,
-) -> ResourceState {
-    let mut body: mu_Rect = mu_Rect {
-        x: 0,
-        y: 0,
-        w: 0,
-        h: 0,
-    };
-    let mut id: mu_Id = mu_get_id(
-        ctx,
-        title as *const libc::c_void,
-        strlen(title) as libc::c_int,
-    );
+pub unsafe extern "C" fn mu_begin_window_ex(mut ctx: *mut mu_Context, mut title: *const libc::c_char, mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
+    let mut body: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
+    let mut id: mu_Id = mu_get_id(ctx, title as *const libc::c_void, strlen(title) as libc::c_int);
     let mut cnt: *mut mu_Container = get_container(ctx, id, opt);
     if cnt.is_null() || (*cnt).open == 0 {
         return ResourceState::None;
     }
     assert!(
         (*ctx).id_stack.idx
-            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong)
-                as libc::c_int
+            < (::core::mem::size_of::<[mu_Id; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<mu_Id>() as libc::c_ulong) as libc::c_int
     );
     (*ctx).id_stack.items[(*ctx).id_stack.idx as usize] = id;
     (*ctx).id_stack.idx += 1;
@@ -2484,11 +1935,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
 
         // TODO: Is this necessary?
         if !opt.has_no_title() {
-            let mut id_0: mu_Id = mu_get_id(
-                ctx,
-                b"!title\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                6 as libc::c_int,
-            );
+            let mut id_0: mu_Id = mu_get_id(ctx, b"!title\0" as *const u8 as *const libc::c_char as *const libc::c_void, 6 as libc::c_int);
             mu_update_control(ctx, id_0, tr, opt);
             mu_draw_control_text(ctx, title, tr, ControlColor::TitleText, opt);
             if id_0 == (*ctx).focus && (*ctx).mouse_down.is_left() {
@@ -2499,19 +1946,10 @@ pub unsafe extern "C" fn mu_begin_window_ex(
             body.h -= tr.h;
         }
         if !opt.has_no_close() {
-            let mut id_1: mu_Id = mu_get_id(
-                ctx,
-                b"!close\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                6 as libc::c_int,
-            );
+            let mut id_1: mu_Id = mu_get_id(ctx, b"!close\0" as *const u8 as *const libc::c_char as *const libc::c_void, 6 as libc::c_int);
             let mut r: mu_Rect = mu_rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
             tr.w -= r.w;
-            mu_draw_icon(
-                ctx,
-                Icon::Close,
-                r,
-                (*(*ctx).style).colors[ControlColor::TitleText as libc::c_int as usize],
-            );
+            mu_draw_icon(ctx, Icon::Close, r, (*(*ctx).style).colors[ControlColor::TitleText as libc::c_int as usize]);
             mu_update_control(ctx, id_1, r, opt);
             if (*ctx).mouse_pressed.is_left() && id_1 == (*ctx).focus {
                 (*cnt).open = 0 as libc::c_int;
@@ -2521,11 +1959,7 @@ pub unsafe extern "C" fn mu_begin_window_ex(
     push_container_body(ctx, cnt, body, opt);
     if !opt.is_auto_sizing() {
         let mut sz: libc::c_int = (*(*ctx).style).title_height;
-        let mut id_2: mu_Id = mu_get_id(
-            ctx,
-            b"!resize\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-            7 as libc::c_int,
-        );
+        let mut id_2: mu_Id = mu_get_id(ctx, b"!resize\0" as *const u8 as *const libc::c_char as *const libc::c_void, 7 as libc::c_int);
         let mut r_0: mu_Rect = mu_rect(rect.x + rect.w - sz, rect.y + rect.h - sz, sz, sz);
         mu_update_control(ctx, id_2, r_0, opt);
         if id_2 == (*ctx).focus && (*ctx).mouse_down.is_left() {
@@ -2565,38 +1999,20 @@ pub unsafe extern "C" fn mu_open_popup(mut ctx: *mut mu_Context, mut name: *cons
     let mut cnt: *mut mu_Container = mu_get_container(ctx, name);
     (*ctx).next_hover_root = cnt;
     (*ctx).hover_root = (*ctx).next_hover_root;
-    (*cnt).rect = mu_rect(
-        (*ctx).mouse_pos.x,
-        (*ctx).mouse_pos.y,
-        1 as libc::c_int,
-        1 as libc::c_int,
-    );
+    (*cnt).rect = mu_rect((*ctx).mouse_pos.x, (*ctx).mouse_pos.y, 1 as libc::c_int, 1 as libc::c_int);
     (*cnt).open = 1 as libc::c_int;
     mu_bring_to_front(ctx, cnt);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_begin_popup(
-    mut ctx: *mut mu_Context,
-    mut name: *const libc::c_char,
-) -> ResourceState {
+pub unsafe extern "C" fn mu_begin_popup(mut ctx: *mut mu_Context, mut name: *const libc::c_char) -> ResourceState {
     let opt = WidgetOption::Popup
         .with_auto_size()
         .with_no_resize()
         .with_no_scroll()
         .with_no_title()
         .with_closed();
-    return mu_begin_window_ex(
-        ctx,
-        name,
-        mu_rect(
-            0 as libc::c_int,
-            0 as libc::c_int,
-            0 as libc::c_int,
-            0 as libc::c_int,
-        ),
-        opt,
-    );
+    return mu_begin_window_ex(ctx, name, mu_rect(0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int), opt);
 }
 
 #[no_mangle]
@@ -2605,30 +2021,17 @@ pub unsafe extern "C" fn mu_end_popup(mut ctx: *mut mu_Context) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mu_begin_panel_ex(
-    mut ctx: *mut mu_Context,
-    mut name: *const libc::c_char,
-    opt: WidgetOption,
-) {
+pub unsafe extern "C" fn mu_begin_panel_ex(mut ctx: *mut mu_Context, mut name: *const libc::c_char, opt: WidgetOption) {
     let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
-    mu_push_id(
-        ctx,
-        name as *const libc::c_void,
-        strlen(name) as libc::c_int,
-    );
+    mu_push_id(ctx, name as *const libc::c_void, strlen(name) as libc::c_int);
     cnt = get_container(ctx, (*ctx).last_id, opt);
     (*cnt).rect = mu_layout_next(ctx);
     if !opt.has_no_frame() {
-        ((*ctx).draw_frame).expect("non-null function pointer")(
-            ctx,
-            (*cnt).rect,
-            ControlColor::PanelBG,
-        );
+        ((*ctx).draw_frame).expect("non-null function pointer")(ctx, (*cnt).rect, ControlColor::PanelBG);
     }
     assert!(
         (*ctx).container_stack.idx
-            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong)
-                .wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
+            < (::core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(::core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
                 as libc::c_int
     );
     (*ctx).container_stack.items[(*ctx).container_stack.idx as usize] = cnt;
