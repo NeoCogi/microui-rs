@@ -19,6 +19,33 @@ pub type __off64_t = libc::c_long;
 
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
+pub struct FixedList<T: Default + Copy, const N: usize> {
+    idx: usize,
+    items: [T; N],
+}
+
+impl<T: Default + Copy, const N: usize> FixedList<T, N> {
+    pub fn push(&mut self, t: T) -> (&mut T, usize) {
+        assert!(self.idx < N - 1);
+        self.items[self.idx] = t;
+        self.idx += 1;
+        (&mut self.items[self.idx - 1], self.idx - 1)
+    }
+
+    pub fn reset(&mut self) {
+        for i in 0..self.idx {
+            self.items[i] = T::default();
+        }
+        self.idx = 0;
+    }
+}
+
+impl<T: Default + Copy, const N: usize> Default for FixedList<T, N> {
+    fn default() -> Self {
+        Self { idx: 0, items: [T::default(); N] }
+    }
+}
+
 pub struct Stack<T: Default + Copy, const N: usize> {
     idx: usize,
     items: [T; N],
@@ -134,6 +161,8 @@ pub enum Icon {
     Close = 1,
     None = 0,
 }
+
+
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(u32)]
@@ -404,7 +433,7 @@ pub struct mu_Context {
     pub scroll_target: *mut mu_Container,
     pub number_edit_buf: [libc::c_char; 127],
     pub number_edit: mu_Id,
-    pub command_list: C2RustUnnamed_13,
+    pub command_list: FixedList<mu_Command, 4096>,
     pub root_list: C2RustUnnamed_12,
     pub container_stack: C2RustUnnamed_11,
     pub clip_stack: C2RustUnnamed_10,
@@ -516,13 +545,6 @@ pub struct C2RustUnnamed_12 {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_13 {
-    pub idx: libc::c_int,
-    pub items: [mu_Command; 4096],
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub union mu_Command {
     pub type_0: Command,
     pub base: mu_BaseCommand,
@@ -531,6 +553,12 @@ pub union mu_Command {
     pub rect: mu_RectCommand,
     pub text: mu_TextCommand,
     pub icon: mu_IconCommand,
+}
+
+impl Default for mu_Command {
+    fn default() -> Self {
+        Self { type_0: Command::None }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -542,7 +570,7 @@ pub struct mu_IconCommand {
     pub color: mu_Color,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_Color {
     pub r: u8,
@@ -717,7 +745,6 @@ unsafe extern "C" fn hash(hash_0: *mut mu_Id, data: *const libc::c_void, mut siz
 impl mu_Context {
     pub unsafe extern "C" fn mu_begin(&mut self) {
         assert!((self.text_width).is_some() && (self.text_height).is_some());
-        self.command_list.idx = 0 as libc::c_int;
         self.root_list.idx = 0 as libc::c_int;
         self.text_stack.idx = 0 as libc::c_int;
         self.scroll_target = 0 as *mut mu_Container;
@@ -725,6 +752,7 @@ impl mu_Context {
         self.next_hover_root = 0 as *mut mu_Container;
         self.mouse_delta.x = self.mouse_pos.x - self.last_mouse_pos.x;
         self.mouse_delta.y = self.mouse_pos.y - self.last_mouse_pos.y;
+        self.command_list.reset();
         self.frame += 1;
     }
 
@@ -778,7 +806,7 @@ impl mu_Context {
             if i == n - 1 as libc::c_int {
                 assert!((*cnt).tail_idx < 4096 as libc::c_int);
                 assert!(self.command_list.items[(*cnt).tail_idx as usize].type_0 == Command::Jump);
-                self.command_list.items[(*cnt).tail_idx as usize].jump.dst_idx = self.command_list.idx;
+                self.command_list.items[(*cnt).tail_idx as usize].jump.dst_idx = self.command_list.idx as i32;
             }
             i += 1;
         }
@@ -1024,12 +1052,10 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_push_command(&mut self, type_0: Command) -> *mut mu_Command {
-        let mut cmd: *mut mu_Command = &mut *(self.command_list.items).as_mut_ptr().offset(self.command_list.idx as isize) as *mut mu_Command;
-        assert!(self.command_list.idx < 4096 as libc::c_int);
-        (*cmd).base.type_0 = type_0;
-        self.command_list.idx += 1 as libc::c_int;
-        return cmd;
+    pub unsafe extern "C" fn mu_push_command(&mut self, type_0: Command) -> (&mut mu_Command, usize) {
+        let (cmd, pos) = self.command_list.push(mu_Command::default());
+        cmd.base.type_0 = type_0;
+        (cmd, pos)
     }
 
     #[no_mangle]
@@ -1064,33 +1090,25 @@ impl mu_Context {
         return 0 as libc::c_int;
     }
 
-    unsafe extern "C" fn push_jump(&mut self, dst_idx: libc::c_int) -> libc::c_int {
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-        cmd = self.mu_push_command(Command::Jump);
-        (*cmd).jump.dst_idx = dst_idx;
-        assert!(
-            cmd == &mut *(self.command_list.items)
-                .as_mut_ptr()
-                .offset((self.command_list.idx - 1 as libc::c_int) as isize) as *mut mu_Command
-        );
-        return self.command_list.idx - 1 as libc::c_int;
+    unsafe extern "C" fn push_jump(&mut self, dst_idx: i32) -> usize {
+        let (cmd, pos) = self.mu_push_command(Command::Jump);
+        cmd.jump.dst_idx = dst_idx;
+        pos
     }
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_set_clip(&mut self, rect: mu_Rect) {
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-        cmd = self.mu_push_command(Command::Clip);
-        (*cmd).clip.rect = rect;
+        let (cmd, _) = self.mu_push_command(Command::Clip);
+        cmd.clip.rect = rect;
     }
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_draw_rect(&mut self, mut rect: mu_Rect, color: mu_Color) {
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
         rect = intersect_rects(rect, self.mu_get_clip_rect());
         if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
-            cmd = self.mu_push_command(Command::Rect);
-            (*cmd).rect.rect = rect;
-            (*cmd).rect.color = color;
+            let (cmd, _) = self.mu_push_command(Command::Rect);
+            cmd.rect.rect = rect;
+            cmd.rect.color = color;
         }
     }
 
@@ -1119,7 +1137,6 @@ impl mu_Context {
         pos: mu_Vec2,
         color: mu_Color,
     ) {
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
         let rect: mu_Rect = mu_rect(
             pos.x,
             pos.y,
@@ -1140,11 +1157,11 @@ impl mu_Context {
             len = strlen(str) as libc::c_int;
         }
         let str_start: *mut libc::c_char = self.mu_push_text(str, len as size_t);
-        cmd = self.mu_push_command(Command::Text);
-        (*cmd).text.str_0 = str_start;
-        (*cmd).text.pos = pos;
-        (*cmd).text.color = color;
-        (*cmd).text.font = font;
+        let (cmd, _) = self.mu_push_command(Command::Text);
+        cmd.text.str_0 = str_start;
+        cmd.text.pos = pos;
+        cmd.text.color = color;
+        cmd.text.font = font;
         if clipped != Clip::None {
             self.mu_set_clip(unclipped_rect);
         }
@@ -1162,10 +1179,10 @@ impl mu_Context {
             }
             _ => (),
         }
-        cmd = self.mu_push_command(Command::Icon);
-        (*cmd).icon.id = id;
-        (*cmd).icon.rect = rect;
-        (*cmd).icon.color = color;
+        let (cmd, _) = self.mu_push_command(Command::Icon);
+        cmd.icon.id = id;
+        cmd.icon.rect = rect;
+        cmd.icon.color = color;
         if clipped != Clip::None {
             self.mu_set_clip(unclipped_rect);
         }
@@ -1842,7 +1859,7 @@ impl mu_Context {
         );
         self.root_list.items[self.root_list.idx as usize] = cnt;
         self.root_list.idx += 1;
-        (*cnt).head_idx = self.push_jump(-(1 as libc::c_int));
+        (*cnt).head_idx = self.push_jump(-1) as i32;
         if rect_overlaps_vec2((*cnt).rect, self.mouse_pos) && ((self.next_hover_root).is_null() || (*cnt).zindex > (*self.next_hover_root).zindex) {
             self.next_hover_root = cnt;
         }
@@ -1856,8 +1873,8 @@ impl mu_Context {
 
     unsafe extern "C" fn end_root_container(&mut self) {
         let mut cnt: *mut mu_Container = self.mu_get_current_container();
-        (*cnt).tail_idx = self.push_jump(-(1 as libc::c_int));
-        self.command_list.items[(*cnt).head_idx as usize].jump.dst_idx = self.command_list.idx;
+        (*cnt).tail_idx = self.push_jump(-1) as i32;
+        self.command_list.items[(*cnt).head_idx as usize].jump.dst_idx = self.command_list.idx as i32;
         self.mu_pop_clip_rect();
         self.pop_container();
     }
