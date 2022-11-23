@@ -198,6 +198,12 @@ impl WidgetOption {
         unsafe { std::mem::transmute(u0 | u1) }
     }
 
+    pub fn with_closed(self) -> Self {
+        let u0 = self as u32;
+        let u1 = Self::Closed as u32;
+        unsafe { std::mem::transmute(u0 | u1) }
+    }
+
     pub fn with_popup(self) -> Self {
         let u0 = self as u32;
         let u1 = Self::Popup as u32;
@@ -2388,8 +2394,6 @@ pub unsafe extern "C" fn mu_begin_window_ex(
     mut rect: mu_Rect,
     opt: WidgetOption,
 ) -> ResourceState {
-    println!("before {}", opt.is_popup());
-
     let mut body: mu_Rect = mu_Rect {
         x: 0,
         y: 0,
@@ -2530,7 +2534,7 @@ pub unsafe extern "C" fn mu_begin_popup(
         .with_no_resize()
         .with_no_scroll()
         .with_no_title()
-        .with_no_close();
+        .with_closed();
     return mu_begin_window_ex(
         ctx,
         name,
