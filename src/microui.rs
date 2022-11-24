@@ -21,47 +21,47 @@ pub type __off64_t = libc::c_long;
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
 pub struct FixedList<T: Default + Copy, const N: usize> {
-    _idx: usize,
-    _items: [T; N],
+    idx: usize,
+    items: [T; N],
 }
 
 impl<T: Default + Copy, const N: usize> FixedList<T, N> {
     pub fn push(&mut self, t: T) -> (&mut T, usize) {
-        assert!(self._idx < N - 1);
-        self._items[self._idx] = t;
-        self._idx += 1;
-        (&mut self._items[self._idx - 1], self._idx - 1)
+        assert!(self.idx < N - 1);
+        self.items[self.idx] = t;
+        self.idx += 1;
+        (&mut self.items[self.idx - 1], self.idx - 1)
     }
 
-    pub fn len(&self) -> usize { self._idx }
+    pub fn len(&self) -> usize { self.idx }
     pub fn reset(&mut self) {
-        for i in 0..self._idx {
-            self._items[i] = T::default();
+        for i in 0..self.idx {
+            self.items[i] = T::default();
         }
-        self._idx = 0;
+        self.idx = 0;
     }
 }
 
 impl<T: Default + Copy, const N: usize> core::ops::Index<i32> for FixedList<T, N> {
     type Output = T;
     fn index(&self, index: i32) -> &Self::Output {
-        assert!((index as usize) < self._idx);
+        assert!((index as usize) < self.idx);
         assert!((index as usize) < N);
-        &self._items[index as usize]
+        &self.items[index as usize]
     }
 }
 
 impl<T: Default + Copy, const N: usize> IndexMut<i32> for FixedList<T, N> {
     fn index_mut(&mut self, index: i32) -> &mut Self::Output {
-        assert!((index as usize) < self._idx);
+        assert!((index as usize) < self.idx);
         assert!((index as usize) < N);
-        &mut self._items[index as usize]
+        &mut self.items[index as usize]
     }
 }
 
 impl<T: Default + Copy, const N: usize> Default for FixedList<T, N> {
     fn default() -> Self {
-        Self { _idx: 0, _items: [T::default(); N] }
+        Self { idx: 0, items: [T::default(); N] }
     }
 }
 
