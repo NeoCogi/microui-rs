@@ -1476,22 +1476,28 @@ pub fn main() {
                 bg[2 as libc::c_int as usize] as u8,
                 255,
             ));
-            let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
-            while (*ctx).mu_next_command(&mut cmd) != 0 {
-                match (*cmd).type_0 {
-                    Command::Text => {
-                        r_draw_text((*cmd).text.str_0, (*cmd).text.pos, (*cmd).text.color);
-                    }
-                    Command::Rect => {
-                        r_draw_rect((*cmd).rect.rect, (*cmd).rect.color);
-                    }
-                    Command::Icon => {
-                        r_draw_icon((*cmd).icon.id, (*cmd).icon.rect, (*cmd).icon.color);
-                    }
-                    Command::Clip => {
-                        r_set_clip_rect((*cmd).clip.rect);
-                    }
-                    _ => {}
+            let mut cmd_id = 0;
+            loop {
+                match (*ctx).mu_next_command(cmd_id) {
+                    Some((command, id)) => {
+                        match command.type_0 {
+                            Command::Text => {
+                                r_draw_text(command.text.str_0, command.text.pos, command.text.color);
+                            }
+                            Command::Rect => {
+                                r_draw_rect(command.rect.rect, command.rect.color);
+                            }
+                            Command::Icon => {
+                                r_draw_icon(command.icon.id, command.icon.rect, command.icon.color);
+                            }
+                            Command::Clip => {
+                                r_set_clip_rect(command.clip.rect);
+                            }
+                            _ => {}
+                        }
+                        cmd_id = id;
+                    },
+                    None => break
                 }
             }
             r_present();

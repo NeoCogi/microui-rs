@@ -1,3 +1,4 @@
+use std::ops::IndexMut;
 use ::libc;
 
 pub type _IO_wide_data = libc::c_int;
@@ -20,29 +21,47 @@ pub type __off64_t = libc::c_long;
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
 pub struct FixedList<T: Default + Copy, const N: usize> {
-    idx: usize,
-    items: [T; N],
+    _idx: usize,
+    _items: [T; N],
 }
 
 impl<T: Default + Copy, const N: usize> FixedList<T, N> {
     pub fn push(&mut self, t: T) -> (&mut T, usize) {
-        assert!(self.idx < N - 1);
-        self.items[self.idx] = t;
-        self.idx += 1;
-        (&mut self.items[self.idx - 1], self.idx - 1)
+        assert!(self._idx < N - 1);
+        self._items[self._idx] = t;
+        self._idx += 1;
+        (&mut self._items[self._idx - 1], self._idx - 1)
     }
 
+    pub fn len(&self) -> usize { self._idx }
     pub fn reset(&mut self) {
-        for i in 0..self.idx {
-            self.items[i] = T::default();
+        for i in 0..self._idx {
+            self._items[i] = T::default();
         }
-        self.idx = 0;
+        self._idx = 0;
+    }
+}
+
+impl<T: Default + Copy, const N: usize> core::ops::Index<i32> for FixedList<T, N> {
+    type Output = T;
+    fn index(&self, index: i32) -> &Self::Output {
+        assert!((index as usize) < self._idx);
+        assert!((index as usize) < N);
+        &self._items[index as usize]
+    }
+}
+
+impl<T: Default + Copy, const N: usize> IndexMut<i32> for FixedList<T, N> {
+    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+        assert!((index as usize) < self._idx);
+        assert!((index as usize) < N);
+        &mut self._items[index as usize]
     }
 }
 
 impl<T: Default + Copy, const N: usize> Default for FixedList<T, N> {
     fn default() -> Self {
-        Self { idx: 0, items: [T::default(); N] }
+        Self { _idx: 0, _items: [T::default(); N] }
     }
 }
 
@@ -795,18 +814,22 @@ impl mu_Context {
         while i < n {
             let cnt: *mut mu_Container = self.root_list.items[i as usize];
             if i == 0 as libc::c_int {
-                let mut cmd: *mut mu_Command = (self.command_list.items).as_mut_ptr();
-                assert!((*cmd).type_0 == Command::Jump);
-                (*cmd).jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
-                assert!((*cmd).jump.dst_idx < 4096 as libc::c_int);
+                // root container!
+                // if this is the first container then make the first command jump to it.
+                // otherwise set the previous container's tail to jump to this one
+
+                let mut cmd: &mut mu_Command = &mut self.command_list[0];
+                assert!(cmd.type_0 == Command::Jump);
+                cmd.jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
+                assert!(cmd.jump.dst_idx < self.command_list.len() as i32);
             } else {
                 let prev: *mut mu_Container = self.root_list.items[(i - 1 as libc::c_int) as usize];
-                self.command_list.items[(*prev).tail_idx as usize].jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
+                self.command_list[(*prev).tail_idx].jump.dst_idx = (*cnt).head_idx + 1 as i32;
             }
             if i == n - 1 as libc::c_int {
-                assert!((*cnt).tail_idx < 4096 as libc::c_int);
-                assert!(self.command_list.items[(*cnt).tail_idx as usize].type_0 == Command::Jump);
-                self.command_list.items[(*cnt).tail_idx as usize].jump.dst_idx = self.command_list.idx as i32;
+                assert!((*cnt).tail_idx < self.command_list.len() as i32);
+                assert!(self.command_list[(*cnt).tail_idx].type_0 == Command::Jump);
+                self.command_list[(*cnt).tail_idx].jump.dst_idx = self.command_list.len() as i32; // the snake eats its tail
             }
             i += 1;
         }
@@ -1074,20 +1097,23 @@ impl mu_Context {
         return str_start;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_next_command(&mut self, cmd: *mut *mut mu_Command) -> libc::c_int {
-        if !(*cmd).is_null() {
-            *cmd = (*cmd).offset(1 as libc::c_int as isize);
-        } else {
-            *cmd = (self.command_list.items).as_mut_ptr();
-        }
-        while *cmd != &mut *(self.command_list.items).as_mut_ptr().offset(self.command_list.idx as isize) as *mut mu_Command {
-            if (**cmd).type_0 != Command::Jump {
-                return 1 as libc::c_int;
+    ///
+    /// returns the next command to execute and the next index to use
+    ///
+    pub fn mu_next_command(&mut self, mut cmd_id: i32) -> Option<(mu_Command, i32)> {
+        unsafe {
+            if cmd_id >= self.command_list.len() as i32 {
+                cmd_id = 0
             }
-            *cmd = &mut *(self.command_list.items).as_mut_ptr().offset((**cmd).jump.dst_idx as isize) as *mut mu_Command;
+
+            while cmd_id != self.command_list.len() as i32 {
+                if self.command_list[cmd_id].type_0 != Command::Jump {
+                    return Some((self.command_list[cmd_id], cmd_id + 1))
+                }
+                cmd_id = self.command_list[cmd_id].jump.dst_idx;
+            }
+            None
         }
-        return 0 as libc::c_int;
     }
 
     unsafe extern "C" fn push_jump(&mut self, dst_idx: i32) -> usize {
@@ -1169,7 +1195,6 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_draw_icon(&mut self, id: Icon, rect: mu_Rect, color: mu_Color) {
-        let mut cmd: *mut mu_Command = 0 as *mut mu_Command;
         let clipped = self.mu_check_clip(rect);
         match clipped {
             Clip::All => return,
@@ -1874,7 +1899,7 @@ impl mu_Context {
     unsafe extern "C" fn end_root_container(&mut self) {
         let mut cnt: *mut mu_Container = self.mu_get_current_container();
         (*cnt).tail_idx = self.push_jump(-1) as i32;
-        self.command_list.items[(*cnt).head_idx as usize].jump.dst_idx = self.command_list.idx as i32;
+        self.command_list[(*cnt).head_idx].jump.dst_idx = self.command_list.len() as i32;
         self.mu_pop_clip_rect();
         self.pop_container();
     }
