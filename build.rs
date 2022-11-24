@@ -4,6 +4,7 @@ fn main() {
     // println!("cargo:rustc-flags=-l readline");
     println!("cargo:rustc-flags=-l SDL2");
     println!("cargo:rustc-flags=-l GL");
+    println!("cargo:rustc-link-lib=c");
 }
 
 #[cfg(target_os = "macos")]

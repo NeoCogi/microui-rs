@@ -4,7 +4,21 @@
 #![allow(non_upper_case_globals)]
 #![allow(unused_assignments)]
 
-//#![no_std]
+//
+// If you need to have the smallest executable, use no_std:
+//
+// #![no_main]
+// #![no_std]
+//
+// use core::panic::PanicInfo;
+//
+// #[panic_handler]
+// fn panic(_panic: &PanicInfo<'_>) -> ! {
+//     loop {}
+// }
+//
+// #[no_mangle]
+// pub extern "C" fn main() {}
 
 extern crate libc;
 #[path = "./microui.rs"]
@@ -1121,13 +1135,13 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
         let mut i: libc::c_int = 0 as libc::c_int;
         while !(colors[i as usize].label).is_null() {
             ctx.mu_label(colors[i as usize].label);
-            let color = ((*(*ctx).style).colors).as_mut_ptr().offset(i as isize);
+            let color = (*ctx).style.colors.as_mut_ptr().offset(i as isize);
             uint8_slider(ctx, &mut (*color).r, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).g, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).b, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).a, 0 as libc::c_int, 255 as libc::c_int);
             let next_layout = ctx.mu_layout_next();
-            ctx.mu_draw_rect(next_layout, (*ctx.style).colors[i as usize]);
+            ctx.mu_draw_rect(next_layout, (*ctx).style.colors[i as usize]);
             i += 1;
         }
         ctx.mu_end_window();
@@ -1409,7 +1423,8 @@ unsafe extern "C" fn text_width(_font: mu_Font, text: *const libc::c_char, mut l
 unsafe extern "C" fn text_height(_font: mu_Font) -> libc::c_int {
     return r_get_text_height();
 }
-pub fn main() {
+
+fn main() {
     unsafe {
         SDL_Init(
             0x1 as libc::c_uint
