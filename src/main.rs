@@ -1439,7 +1439,6 @@ fn main() {
                     771 => {
                         let mut text = FixedVec::<char, 32>::default();
                         let u8_txt = e.text.text.as_slice();
-                        println!("*** {:?}", u8_txt);
                         for c in u8_txt {
                             if *c != 0 {
                                 text.push(*c as u8 as char);

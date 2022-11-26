@@ -1545,9 +1545,7 @@ impl mu_Context {
             } else {
                 self.input_text.len() as i32
             };
-            println!("n: {}, cap: {}, len: {}, bufz: {}, txlen: {}", n, buf.capacity(), len, bufsz, self.input_text.len());
             if n > 0 {
-                println!("append {:?}", &self.input_text.to_slice()[0..n as usize]);
                 buf.append(&self.input_text.to_slice()[0..n as usize]);
                 len += n as usize;
                 res.change()
@@ -1618,7 +1616,7 @@ impl mu_Context {
     #[no_mangle]
     pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut dyn IVec<char>, opt: WidgetOption) -> ResourceState {
         let id: mu_Id = self.mu_get_id(
-            buf.to_slice_mut().as_mut_ptr() as *mut *mut libc::c_char as *const libc::c_void,
+            &buf.to_slice().as_ptr() as *const * const char as *const libc::c_void,
             core::mem::size_of::<*mut char>() as libc::c_ulong as libc::c_int,
         );
         let r: mu_Rect = self.mu_layout_next();
