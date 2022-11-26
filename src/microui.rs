@@ -1,4 +1,6 @@
 use core::ops::{IndexMut, Index};
+use std::fmt::{Arguments, Write, write};
+use std::str::FromStr;
 use ::libc;
 
 pub type _IO_wide_data = libc::c_int;
@@ -20,70 +22,52 @@ pub type __off64_t = libc::c_long;
 
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
-pub struct FixedList<T: Default + Copy, const N: usize> {
+pub trait IVec<T: Default + Copy> {
+    fn push(&mut self, t: T) -> (&mut T, usize);
+    fn pop(&mut self);
+
+    fn top(&self) -> Option<&T>;
+
+    fn top_mut(&mut self) -> Option<&mut T>;
+
+    fn capacity(&self) -> usize;
+    fn len(&self) -> usize;
+    fn reset(&mut self);
+
+    fn to_slice(&self) -> &[T];
+    fn to_slice_mut(&mut self) -> &mut [T];
+
+    fn get(&self, index: usize) -> &T;
+    fn get_mut(&mut self, index: usize) -> &mut T;
+
+    fn append(&mut self, other: &[T]) {
+        for e in other {
+            self.push(e.clone());
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FixedVec<T: Default + Copy, const N: usize> {
     idx: usize,
     items: [T; N],
 }
 
-impl<T: Default + Copy, const N: usize> FixedList<T, N> {
-    pub fn push(&mut self, t: T) -> (&mut T, usize) {
+impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
+    fn push(&mut self, t: T) -> (&mut T, usize) {
         assert!(self.idx < N - 1);
         self.items[self.idx] = t;
         self.idx += 1;
         (&mut self.items[self.idx - 1], self.idx - 1)
     }
 
-    pub fn len(&self) -> usize { self.idx }
-    pub fn reset(&mut self) {
-        for i in 0..self.idx {
-            self.items[i] = T::default();
-        }
-        self.idx = 0;
-    }
-}
-
-impl<T: Default + Copy, const N: usize> Index<i32> for FixedList<T, N> {
-    type Output = T;
-    fn index(&self, index: i32) -> &Self::Output {
-        assert!((index as usize) < self.idx);
-        assert!((index as usize) < N);
-        &self.items[index as usize]
-    }
-}
-
-impl<T: Default + Copy, const N: usize> IndexMut<i32> for FixedList<T, N> {
-    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
-        assert!((index as usize) < self.idx);
-        assert!((index as usize) < N);
-        &mut self.items[index as usize]
-    }
-}
-
-impl<T: Default + Copy, const N: usize> Default for FixedList<T, N> {
-    fn default() -> Self {
-        Self { idx: 0, items: [T::default(); N] }
-    }
-}
-
-pub struct Stack<T: Default + Copy, const N: usize> {
-    idx: usize,
-    items: [T; N],
-}
-
-impl<T: Default + Copy, const N: usize> Stack<T, N> {
-    pub fn push(&mut self, t: T) {
-        assert!(self.idx < N - 1);
-        self.items[self.idx] = t;
-        self.idx += 1;
-    }
-
-    pub fn pop(&mut self) {
+    fn pop(&mut self) {
         assert!(self.idx > 0);
         self.idx -= 1;
         self.items[self.idx] = T::default();
     }
 
-    pub fn top(&self) -> Option<&T> {
+    fn top(&self) -> Option<&T> {
         if self.idx != 0 {
             Some(&self.items[self.idx - 1])
         } else {
@@ -91,7 +75,7 @@ impl<T: Default + Copy, const N: usize> Stack<T, N> {
         }
     }
 
-    pub fn top_mut(&mut self) -> Option<&mut T> {
+    fn top_mut(&mut self) -> Option<&mut T> {
         if self.idx != 0 {
             Some(&mut self.items[self.idx - 1])
         } else {
@@ -99,16 +83,83 @@ impl<T: Default + Copy, const N: usize> Stack<T, N> {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.idx
+    fn capacity(&self) -> usize { N }
+    fn len(&self) -> usize { self.idx }
+    fn reset(&mut self) {
+        for i in 0..self.idx {
+            self.items[i] = T::default();
+        }
+        self.idx = 0;
+    }
+
+    fn to_slice(&self) -> &[T] {
+        &self.items[0..self.idx]
+    }
+
+    fn to_slice_mut(&mut self) -> &mut [T] {
+        &mut self.items[0..self.idx]
+    }
+
+    fn get(&self, index: usize) -> &T {
+        assert!((index as usize) < self.idx);
+        assert!((index as usize) < N);
+        &self.items[index as usize]
+    }
+
+    fn get_mut(&mut self, index: usize) -> &mut T {
+        assert!((index as usize) < self.idx);
+        assert!((index as usize) < N);
+        &mut self.items[index as usize]
     }
 }
 
-impl<T: Default + Copy, const N: usize> Default for Stack<T, N> {
+impl<T: Default + Copy, const N: usize> Index<i32> for FixedVec<T, N> {
+    type Output = T;
+    fn index(&self, index: i32) -> &Self::Output {
+        self.get(index as usize)
+    }
+}
+
+impl<T: Default + Copy, const N: usize> IndexMut<i32> for FixedVec<T, N> {
+    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+        self.get_mut(index as usize)
+    }
+}
+
+impl<T: Default + Copy, const N: usize> Default for FixedVec<T, N> {
     fn default() -> Self {
         Self { idx: 0, items: [T::default(); N] }
     }
 }
+
+impl<T: Default + Copy> Index<i32> for dyn IVec<T> {
+    type Output = T;
+    fn index(&self, index: i32) -> &Self::Output {
+        self.get(index as usize)
+    }
+}
+
+impl<T: Default + Copy> IndexMut<i32> for dyn IVec<T> {
+    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
+        self.get_mut(index as usize)
+    }
+}
+
+
+impl <const N: usize> core::fmt::Write for FixedVec<char, N> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for c in s.chars() {
+            if self.idx < N - 1 {
+                self.push(c);
+            } else {
+                return Err(core::fmt::Error)
+            }
+        }
+        Ok(())
+    }
+}
+
+
 
 #[derive(PartialEq)]
 #[repr(u32)]
@@ -435,9 +486,9 @@ pub const MU_KEY_SHIFT: u32 = 1;
 
 #[repr(C)]
 pub struct mu_Context {
-    pub text_width: Option<unsafe extern "C" fn(mu_Font, *const libc::c_char, libc::c_int) -> libc::c_int>,
+    pub text_width: Option<unsafe extern "C" fn(mu_Font, &[char]) -> i32>,
     pub text_height: Option<unsafe extern "C" fn(mu_Font) -> libc::c_int>,
-    pub draw_frame: Option<unsafe extern "C" fn(*mut mu_Context, mu_Rect, ControlColor) -> ()>,
+    pub draw_frame: Option<unsafe extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ()>,
     pub style: mu_Style,
     pub hover: mu_Id,
     pub focus: mu_Id,
@@ -449,15 +500,15 @@ pub struct mu_Context {
     pub hover_root: *mut mu_Container,
     pub next_hover_root: *mut mu_Container,
     pub scroll_target: *mut mu_Container,
-    pub number_edit_buf: [libc::c_char; 127],
+    pub number_edit_buf: FixedVec<char, 127>,
     pub number_edit: mu_Id,
-    pub command_list: FixedList<mu_Command, 4096>,
+    pub command_list: FixedVec<mu_Command, 4096>,
     pub root_list: C2RustUnnamed_12,
     pub container_stack: C2RustUnnamed_11,
     pub clip_stack: C2RustUnnamed_10,
-    pub id_stack: Stack<mu_Id, 32>,
-    pub layout_stack: Stack<mu_Layout, 16>,
-    pub text_stack: C2RustUnnamed_7,
+    pub id_stack: FixedVec<mu_Id, 32>,
+    pub layout_stack: FixedVec<mu_Layout, 16>,
+    pub text_stack: FixedVec<char, 65536>,
     pub container_pool: [mu_PoolItem; 48],
     pub containers: [mu_Container; 48],
     pub treenode_pool: [mu_PoolItem; 48],
@@ -469,7 +520,7 @@ pub struct mu_Context {
     pub mouse_pressed: MouseButton,
     pub key_down: libc::c_int,
     pub key_pressed: libc::c_int,
-    pub input_text: [libc::c_char; 32],
+    pub input_text: FixedVec<char, 32>,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -508,13 +559,6 @@ pub struct mu_Rect {
     pub y: i32,
     pub w: i32,
     pub h: i32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_7 {
-    pub idx: libc::c_int,
-    pub items: [libc::c_char; 65536],
 }
 
 #[derive(Default, Copy, Clone)]
@@ -603,7 +647,8 @@ pub struct mu_TextCommand {
     pub font: mu_Font,
     pub pos: mu_Vec2,
     pub color: mu_Color,
-    pub str_0: *mut libc::c_char,
+    pub str_start: usize,
+    pub str_len: usize,
 }
 
 pub type mu_Font = *mut libc::c_void;
@@ -644,7 +689,7 @@ pub struct mu_Style {
     pub colors: [mu_Color; 14],
 }
 
-pub type mu_Real = libc::c_float;
+pub type mu_Real = f32;
 
 pub const ABSOLUTE: C2RustUnnamed_14 = 2;
 pub const RELATIVE: C2RustUnnamed_14 = 1;
@@ -720,17 +765,17 @@ pub fn rect_overlaps_vec2(r: mu_Rect, p: mu_Vec2) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn mu_init(mut ctx: *mut mu_Context) {
     memset(ctx as *mut libc::c_void, 0 as libc::c_int, core::mem::size_of::<mu_Context>() as libc::c_ulong);
-    (*ctx).draw_frame = Some(draw_frame as unsafe extern "C" fn(*mut mu_Context, mu_Rect, ControlColor) -> ());
+    (*ctx).draw_frame = Some(draw_frame as unsafe extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ());
     (*ctx).style = default_style.clone();
 }
 
-pub unsafe extern "C" fn draw_frame(ctx: *mut mu_Context, rect: mu_Rect, colorid: ControlColor) {
-    (*ctx).mu_draw_rect(rect, (*ctx).style.colors[colorid as usize]);
+pub unsafe extern "C" fn draw_frame(ctx: &mut mu_Context, rect: mu_Rect, colorid: ControlColor) {
+    ctx.mu_draw_rect(rect, ctx.style.colors[colorid as usize]);
     if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
         return;
     }
-    if (*ctx).style.colors[ControlColor::Border as usize].a != 0 {
-        (*ctx).mu_draw_box(expand_rect(rect, 1 as libc::c_int), (*ctx).style.colors[ControlColor::Border as usize]);
+    if ctx.style.colors[ControlColor::Border as usize].a != 0 {
+        ctx.mu_draw_box(expand_rect(rect, 1 as libc::c_int), ctx.style.colors[ControlColor::Border as usize]);
     }
 }
 
@@ -756,7 +801,7 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_begin(&mut self) {
         assert!((self.text_width).is_some() && (self.text_height).is_some());
         self.root_list.idx = 0 as libc::c_int;
-        self.text_stack.idx = 0 as libc::c_int;
+        self.text_stack.reset();
         self.scroll_target = 0 as *mut mu_Container;
         self.hover_root = self.next_hover_root;
         self.next_hover_root = 0 as *mut mu_Container;
@@ -790,7 +835,7 @@ impl mu_Context {
             self.mu_bring_to_front(self.next_hover_root);
         }
         self.key_pressed = 0 as libc::c_int;
-        self.input_text[0 as libc::c_int as usize] = '\0' as i32 as libc::c_char;
+        self.input_text.reset();
         self.mouse_pressed = MouseButton::None;
         self.scroll_delta = mu_vec2(0 as libc::c_int, 0 as libc::c_int);
         self.last_mouse_pos = self.mouse_pos;
@@ -963,8 +1008,8 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_get_container(&mut self, name: *const libc::c_char) -> *mut mu_Container {
-        let id = self.mu_get_id(name as *const libc::c_void, strlen(name) as libc::c_int);
+    pub unsafe extern "C" fn mu_get_container(&mut self, name: &[char]) -> *mut mu_Container {
+        let id = self.mu_get_id(name.as_ptr() as *const libc::c_void, (name.len() * core::mem::size_of::<char>()) as libc::c_int);
         self.get_container(id, WidgetOption::None)
     }
 
@@ -1047,15 +1092,11 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_input_text(&mut self, text: *const libc::c_char) {
-        let len: libc::c_int = strlen((self.input_text).as_mut_ptr()) as libc::c_int;
-        let size: libc::c_int = (strlen(text)).wrapping_add(1 as libc::c_int as libc::c_ulong) as libc::c_int;
-        assert!(len + size <= core::mem::size_of::<[libc::c_char; 32]>() as libc::c_ulong as libc::c_int);
-        memcpy(
-            (self.input_text).as_mut_ptr().offset(len as isize) as *mut libc::c_void,
-            text as *const libc::c_void,
-            size as libc::c_ulong,
-        );
+    pub unsafe extern "C" fn mu_input_text(&mut self, text: &[char]) {
+        let len = self.input_text.len();
+        let size = text.len();
+        assert!(len + size <= self.input_text.capacity());
+        self.input_text.append(text);
     }
 
     pub fn mu_push_command(&mut self, type_0: Command) -> (&mut mu_Command, usize) {
@@ -1065,18 +1106,11 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_push_text(&mut self, str: *const libc::c_char, len: size_t) -> *mut libc::c_char {
-        let str_start: *mut libc::c_char = &mut *(self.text_stack.items).as_mut_ptr().offset(self.text_stack.idx as isize) as *mut libc::c_char;
-        assert!(
-            (self.text_stack.idx as libc::c_ulong)
-                .wrapping_add(len)
-                .wrapping_add(1 as libc::c_int as libc::c_ulong)
-                < 65536 as libc::c_int as libc::c_ulong
-        );
-        memcpy(str_start as *mut libc::c_void, str as *const libc::c_void, len);
-        *str_start.offset(len as isize) = '\0' as i32 as libc::c_char;
-        self.text_stack.idx =
-            (self.text_stack.idx as libc::c_ulong).wrapping_add(len.wrapping_add(1 as libc::c_int as libc::c_ulong)) as libc::c_int as libc::c_int;
+    pub unsafe extern "C" fn mu_push_text(&mut self, str: &[char]) -> usize {
+        let len = str.len();
+        let str_start = self.text_stack.len();
+        assert!(self.text_stack.len() + len < self.text_stack.capacity());
+        self.text_stack.append(str);
         return str_start;
     }
 
@@ -1139,15 +1173,14 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_draw_text(
         &mut self,
         font: mu_Font,
-        str: *const libc::c_char,
-        mut len: libc::c_int,
+        str: &[char],
         pos: mu_Vec2,
         color: mu_Color,
     ) {
         let rect: mu_Rect = mu_rect(
             pos.x,
             pos.y,
-            (self.text_width).expect("non-null function pointer")(font, str, len),
+            (self.text_width).expect("non-null function pointer")(font, str),
             (self.text_height).expect("non-null function pointer")(font),
         );
         let clipped = self.mu_check_clip(rect);
@@ -1160,12 +1193,10 @@ impl mu_Context {
             _ => (),
         }
 
-        if len < 0 as libc::c_int {
-            len = strlen(str) as libc::c_int;
-        }
-        let str_start: *mut libc::c_char = self.mu_push_text(str, len as size_t);
+        let str_start = self.mu_push_text(str);
         let (cmd, _) = self.mu_push_command(Command::Text);
-        cmd.text.str_0 = str_start;
+        cmd.text.str_start = str_start;
+        cmd.text.str_len = str.len();
         cmd.text.pos = pos;
         cmd.text.color = color;
         cmd.text.font = font;
@@ -1338,14 +1369,14 @@ impl mu_Context {
         } else if self.hover == id {
             colorid.hover()
         }
-        (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, rect, colorid);
+        (self.draw_frame).expect("non-null function pointer")(self, rect, colorid);
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_control_text(&mut self, str: *const libc::c_char, rect: mu_Rect, colorid: ControlColor, opt: WidgetOption) {
+    pub unsafe extern "C" fn mu_draw_control_text(&mut self, str: &[char], rect: mu_Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: mu_Vec2 = mu_Vec2 { x: 0, y: 0 };
         let font: mu_Font = self.style.font;
-        let tw: libc::c_int = self.text_width.expect("non-null function pointer")(font, str, -(1 as libc::c_int));
+        let tw = self.text_width.expect("non-null function pointer")(font, str);
         self.mu_push_clip_rect(rect);
         pos.y = rect.y + (rect.h - self.text_height.expect("non-null function pointer")(font)) / 2 as libc::c_int;
         if opt.is_aligned_center() {
@@ -1355,7 +1386,7 @@ impl mu_Context {
         } else {
             pos.x = rect.x + self.style.padding;
         }
-        self.mu_draw_text(font, str, -(1 as libc::c_int), pos, self.style.colors[colorid as usize]);
+        self.mu_draw_text(font, str, pos, self.style.colors[colorid as usize]);
         self.mu_pop_clip_rect();
     }
 
@@ -1395,57 +1426,60 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_text(&mut self, text: *const libc::c_char) {
-        let mut start: *const libc::c_char = 0 as *const libc::c_char;
-        let mut end: *const libc::c_char = 0 as *const libc::c_char;
-        let mut p: *const libc::c_char = text;
+    pub unsafe extern "C" fn mu_text(&mut self, text: &[char]) {
+        let mut start = 0;
+        let mut end = 0;
+        let mut p = 0;
         let mut width: libc::c_int = -(1 as libc::c_int);
         let font: mu_Font = self.style.font;
         let color: mu_Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
         self.mu_layout_begin_column();
         self.mu_layout_row(1 as libc::c_int, &mut width, (self.text_height).expect("non-null function pointer")(font));
         loop {
+            if end == text.len() {
+                break;
+            }
             let r: mu_Rect = self.mu_layout_next();
             let mut w: libc::c_int = 0 as libc::c_int;
             end = p;
             start = end;
             loop {
-                let word: *const libc::c_char = p;
-                while *p as libc::c_int != 0 && *p as libc::c_int != ' ' as i32 && *p as libc::c_int != '\n' as i32 {
-                    p = p.offset(1);
+                let word = p;
+                while p < text.len() && text[p] != ' ' && text[p] != '\n' {
+                    p += 1;
                 }
-                w += (self.text_width).expect("non-null function pointer")(font, word, p.offset_from(word) as libc::c_long as libc::c_int);
+                w += (self.text_width).expect("non-null function pointer")(font, &text[word..p]);
                 if w > r.w && end != start {
                     break;
                 }
-                w += (self.text_width).expect("non-null function pointer")(font, p, 1 as libc::c_int);
                 let fresh3 = p;
-                p = p.offset(1);
                 end = fresh3;
-                if !(*end as libc::c_int != 0 && *end as libc::c_int != '\n' as i32) {
+                if p < text.len() {
+                    w += (self.text_width).expect("non-null function pointer")(font, &text[p..p + 1]);
+                    p += 1;
+                }
+                if end <= text.len() || text[end] == '\n' {
                     break;
                 }
             }
-            self.mu_draw_text(font, start, end.offset_from(start) as libc::c_long as libc::c_int, mu_vec2(r.x, r.y), color);
-            p = end.offset(1 as libc::c_int as isize);
-            if !(*end != 0) {
-                break;
-            }
+            self.mu_draw_text(font, &text[start..end], mu_vec2(r.x, r.y), color);
+            p = end + 1;
+
         }
         self.mu_layout_end_column();
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_label(&mut self, text: *const libc::c_char) {
+    pub unsafe extern "C" fn mu_label(&mut self, text: &[char]) {
         let layout = self.mu_layout_next();
         self.mu_draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_button_ex(&mut self, label: *const libc::c_char, icon: Icon, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_button_ex(&mut self, label: &[char], icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = if !label.is_null() {
-            self.mu_get_id(label as *const libc::c_void, strlen(label) as libc::c_int)
+        let id: mu_Id = if label.len() > 0 {
+            self.mu_get_id(label.as_ptr() as *const libc::c_void, (label.len() * core::mem::size_of::<char>()) as libc::c_int)
         } else {
             self.mu_get_id(
                 &icon as *const Icon as *const libc::c_int as *const libc::c_void,
@@ -1458,7 +1492,7 @@ impl mu_Context {
             res.submit();
         }
         self.mu_draw_control_frame(id, r, ControlColor::Button, opt);
-        if !label.is_null() {
+        if label.len() > 0 {
             self.mu_draw_control_text(label, r, ControlColor::Text, opt);
         }
         if icon != Icon::None {
@@ -1468,7 +1502,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_checkbox(&mut self, label: *const libc::c_char, mut state: *mut libc::c_int) -> ResourceState {
+    pub unsafe extern "C" fn mu_checkbox(&mut self, label: &[char], mut state: *mut libc::c_int) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id(
             &mut state as *mut *mut libc::c_int as *const libc::c_void,
@@ -1493,39 +1527,36 @@ impl mu_Context {
     #[no_mangle]
     pub unsafe extern "C" fn mu_textbox_raw(
         &mut self,
-        buf: *mut libc::c_char,
-        bufsz: libc::c_int,
+        buf: &mut dyn IVec<char>,
         id: mu_Id,
         r: mu_Rect,
         opt: WidgetOption,
     ) -> ResourceState {
         let mut res = ResourceState::None;
+        let bufsz = buf.capacity();
         self.mu_update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
-            let mut len: libc::c_int = strlen(buf) as libc::c_int;
-            let n: libc::c_int = if (bufsz - len - 1 as libc::c_int) < strlen((self.input_text).as_mut_ptr()) as libc::c_int {
-                bufsz - len - 1 as libc::c_int
+            let mut len = buf.len();
+            let n = if bufsz - len - 1 < self.input_text.len() {
+                bufsz - len - 1
             } else {
-                strlen((self.input_text).as_mut_ptr()) as libc::c_int
+                self.input_text.len()
             };
-            if n > 0 as libc::c_int {
-                memcpy(
-                    buf.offset(len as isize) as *mut libc::c_void,
-                    (self.input_text).as_mut_ptr() as *const libc::c_void,
-                    n as libc::c_ulong,
-                );
+            if n > 0 {
+                buf.append(self.input_text.to_slice());
                 len += n;
-                *buf.offset(len as isize) = '\0' as i32 as libc::c_char;
                 res.change()
             }
-            if self.key_pressed & MU_KEY_BACKSPACE as libc::c_int != 0 && len > 0 as libc::c_int {
+            if self.key_pressed & MU_KEY_BACKSPACE as i32 != 0 && len > 0 {
                 loop {
                     len -= 1;
-                    if !(*buf.offset(len as isize) as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int && len > 0 as libc::c_int) {
+                    buf.pop();
+                    let l = len as i32;
+                    let c = buf.get(l as usize);
+                    if !(*c as i32 & 0xc0 == 0x80 && len > 0) {
                         break;
                     }
                 }
-                *buf.offset(len as isize) = '\0' as i32 as libc::c_char;
                 res.change();
             }
             if self.key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
@@ -1537,41 +1568,37 @@ impl mu_Context {
         if self.focus == id {
             let color: mu_Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
             let font: mu_Font = self.style.font;
-            let textw: libc::c_int = (self.text_width).expect("non-null function pointer")(font, buf, -(1 as libc::c_int));
+            let textw: libc::c_int = (self.text_width).expect("non-null function pointer")(font, buf.to_slice());
             let texth: libc::c_int = (self.text_height).expect("non-null function pointer")(font);
             let ofx: libc::c_int = r.w - self.style.padding - textw - 1 as libc::c_int;
             let textx: libc::c_int = r.x + (if ofx < self.style.padding { ofx } else { self.style.padding });
             let texty: libc::c_int = r.y + (r.h - texth) / 2 as libc::c_int;
             self.mu_push_clip_rect(r);
-            self.mu_draw_text(font, buf, -(1 as libc::c_int), mu_vec2(textx, texty), color);
+            self.mu_draw_text(font, buf.to_slice(), mu_vec2(textx, texty), color);
             self.mu_draw_rect(mu_rect(textx + textw, texty, 1 as libc::c_int, texth), color);
             self.mu_pop_clip_rect();
         } else {
-            self.mu_draw_control_text(buf, r, ControlColor::Text, opt);
+            self.mu_draw_control_text(buf.to_slice(), r, ControlColor::Text, opt);
         }
         return res;
     }
 
-    unsafe extern "C" fn number_textbox(&mut self, value: *mut mu_Real, r: mu_Rect, id: mu_Id) -> ResourceState {
+    unsafe extern "C" fn number_textbox(&mut self, value: &mut mu_Real, r: mu_Rect, id: mu_Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
             self.number_edit = id;
-            sprintf(
-                (self.number_edit_buf).as_mut_ptr(),
-                b"%.3g\0" as *const u8 as *const libc::c_char,
-                *value as libc::c_double,
-            );
+            write!(self.number_edit_buf, "{:.3}", value).unwrap();
         }
         if self.number_edit == id {
-            let buff = self.number_edit_buf.as_mut_ptr();
+            let mut buf = self.number_edit_buf.clone();
             let res: ResourceState = self.mu_textbox_raw(
-                buff,
-                core::mem::size_of::<[libc::c_char; 127]>() as libc::c_ulong as libc::c_int,
+                &mut buf,
                 id,
                 r,
                 WidgetOption::None,
             );
+            self.number_edit_buf = buf;
             if res.is_submitted() || self.focus != id {
-                *value = strtod((self.number_edit_buf).as_mut_ptr(), 0 as *mut *mut libc::c_char) as mu_Real;
+                *value = f32::from_str(String::from_iter(self.number_edit_buf.to_slice().iter()).as_str()).unwrap();
                 self.number_edit = 0 as libc::c_int as mu_Id;
             } else {
                 return ResourceState::Active;
@@ -1581,13 +1608,13 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_ex(&mut self, mut buf: *mut libc::c_char, bufsz: libc::c_int, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut dyn IVec<char>, opt: WidgetOption) -> ResourceState {
         let id: mu_Id = self.mu_get_id(
-            &mut buf as *mut *mut libc::c_char as *const libc::c_void,
-            core::mem::size_of::<*mut libc::c_char>() as libc::c_ulong as libc::c_int,
+            buf.to_slice_mut().as_mut_ptr() as *mut *mut libc::c_char as *const libc::c_void,
+            core::mem::size_of::<*mut char>() as libc::c_ulong as libc::c_int,
         );
         let r: mu_Rect = self.mu_layout_next();
-        return self.mu_textbox_raw(buf, bufsz, id, r, opt);
+        return self.mu_textbox_raw(buf, id, r, opt);
     }
 
     #[no_mangle]
@@ -1597,10 +1624,10 @@ impl mu_Context {
         low: mu_Real,
         high: mu_Real,
         step: mu_Real,
-        fmt: *const libc::c_char,
+        fmt: &str,
         opt: WidgetOption,
     ) -> ResourceState {
-        let mut buf: [libc::c_char; 128] = [0; 128];
+        let mut buf: FixedVec<char, 128> = FixedVec::default();
         let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut x: libc::c_int = 0;
         let mut w: libc::c_int = 0;
@@ -1638,23 +1665,26 @@ impl mu_Context {
         x = ((v - low) * (base.w - w) as libc::c_float / (high - low)) as libc::c_int;
         thumb = mu_rect(base.x + x, base.y, w, base.h);
         self.mu_draw_control_frame(id, thumb, ControlColor::Button, opt);
-        sprintf(buf.as_mut_ptr(), fmt, v as libc::c_double);
-        self.mu_draw_control_text(buf.as_mut_ptr(), base, ControlColor::Text, opt);
+        // TODO: change to variadic format
+        buf.write_fmt(format_args!("{:.2}", v)).unwrap();
+        //buf.write_fmt(format_args!(fmt, v)).unwrap();
+
+        self.mu_draw_control_text(buf.to_slice(), base, ControlColor::Text, opt);
         return res;
     }
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_number_ex(
         &mut self,
-        mut value: *mut mu_Real,
+        value: &mut mu_Real,
         step: mu_Real,
         fmt: *const libc::c_char,
         opt: WidgetOption,
     ) -> ResourceState {
-        let mut buf: [libc::c_char; 128] = [0; 128];
+        let mut buf: FixedVec<char, 128> = FixedVec::default();
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id(
-            &mut value as *mut *mut mu_Real as *const libc::c_void,
+            value as *mut mu_Real as *const libc::c_void,
             core::mem::size_of::<*mut mu_Real>() as libc::c_ulong as libc::c_int,
         );
         let base: mu_Rect = self.mu_layout_next();
@@ -1670,16 +1700,17 @@ impl mu_Context {
             res.change();
         }
         self.mu_draw_control_frame(id, base, ControlColor::Base, opt);
-        sprintf(buf.as_mut_ptr(), fmt, *value as libc::c_double);
-        self.mu_draw_control_text(buf.as_mut_ptr(), base, ControlColor::Text, opt);
+        // TODO: change to variadic format
+        buf.write_fmt(format_args!("{:.2}", value)).unwrap();
+        self.mu_draw_control_text(buf.to_slice(), base, ControlColor::Text, opt);
         return res;
     }
 
-    unsafe extern "C" fn header(&mut self, label: *const libc::c_char, istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
+    unsafe extern "C" fn header(&mut self, label: &[char], istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
         let mut r: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
-        let id: mu_Id = self.mu_get_id(label as *const libc::c_void, strlen(label) as libc::c_int);
+        let id: mu_Id = self.mu_get_id(label.as_ptr() as *const libc::c_void, (label.len() * core::mem::size_of::<char>()) as libc::c_int);
         let idx: libc::c_int = self.mu_pool_get(self.treenode_pool.as_ptr(), 48 as libc::c_int, id);
         let mut width: libc::c_int = -(1 as libc::c_int);
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
@@ -1706,7 +1737,7 @@ impl mu_Context {
 
         if istreenode != 0 {
             if self.hover == id {
-                (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, r, ControlColor::ButtonHover);
+                (self.draw_frame).expect("non-null function pointer")(self, r, ControlColor::ButtonHover);
             }
         } else {
             self.mu_draw_control_frame(id, r, ControlColor::Button, WidgetOption::None);
@@ -1723,16 +1754,16 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_header_ex(&mut self, label: *const libc::c_char, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_header_ex(&mut self, label: &[char], opt: WidgetOption) -> ResourceState {
         return self.header(label, 0 as libc::c_int, opt);
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_treenode_ex(&mut self, label: *const libc::c_char, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_begin_treenode_ex(&mut self, label: &[char], opt: WidgetOption) -> ResourceState {
         let res = self.header(label, 1 as libc::c_int, opt);
         if res.is_active() {
             self.get_layout_mut().indent += self.style.indent;
-            self.id_stack.push(self.last_id)
+            self.id_stack.push(self.last_id);
         }
         return res;
     }
@@ -1779,7 +1810,7 @@ impl mu_Context {
             } else {
                 (*cnt).scroll.y
             };
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, base, ControlColor::ScrollBase);
+            (self.draw_frame).expect("non-null function pointer")(self, base, ControlColor::ScrollBase);
             thumb = base;
             thumb.h = if self.style.thumb_size > base.h * (*body).h / cs.y {
                 self.style.thumb_size
@@ -1787,7 +1818,7 @@ impl mu_Context {
                 base.h * (*body).h / cs.y
             };
             thumb.y += (*cnt).scroll.y * (base.h - thumb.h) / maxscroll;
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, thumb, ControlColor::ScrollThumb);
+            (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
             if self.mu_mouse_over(*body) != 0 {
                 self.scroll_target = cnt;
             }
@@ -1818,7 +1849,7 @@ impl mu_Context {
             } else {
                 (*cnt).scroll.x
             };
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, base_0, ControlColor::ScrollBase);
+            (self.draw_frame).expect("non-null function pointer")(self, base_0, ControlColor::ScrollBase);
             thumb_0 = base_0;
             thumb_0.w = if self.style.thumb_size > base_0.w * (*body).w / cs.x {
                 self.style.thumb_size
@@ -1826,7 +1857,7 @@ impl mu_Context {
                 base_0.w * (*body).w / cs.x
             };
             thumb_0.x += (*cnt).scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, thumb_0, ControlColor::ScrollThumb);
+            (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
             if self.mu_mouse_over(*body) != 0 {
                 self.scroll_target = cnt;
             }
@@ -1881,9 +1912,9 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_window_ex(&mut self, title: *const libc::c_char, mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_begin_window_ex(&mut self, title: &[char], mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut body: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
-        let id: mu_Id = self.mu_get_id(title as *const libc::c_void, strlen(title) as libc::c_int);
+        let id: mu_Id = self.mu_get_id(title.as_ptr() as *const libc::c_void, (title.len() * core::mem::size_of::<char>()) as i32);
         let mut cnt: *mut mu_Container = self.get_container(id, opt);
         if cnt.is_null() || (*cnt).open == 0 {
             return ResourceState::None;
@@ -1897,12 +1928,12 @@ impl mu_Context {
         body = (*cnt).rect;
         rect = body;
         if !opt.has_no_frame() {
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, rect, ControlColor::WindowBG);
+            (self.draw_frame).expect("non-null function pointer")(self, rect, ControlColor::WindowBG);
         }
         if !opt.has_no_title() {
             let mut tr: mu_Rect = rect;
             tr.h = self.style.title_height;
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, tr, ControlColor::TitleBG);
+            (self.draw_frame).expect("non-null function pointer")(self, tr, ControlColor::TitleBG);
 
             // TODO: Is this necessary?
             if !opt.has_no_title() {
@@ -1966,7 +1997,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_open_popup(&mut self, name: *const libc::c_char) {
+    pub unsafe extern "C" fn mu_open_popup(&mut self, name: &[char]) {
         let mut cnt: *mut mu_Container = self.mu_get_container(name);
         self.next_hover_root = cnt;
         self.hover_root = self.next_hover_root;
@@ -1976,7 +2007,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_popup(&mut self, name: *const libc::c_char) -> ResourceState {
+    pub unsafe extern "C" fn mu_begin_popup(&mut self, name: &[char]) -> ResourceState {
         let opt = WidgetOption::Popup
             .with_auto_size()
             .with_no_resize()
@@ -1992,13 +2023,13 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_panel_ex(&mut self, name: *const libc::c_char, opt: WidgetOption) {
+    pub unsafe extern "C" fn mu_begin_panel_ex(&mut self, name: &[char], opt: WidgetOption) {
         let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
-        self.mu_push_id(name as *const libc::c_void, strlen(name) as libc::c_int);
+        self.mu_push_id(name.as_ptr() as *const libc::c_void, (name.len() * core::mem::size_of::<char>()) as libc::c_int);
         cnt = self.get_container(self.last_id, opt);
         (*cnt).rect = self.mu_layout_next();
         if !opt.has_no_frame() {
-            (self.draw_frame).expect("non-null function pointer")(self as *mut mu_Context, (*cnt).rect, ControlColor::PanelBG);
+            (self.draw_frame).expect("non-null function pointer")(self, (*cnt).rect, ControlColor::PanelBG);
         }
         assert!(
             self.container_stack.idx

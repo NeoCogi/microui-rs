@@ -1588,7 +1588,7 @@ pub unsafe extern "C" fn r_draw_rect(mut rect: mu_Rect, mut color: mu_Color) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_text(mut text: *const libc::c_char, mut pos: mu_Vec2, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_text(text: &[char], mut pos: mu_Vec2, mut color: mu_Color) {
     let mut dst: mu_Rect = {
         let mut init = mu_Rect {
             x: pos.x,
@@ -1598,8 +1598,7 @@ pub unsafe extern "C" fn r_draw_text(mut text: *const libc::c_char, mut pos: mu_
         };
         init
     };
-    let mut p: *const libc::c_char = text;
-    while *p != 0 {
+    for p in text {
         if !(*p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
             let mut chr: libc::c_int = if (*p as libc::c_uchar as libc::c_int) < 127 as libc::c_int {
                 *p as libc::c_uchar as libc::c_int
@@ -1612,7 +1611,6 @@ pub unsafe extern "C" fn r_draw_text(mut text: *const libc::c_char, mut pos: mu_
             push_quad(dst, src, color);
             dst.x += dst.w;
         }
-        p = p.offset(1);
     }
 }
 
@@ -1625,23 +1623,20 @@ pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: mu_Rect, mut color:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_get_text_width(mut text: *const libc::c_char, mut len: libc::c_int) -> libc::c_int {
-    let mut res: libc::c_int = 0 as libc::c_int;
-    let mut p: *const libc::c_char = text;
-    while *p as libc::c_int != 0 && {
-        let fresh0 = len;
-        len = len - 1;
-        fresh0 != 0
-    } {
-        if !(*p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
-            let mut chr: libc::c_int = if (*p as libc::c_uchar as libc::c_int) < 127 as libc::c_int {
-                *p as libc::c_uchar as libc::c_int
+pub unsafe extern "C" fn r_get_text_width(text: &[char]) -> libc::c_int {
+    let mut res = 0;
+    let mut p = 0;
+    let len = text.len();
+    while p < len {
+        if !(text[p] as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
+            let mut chr: libc::c_int = if (text[p] as libc::c_uchar as libc::c_int) < 127 as libc::c_int {
+                text[p] as libc::c_uchar as libc::c_int
             } else {
                 127 as libc::c_int
             };
             res += atlas[(ATLAS_FONT as libc::c_int + chr) as usize].w;
         }
-        p = p.offset(1);
+        p += 1;
     }
     return res;
 }
