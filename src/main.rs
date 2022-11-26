@@ -919,11 +919,11 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
                 ),
             );
             let fm = format!(
-            "#{:#02X}{:#02X}{:#02X}",
-            bg[0 as libc::c_int as usize] as libc::c_int,
-            bg[1 as libc::c_int as usize] as libc::c_int,
-            bg[2 as libc::c_int as usize] as libc::c_int,
-        ).chars().collect::<Vec<_>>();
+                "#{:#02X}{:#02X}{:#02X}",
+                bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
+            )
+            .chars()
+            .collect::<Vec<_>>();
             let buf_0 = fm.as_slice();
             ctx.mu_draw_control_text(buf_0, r, ControlColor::Text, WidgetOption::AlignCenter);
         }
@@ -951,13 +951,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mu
         }
         let mut submitted: libc::c_int = 0 as libc::c_int;
         ctx.mu_layout_row(2 as libc::c_int, [-(70 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-        if ctx
-            .mu_textbox_ex(
-                submit_buf,
-                WidgetOption::None,
-            )
-            .is_submitted()
-        {
+        if ctx.mu_textbox_ex(submit_buf, WidgetOption::None).is_submitted() {
             ctx.mu_set_focus(ctx.last_id);
             submitted = 1 as libc::c_int;
         }
@@ -995,10 +989,7 @@ unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, mut value: *mut libc::c_
 unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     static mut colors: [C2RustUnnamed_13; 15] = [
         {
-            let init = C2RustUnnamed_13 {
-                label: "text",
-                idx: ControlColor::Text,
-            };
+            let init = C2RustUnnamed_13 { label: "text", idx: ControlColor::Text };
             init
         },
         {
@@ -1058,10 +1049,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
             init
         },
         {
-            let init = C2RustUnnamed_13 {
-                label: "base:",
-                idx: ControlColor::Base,
-            };
+            let init = C2RustUnnamed_13 { label: "base:", idx: ControlColor::Base };
             init
         },
         {
@@ -1093,10 +1081,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
             init
         },
         {
-            let init = C2RustUnnamed_13 {
-                label: "",
-                idx: ControlColor::Text,
-            };
+            let init = C2RustUnnamed_13 { label: "", idx: ControlColor::Text };
             init
         },
     ];
@@ -1503,8 +1488,8 @@ fn main() {
                             _ => {}
                         }
                         cmd_id = id;
-                    },
-                    None => break
+                    }
+                    None => break,
                 }
             }
             r_present();

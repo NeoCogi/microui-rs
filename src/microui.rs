@@ -8,17 +8,12 @@ pub type _IO_codecvt = libc::c_int;
 pub type _IO_marker = libc::c_int;
 
 extern "C" {
-    fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
-    fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char) -> libc::c_double;
     fn qsort(__base: *mut libc::c_void, __nmemb: size_t, __size: size_t, __compar: __compar_fn_t);
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
     fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong) -> *mut libc::c_void;
-    fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
 pub type size_t = libc::c_ulong;
-pub type __off_t = libc::c_long;
-pub type __off64_t = libc::c_long;
 
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
@@ -83,8 +78,12 @@ impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
         }
     }
 
-    fn capacity(&self) -> usize { N }
-    fn len(&self) -> usize { self.idx }
+    fn capacity(&self) -> usize {
+        N
+    }
+    fn len(&self) -> usize {
+        self.idx
+    }
     fn reset(&mut self) {
         for i in 0..self.idx {
             self.items[i] = T::default();
@@ -145,21 +144,18 @@ impl<T: Default + Copy> IndexMut<i32> for dyn IVec<T> {
     }
 }
 
-
-impl <const N: usize> core::fmt::Write for FixedVec<char, N> {
+impl<const N: usize> core::fmt::Write for FixedVec<char, N> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for c in s.chars() {
             if self.idx < N - 1 {
                 self.push(c);
             } else {
-                return Err(core::fmt::Error)
+                return Err(core::fmt::Error);
             }
         }
         Ok(())
     }
 }
-
-
 
 #[derive(PartialEq)]
 #[repr(u32)]
@@ -231,8 +227,6 @@ pub enum Icon {
     Close = 1,
     None = 0,
 }
-
-
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(u32)]
@@ -701,8 +695,8 @@ static mut unclipped_rect: mu_Rect = mu_Rect { x: 0, y: 0, w: 0x1000000, h: 0x10
 static mut default_style: mu_Style = mu_Style {
     font: 0 as *const libc::c_void as *mut libc::c_void,
     size: mu_Vec2 {
-            x: 68 as libc::c_int,
-            y: 10 as libc::c_int,
+        x: 68 as libc::c_int,
+        y: 10 as libc::c_int,
     },
     padding: 5 as libc::c_int,
     spacing: 4 as libc::c_int,
@@ -865,7 +859,8 @@ impl mu_Context {
             if i == n - 1 as libc::c_int {
                 assert!((*cnt).tail_idx < self.command_list.len() as i32);
                 assert!(self.command_list[(*cnt).tail_idx].type_0 == Command::Jump);
-                self.command_list[(*cnt).tail_idx].jump.dst_idx = self.command_list.len() as i32; // the snake eats its tail
+                self.command_list[(*cnt).tail_idx].jump.dst_idx = self.command_list.len() as i32;
+                // the snake eats its tail
             }
             i += 1;
         }
@@ -1007,7 +1002,6 @@ impl mu_Context {
         return cnt;
     }
 
-    #[no_mangle]
     pub unsafe extern "C" fn mu_get_container(&mut self, name: &[char]) -> *mut mu_Container {
         let id = self.mu_get_id(name.as_ptr() as *const libc::c_void, (name.len() * core::mem::size_of::<char>()) as libc::c_int);
         self.get_container(id, WidgetOption::None)
@@ -1125,7 +1119,7 @@ impl mu_Context {
 
             while cmd_id != self.command_list.len() as i32 {
                 if self.command_list[cmd_id].type_0 != Command::Jump {
-                    return Some((self.command_list[cmd_id], cmd_id + 1))
+                    return Some((self.command_list[cmd_id], cmd_id + 1));
                 }
                 cmd_id = self.command_list[cmd_id].jump.dst_idx;
             }
@@ -1170,13 +1164,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_text(
-        &mut self,
-        font: mu_Font,
-        str: &[char],
-        pos: mu_Vec2,
-        color: mu_Color,
-    ) {
+    pub unsafe extern "C" fn mu_draw_text(&mut self, font: mu_Font, str: &[char], pos: mu_Vec2, color: mu_Color) {
         let rect: mu_Rect = mu_rect(
             pos.x,
             pos.y,
@@ -1467,7 +1455,6 @@ impl mu_Context {
             }
             self.mu_draw_text(font, &text[start..end], mu_vec2(r.x, r.y), color);
             p = end + 1;
-
         }
         self.mu_layout_end_column();
     }
@@ -1482,7 +1469,10 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_button_ex(&mut self, label: &[char], icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = if label.len() > 0 {
-            self.mu_get_id(label.as_ptr() as *const libc::c_void, (label.len() * core::mem::size_of::<char>()) as libc::c_int)
+            self.mu_get_id(
+                label.as_ptr() as *const libc::c_void,
+                (label.len() * core::mem::size_of::<char>()) as libc::c_int,
+            )
         } else {
             self.mu_get_id(
                 &icon as *const Icon as *const libc::c_int as *const libc::c_void,
@@ -1528,13 +1518,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_raw(
-        &mut self,
-        buf: &mut dyn IVec<char>,
-        id: mu_Id,
-        r: mu_Rect,
-        opt: WidgetOption,
-    ) -> ResourceState {
+    pub unsafe extern "C" fn mu_textbox_raw(&mut self, buf: &mut dyn IVec<char>, id: mu_Id, r: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let bufsz = buf.capacity();
         self.mu_update_control(id, r, opt.with_hold_focus());
@@ -1596,12 +1580,7 @@ impl mu_Context {
         }
         if self.number_edit == id {
             let mut buf = self.number_edit_buf.clone();
-            let res: ResourceState = self.mu_textbox_raw(
-                &mut buf,
-                id,
-                r,
-                WidgetOption::None,
-            );
+            let res: ResourceState = self.mu_textbox_raw(&mut buf, id, r, WidgetOption::None);
             self.number_edit_buf = buf;
             if res.is_submitted() || self.focus != id {
                 *value = f32::from_str(String::from_iter(self.number_edit_buf.to_slice().iter()).as_str()).unwrap();
@@ -1616,7 +1595,7 @@ impl mu_Context {
     #[no_mangle]
     pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut dyn IVec<char>, opt: WidgetOption) -> ResourceState {
         let id: mu_Id = self.mu_get_id(
-            &buf.to_slice().as_ptr() as *const * const char as *const libc::c_void,
+            &buf.to_slice().as_ptr() as *const *const char as *const libc::c_void,
             core::mem::size_of::<*mut char>() as libc::c_ulong as libc::c_int,
         );
         let r: mu_Rect = self.mu_layout_next();
@@ -1680,13 +1659,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_number_ex(
-        &mut self,
-        value: &mut mu_Real,
-        step: mu_Real,
-        fmt: *const libc::c_char,
-        opt: WidgetOption,
-    ) -> ResourceState {
+    pub unsafe extern "C" fn mu_number_ex(&mut self, value: &mut mu_Real, step: mu_Real, fmt: *const libc::c_char, opt: WidgetOption) -> ResourceState {
         let mut buf: FixedVec<char, 128> = FixedVec::default();
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id(
@@ -1716,7 +1689,10 @@ impl mu_Context {
         let mut r: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
-        let id: mu_Id = self.mu_get_id(label.as_ptr() as *const libc::c_void, (label.len() * core::mem::size_of::<char>()) as libc::c_int);
+        let id: mu_Id = self.mu_get_id(
+            label.as_ptr() as *const libc::c_void,
+            (label.len() * core::mem::size_of::<char>()) as libc::c_int,
+        );
         let idx: libc::c_int = self.mu_pool_get(self.treenode_pool.as_ptr(), 48 as libc::c_int, id);
         let mut width: libc::c_int = -(1 as libc::c_int);
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
