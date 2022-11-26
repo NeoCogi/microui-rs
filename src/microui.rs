@@ -1540,23 +1540,28 @@ impl mu_Context {
         self.mu_update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
             let mut len = buf.len();
-            let n = if bufsz - len - 1 < self.input_text.len() {
-                bufsz - len - 1
+            let n = if bufsz - len < self.input_text.len() {
+                bufsz as i32 - len as i32
             } else {
-                self.input_text.len()
+                self.input_text.len() as i32
             };
+            println!("n: {}, cap: {}, len: {}, bufz: {}, txlen: {}", n, buf.capacity(), len, bufsz, self.input_text.len());
             if n > 0 {
-                buf.append(self.input_text.to_slice());
-                len += n;
+                println!("append {:?}", &self.input_text.to_slice()[0..n as usize]);
+                buf.append(&self.input_text.to_slice()[0..n as usize]);
+                len += n as usize;
                 res.change()
             }
             if self.key_pressed & MU_KEY_BACKSPACE as i32 != 0 && len > 0 {
+                // skip utf-8 continuation bytes
                 loop {
-                    len -= 1;
                     buf.pop();
-                    let l = len as i32;
-                    let c = buf.get(l as usize);
-                    if !(*c as i32 & 0xc0 == 0x80 && len > 0) {
+                    if buf.len() > 0 {
+                        let c = buf.top().unwrap();
+                        if !(*c as i32 & 0xc0 == 0x80) {
+                            break;
+                        }
+                    } else {
                         break;
                     }
                 }

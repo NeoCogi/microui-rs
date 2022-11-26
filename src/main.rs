@@ -930,7 +930,7 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
+unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, submit_buf: &mut dyn IVec<char>, ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
             "Log Window".chars().collect::<Vec<_>>().as_slice(),
@@ -949,12 +949,11 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mu
             (*panel).scroll.y = (*panel).content_size.y;
             *logbuf_updated = 0 as libc::c_int;
         }
-        let mut buf: FixedVec<char, 128> = FixedVec::default();
         let mut submitted: libc::c_int = 0 as libc::c_int;
         ctx.mu_layout_row(2 as libc::c_int, [-(70 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
         if ctx
             .mu_textbox_ex(
-                &mut buf,
+                submit_buf,
                 WidgetOption::None,
             )
             .is_submitted()
@@ -969,7 +968,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mu
             submitted = 1 as libc::c_int;
         }
         if submitted != 0 {
-            write_log(logbuf, logbuf_updated, buf.to_slice());
+            write_log(logbuf, logbuf_updated, submit_buf.to_slice());
         }
         ctx.mu_end_window();
     }
@@ -1131,10 +1130,10 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     }
 }
 
-unsafe extern "C" fn process_frame(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
+unsafe extern "C" fn process_frame(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, submit_buf: &mut dyn IVec<char>, ctx: &mut mu_Context) {
     ctx.mu_begin();
     style_window(ctx);
-    log_window(logbuf, logbuf_updated, ctx);
+    log_window(logbuf, logbuf_updated, submit_buf, ctx);
     test_window(logbuf, logbuf_updated, ctx);
     ctx.mu_end();
 }
@@ -1407,6 +1406,7 @@ unsafe extern "C" fn text_height(_font: mu_Font) -> libc::c_int {
 fn main() {
     let mut logbuf: FixedVec<char, 64000> = FixedVec::default();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
+    let mut submit_buf = FixedVec::<char, 32>::default();
     unsafe {
         SDL_Init(
             0x1 as libc::c_uint
@@ -1436,9 +1436,19 @@ fn main() {
                     1027 => {
                         (*ctx).mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
                     }
-                    //771 => {
-//                        (*ctx).mu_input_text(e.text.text);
-                    //}
+                    771 => {
+                        let mut text = FixedVec::<char, 32>::default();
+                        let u8_txt = e.text.text.as_slice();
+                        println!("*** {:?}", u8_txt);
+                        for c in u8_txt {
+                            if *c != 0 {
+                                text.push(*c as u8 as char);
+                            } else {
+                                break;
+                            }
+                        }
+                        (*ctx).mu_input_text(text.to_slice());
+                    }
                     1025 | 1026 => {
                         let b = match e.button.button {
                             1 => MouseButton::Left,
@@ -1466,7 +1476,7 @@ fn main() {
                     _ => {}
                 }
             }
-            process_frame(&mut logbuf, &mut logbuf_updated, &mut *ctx);
+            process_frame(&mut logbuf, &mut logbuf_updated, &mut submit_buf, &mut *ctx);
             r_clear(mu_color(
                 bg[0 as libc::c_int as usize] as u8,
                 bg[1 as libc::c_int as usize] as u8,
