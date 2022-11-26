@@ -1457,8 +1457,11 @@ impl mu_Context {
                 if p < text.len() {
                     w += (self.text_width).expect("non-null function pointer")(font, &text[p..p + 1]);
                     p += 1;
-                }
-                if end <= text.len() || text[end] == '\n' {
+
+                    if end >= text.len() || text[end] == '\n' {
+                        break;
+                    }
+                } else {
                     break;
                 }
             }

@@ -687,6 +687,9 @@ static mut bg: [libc::c_float; 3] = [
     100 as libc::c_int as libc::c_float,
 ];
 unsafe extern "C" fn write_log(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, text: &[char]) {
+    if logbuf.len() != 0 {
+        logbuf.push('\n');
+    }
     logbuf.append(text);
     *logbuf_updated = 1 as libc::c_int;
 }
