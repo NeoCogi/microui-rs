@@ -25,6 +25,8 @@ extern crate libc;
 pub mod microui;
 #[path = "./renderer.rs"]
 pub mod renderer;
+mod fixed_collections;
+
 pub type SDL_SysWMmsg = libc::c_int;
 
 use microui::*;

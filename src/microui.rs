@@ -1,7 +1,7 @@
-use core::ops::{IndexMut, Index};
 use std::fmt::{Arguments, Write, write};
 use std::str::FromStr;
 use ::libc;
+use crate::fixed_collections::*;
 
 pub type _IO_wide_data = libc::c_int;
 pub type _IO_codecvt = libc::c_int;
@@ -16,146 +16,6 @@ extern "C" {
 pub type size_t = libc::c_ulong;
 
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
-
-pub trait IVec<T: Default + Copy> {
-    fn push(&mut self, t: T) -> (&mut T, usize);
-    fn pop(&mut self);
-
-    fn top(&self) -> Option<&T>;
-
-    fn top_mut(&mut self) -> Option<&mut T>;
-
-    fn capacity(&self) -> usize;
-    fn len(&self) -> usize;
-    fn reset(&mut self);
-
-    fn to_slice(&self) -> &[T];
-    fn to_slice_mut(&mut self) -> &mut [T];
-
-    fn get(&self, index: usize) -> &T;
-    fn get_mut(&mut self, index: usize) -> &mut T;
-
-    fn append(&mut self, other: &[T]) {
-        for e in other {
-            self.push(e.clone());
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct FixedVec<T: Default + Copy, const N: usize> {
-    idx: usize,
-    items: [T; N],
-}
-
-impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
-    fn push(&mut self, t: T) -> (&mut T, usize) {
-        assert!(self.idx < N - 1);
-        self.items[self.idx] = t;
-        self.idx += 1;
-        (&mut self.items[self.idx - 1], self.idx - 1)
-    }
-
-    fn pop(&mut self) {
-        assert!(self.idx > 0);
-        self.idx -= 1;
-        self.items[self.idx] = T::default();
-    }
-
-    fn top(&self) -> Option<&T> {
-        if self.idx != 0 {
-            Some(&self.items[self.idx - 1])
-        } else {
-            None
-        }
-    }
-
-    fn top_mut(&mut self) -> Option<&mut T> {
-        if self.idx != 0 {
-            Some(&mut self.items[self.idx - 1])
-        } else {
-            None
-        }
-    }
-
-    fn capacity(&self) -> usize {
-        N
-    }
-    fn len(&self) -> usize {
-        self.idx
-    }
-    fn reset(&mut self) {
-        for i in 0..self.idx {
-            self.items[i] = T::default();
-        }
-        self.idx = 0;
-    }
-
-    fn to_slice(&self) -> &[T] {
-        &self.items[0..self.idx]
-    }
-
-    fn to_slice_mut(&mut self) -> &mut [T] {
-        &mut self.items[0..self.idx]
-    }
-
-    fn get(&self, index: usize) -> &T {
-        assert!((index as usize) < self.idx);
-        assert!((index as usize) < N);
-        &self.items[index as usize]
-    }
-
-    fn get_mut(&mut self, index: usize) -> &mut T {
-        assert!((index as usize) < self.idx);
-        assert!((index as usize) < N);
-        &mut self.items[index as usize]
-    }
-}
-
-impl<T: Default + Copy, const N: usize> Index<i32> for FixedVec<T, N> {
-    type Output = T;
-    fn index(&self, index: i32) -> &Self::Output {
-        self.get(index as usize)
-    }
-}
-
-impl<T: Default + Copy, const N: usize> IndexMut<i32> for FixedVec<T, N> {
-    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
-        self.get_mut(index as usize)
-    }
-}
-
-impl<T: Default + Copy, const N: usize> Default for FixedVec<T, N> {
-    fn default() -> Self {
-        Self { idx: 0, items: [T::default(); N] }
-    }
-}
-
-impl<T: Default + Copy> Index<i32> for dyn IVec<T> {
-    type Output = T;
-    fn index(&self, index: i32) -> &Self::Output {
-        self.get(index as usize)
-    }
-}
-
-impl<T: Default + Copy> IndexMut<i32> for dyn IVec<T> {
-    fn index_mut(&mut self, index: i32) -> &mut Self::Output {
-        self.get_mut(index as usize)
-    }
-}
-
-impl<const N: usize> core::fmt::Write for FixedVec<char, N> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        for c in s.chars() {
-            if self.idx < N - 1 {
-                self.push(c);
-            } else {
-                return Err(core::fmt::Error);
-            }
-        }
-        Ok(())
-    }
-}
 
 #[derive(PartialEq)]
 #[repr(u32)]
@@ -536,8 +396,8 @@ pub type mu_Id = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct mu_Container {
-    pub head_idx: libc::c_int,
-    pub tail_idx: libc::c_int,
+    pub head_idx: Option<usize>,
+    pub tail_idx: Option<usize>,
     pub rect: mu_Rect,
     pub body: mu_Rect,
     pub content_size: mu_Vec2,
@@ -666,7 +526,7 @@ pub struct mu_ClipCommand {
 #[repr(C)]
 pub struct mu_JumpCommand {
     pub base: mu_BaseCommand,
-    pub dst_idx: libc::c_int,
+    pub dst_idx: Option<usize>,
 }
 
 #[derive(Copy, Clone)]
@@ -858,16 +718,16 @@ impl mu_Context {
 
                 let mut cmd: &mut mu_Command = &mut self.command_list[0];
                 assert!(cmd.type_0 == Command::Jump);
-                cmd.jump.dst_idx = (*cnt).head_idx + 1 as libc::c_int;
-                assert!(cmd.jump.dst_idx < self.command_list.len() as i32);
+                cmd.jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
+                assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len());
             } else {
                 let prev: *mut mu_Container = self.root_list.items[(i - 1 as libc::c_int) as usize];
-                self.command_list[(*prev).tail_idx].jump.dst_idx = (*cnt).head_idx + 1 as i32;
+                self.command_list[(*prev).tail_idx.unwrap()].jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
             }
             if i == n - 1 as libc::c_int {
-                assert!((*cnt).tail_idx < self.command_list.len() as i32);
-                assert!(self.command_list[(*cnt).tail_idx].type_0 == Command::Jump);
-                self.command_list[(*cnt).tail_idx].jump.dst_idx = self.command_list.len() as i32;
+                assert!((*cnt).tail_idx.unwrap() < self.command_list.len());
+                assert!(self.command_list[(*cnt).tail_idx.unwrap()].type_0 == Command::Jump);
+                self.command_list[(*cnt).tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
                 // the snake eats its tail
             }
             i += 1;
@@ -1027,8 +887,8 @@ impl mu_Context {
             0 as libc::c_int,
             core::mem::size_of::<mu_Container>() as libc::c_ulong,
         );
-        (*cnt).head_idx = -(1 as libc::c_int);
-        (*cnt).tail_idx = -(1 as libc::c_int);
+        (*cnt).head_idx = None;
+        (*cnt).tail_idx = None;
         (*cnt).open = 1 as libc::c_int;
         self.mu_bring_to_front(cnt);
         return cnt;
@@ -1135,23 +995,23 @@ impl mu_Context {
     ///
     /// returns the next command to execute and the next index to use
     ///
-    pub fn mu_next_command(&mut self, mut cmd_id: i32) -> Option<(mu_Command, i32)> {
+    pub fn mu_next_command(&mut self, mut cmd_id: usize) -> Option<(mu_Command, usize)> {
         unsafe {
-            if cmd_id >= self.command_list.len() as i32 {
+            if cmd_id >= self.command_list.len() {
                 cmd_id = 0
             }
 
-            while cmd_id != self.command_list.len() as i32 {
+            while cmd_id != self.command_list.len() {
                 if self.command_list[cmd_id].type_0 != Command::Jump {
                     return Some((self.command_list[cmd_id], cmd_id + 1));
                 }
-                cmd_id = self.command_list[cmd_id].jump.dst_idx;
+                cmd_id = self.command_list[cmd_id].jump.dst_idx.unwrap();
             }
             None
         }
     }
 
-    unsafe fn push_jump(&mut self, dst_idx: i32) -> usize {
+    unsafe fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
         let (cmd, pos) = self.mu_push_command(Command::Jump);
         cmd.jump.dst_idx = dst_idx;
         pos
@@ -1358,7 +1218,7 @@ impl mu_Context {
             if self.container_stack.items[i as usize] == self.hover_root {
                 return 1 as libc::c_int;
             }
-            if (*self.container_stack.items[i as usize]).head_idx != -(1 as libc::c_int) {
+            if (*self.container_stack.items[i as usize]).head_idx.is_some() {
                 break;
             }
         }
@@ -1519,7 +1379,7 @@ impl mu_Context {
         self.mu_update_control(id, r, WidgetOption::None);
         if self.mouse_pressed.is_left() && self.focus == id {
             res.change();
-            *state = (*state == false);
+            *state = *state == false;
         }
         self.mu_draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::None);
         if *state {
@@ -1860,7 +1720,7 @@ impl mu_Context {
         );
         self.root_list.items[self.root_list.idx as usize] = cnt;
         self.root_list.idx += 1;
-        (*cnt).head_idx = self.push_jump(-1) as i32;
+        (*cnt).head_idx = Some(self.push_jump(None));
         if rect_overlaps_vec2((*cnt).rect, self.mouse_pos) && ((self.next_hover_root).is_null() || (*cnt).zindex > (*self.next_hover_root).zindex) {
             self.next_hover_root = cnt;
         }
@@ -1874,8 +1734,8 @@ impl mu_Context {
 
     unsafe extern "C" fn end_root_container(&mut self) {
         let mut cnt: *mut mu_Container = self.mu_get_current_container();
-        (*cnt).tail_idx = self.push_jump(-1) as i32;
-        self.command_list[(*cnt).head_idx].jump.dst_idx = self.command_list.len() as i32;
+        (*cnt).tail_idx = Some(self.push_jump(None));
+        self.command_list[(*cnt).head_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
         self.mu_pop_clip_rect();
         self.pop_container();
     }
