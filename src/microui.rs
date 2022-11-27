@@ -792,6 +792,13 @@ fn hash_str(hash_0: &mut mu_Id, s: &str) {
     }
 }
 
+fn hash_bytes(hash_0: &mut mu_Id, s: &[u8]) {
+    for c in s {
+        let fresh1 = *c as i32;
+        *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
+    }
+}
+
 impl mu_Context {
     pub unsafe extern "C" fn mu_begin(&mut self) {
         assert!((self.char_width).is_some() && (self.char_height).is_some());
@@ -872,12 +879,24 @@ impl mu_Context {
         self.updated_focus = 1 as libc::c_int;
     }
 
-    pub fn mu_get_id(&mut self, orig_id: u32) -> mu_Id {
+    pub fn mu_get_id_u32(&mut self, orig_id: u32) -> mu_Id {
         let mut res: mu_Id = match self.id_stack.top() {
             Some(id) => *id,
             None => 2166136261 as mu_Id,
         };
         hash_u32(&mut res, orig_id);
+        self.last_id = res;
+        return res;
+    }
+
+    pub fn mu_get_id_from_ptr<T>(&mut self, orig_id: &T) -> mu_Id {
+        let mut res: mu_Id = match self.id_stack.top() {
+            Some(id) => *id,
+            None => 2166136261 as mu_Id,
+        };
+        let ptr = orig_id as *const T as usize;
+        let bytes = ptr.to_le_bytes();
+        hash_bytes(&mut res, &bytes);
         self.last_id = res;
         return res;
     }
@@ -892,8 +911,8 @@ impl mu_Context {
         return res;
     }
 
-    pub unsafe extern "C" fn mu_push_id(&mut self, orig_id: u32) {
-        let id = self.mu_get_id(orig_id);
+    pub unsafe extern "C" fn mu_push_id_from_ptr<T>(&mut self, orig_id: &T) {
+        let id = self.mu_get_id_from_ptr(orig_id);
         self.id_stack.push(id);
     }
 
@@ -1469,9 +1488,13 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_button_ex(&mut self, orig_id: mu_Id, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = self.mu_get_id(orig_id);
+        let id: mu_Id = if label.len() > 0 {
+            self.mu_get_id_from_str(label)
+        } else {
+            self.mu_get_id_u32(icon as u32)
+        };
         let r: mu_Rect = self.mu_layout_next();
         self.mu_update_control(id, r, opt);
         if self.mouse_pressed.is_left() && self.focus == id {
@@ -1488,9 +1511,9 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_checkbox(&mut self, orig_id: mu_Id, label: &str, state: &mut bool) -> ResourceState {
+    pub unsafe extern "C" fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = self.mu_get_id(orig_id);
+        let id: mu_Id = self.mu_get_id_from_ptr(state);
         let mut r: mu_Rect = self.mu_layout_next();
         let box_0: mu_Rect = mu_rect(r.x, r.y, r.h, r.h);
         self.mu_update_control(id, r, WidgetOption::None);
@@ -1569,8 +1592,8 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_ex(&mut self, orig_id: mu_Id, buf: &mut String, opt: WidgetOption) -> ResourceState {
-        let id: mu_Id = self.mu_get_id(orig_id);
+    pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut Box<String>, opt: WidgetOption) -> ResourceState {
+        let id: mu_Id = self.mu_get_id_from_ptr(buf);
         let r: mu_Rect = self.mu_layout_next();
         return self.mu_textbox_raw(buf, id, r, opt);
     }
@@ -1578,7 +1601,7 @@ impl mu_Context {
     #[no_mangle]
     pub unsafe extern "C" fn mu_slider_ex(
         &mut self,
-        orig_id: mu_Id,
+
         mut value: &mut mu_Real,
         low: mu_Real,
         high: mu_Real,
@@ -1592,7 +1615,7 @@ impl mu_Context {
         let mut res = ResourceState::None;
         let last: mu_Real = *value;
         let mut v: mu_Real = last;
-        let id: mu_Id = self.mu_get_id(orig_id);
+        let id: mu_Id = self.mu_get_id_from_ptr(value);
         let base: mu_Rect = self.mu_layout_next();
         if !self.number_textbox(&mut v, base, id).is_none() {
             return res;
@@ -1629,17 +1652,10 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_number_ex(
-        &mut self,
-        orig_id: mu_Id,
-        value: &mut mu_Real,
-        step: mu_Real,
-        fmt: *const libc::c_char,
-        opt: WidgetOption,
-    ) -> ResourceState {
+    pub unsafe extern "C" fn mu_number_ex(&mut self, value: &mut mu_Real, step: mu_Real, fmt: *const libc::c_char, opt: WidgetOption) -> ResourceState {
         let mut buf: FixedVec<char, 128> = FixedVec::default();
         let mut res = ResourceState::None;
-        let id: mu_Id = self.mu_get_id(orig_id);
+        let id: mu_Id = self.mu_get_id_from_ptr(value);
         let base: mu_Rect = self.mu_layout_next();
         let last: mu_Real = *value;
         if !self.number_textbox(value, base, id).is_none() {

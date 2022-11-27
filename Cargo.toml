@@ -8,7 +8,6 @@ build = "build-demo.rs"
 
 [dependencies]
 libc= "0.2"
-microui_proc_id = { path= "./microui_proc_id" }
 
 [profile.release]
 panic = 'abort'
