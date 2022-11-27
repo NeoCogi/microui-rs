@@ -1,5 +1,5 @@
-use std::fmt::{Arguments, Write, write};
-use std::str::FromStr;
+use core::fmt::{Arguments, Write, write};
+use core::str::FromStr;
 use ::libc;
 use crate::fixed_collections::*;
 
@@ -354,7 +354,7 @@ pub struct mu_Context {
     pub hover_root: *mut mu_Container,
     pub next_hover_root: *mut mu_Container,
     pub scroll_target: *mut mu_Container,
-    pub number_edit_buf: String, // FixedVec<char, 127>,
+    pub number_edit_buf: FixedString<127>,
     pub number_edit: mu_Id,
     pub command_list: FixedVec<mu_Command, 4096>,
     pub root_list: C2RustUnnamed_12,
@@ -362,7 +362,7 @@ pub struct mu_Context {
     pub clip_stack: C2RustUnnamed_10,
     pub id_stack: FixedVec<mu_Id, 32>,
     pub layout_stack: FixedVec<mu_Layout, 16>,
-    pub text_stack: String, //FixedVec<char, 65536>,
+    pub text_stack: FixedString<65536>,
     pub container_pool: [mu_PoolItem; 48],
     pub containers: [mu_Container; 48],
     pub treenode_pool: [mu_PoolItem; 48],
@@ -374,7 +374,7 @@ pub struct mu_Context {
     pub mouse_pressed: MouseButton,
     pub key_down: libc::c_int,
     pub key_pressed: libc::c_int,
-    pub input_text: String, // FixedVec<char, 32>,
+    pub input_text: FixedString<32>,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -669,7 +669,7 @@ impl mu_Context {
         self.next_hover_root = 0 as *mut mu_Container;
         self.mouse_delta.x = self.mouse_pos.x - self.last_mouse_pos.x;
         self.mouse_delta.y = self.mouse_pos.y - self.last_mouse_pos.y;
-        self.command_list.reset();
+        self.command_list.clear();
         self.frame += 1;
     }
 
@@ -749,12 +749,12 @@ impl mu_Context {
         return res;
     }
 
-    pub fn mu_get_id_from_ptr<T>(&mut self, orig_id: &T) -> mu_Id {
+    pub fn mu_get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> mu_Id {
         let mut res: mu_Id = match self.id_stack.top() {
             Some(id) => *id,
             None => 2166136261 as mu_Id,
         };
-        let ptr = orig_id as *const T as usize;
+        let ptr = orig_id as *const T as *const u8 as usize;
         let bytes = ptr.to_le_bytes();
         hash_bytes(&mut res, &bytes);
         self.last_id = res;
@@ -1391,21 +1391,21 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_raw(&mut self, buf: &mut String, id: mu_Id, r: mu_Rect, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: mu_Id, r: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         self.mu_update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
             let mut len = buf.len();
 
             if self.input_text.len() > 0 {
-                *buf += self.input_text.as_str();
+                buf.add_str(self.input_text.as_str());
                 len += self.input_text.len() as usize;
                 res.change()
             }
 
             if self.key_pressed & MU_KEY_BACKSPACE as i32 != 0 && len > 0 {
                 // skip utf-8 continuation bytes
-                buf.remove(buf.len() - 1);
+                buf.pop();
                 res.change();
             }
             if self.key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
@@ -1417,8 +1417,8 @@ impl mu_Context {
         if self.focus == id {
             let color: mu_Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
             let font: mu_Font = self.style.font;
-            let textw = self.get_text_width(font, buf);
-            let texth = self.get_text_height(font, buf);
+            let textw = self.get_text_width(font, buf.as_str());
+            let texth = self.get_text_height(font, buf.as_str());
             let ofx: libc::c_int = r.w - self.style.padding - textw - 1 as libc::c_int;
             let textx: libc::c_int = r.x + (if ofx < self.style.padding { ofx } else { self.style.padding });
             let texty: libc::c_int = r.y + (r.h - texth) / 2 as libc::c_int;
@@ -1438,7 +1438,7 @@ impl mu_Context {
             write!(self.number_edit_buf, "{:.3}", value).unwrap();
         }
         if self.number_edit == id {
-            let mut temp: String = self.number_edit_buf.clone();
+            let mut temp = self.number_edit_buf.clone();
             let res: ResourceState = self.mu_textbox_raw(&mut temp, id, r, WidgetOption::None);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != id {
@@ -1452,7 +1452,7 @@ impl mu_Context {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut Box<String>, opt: WidgetOption) -> ResourceState {
+    pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
         let id: mu_Id = self.mu_get_id_from_ptr(buf);
         let r: mu_Rect = self.mu_layout_next();
         return self.mu_textbox_raw(buf, id, r, opt);
@@ -1461,7 +1461,6 @@ impl mu_Context {
     #[no_mangle]
     pub unsafe extern "C" fn mu_slider_ex(
         &mut self,
-
         mut value: &mut mu_Real,
         low: mu_Real,
         high: mu_Real,

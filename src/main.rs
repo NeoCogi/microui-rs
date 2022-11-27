@@ -31,14 +31,12 @@ pub type SDL_SysWMmsg = libc::c_int;
 
 use microui::*;
 use renderer::*;
+use fixed_collections::*;
 
 //use ::libc;
 extern "C" {
-    fn strlen(_: *const libc::c_char) -> libc::c_ulong;
-    fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
     fn exit(_: libc::c_int) -> !;
     fn malloc(_: libc::c_ulong) -> *mut libc::c_void;
-    fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
     fn SDL_Init(flags: Uint32) -> libc::c_int;
     fn SDL_PollEvent(event: *mut SDL_Event) -> libc::c_int;
 }
@@ -688,7 +686,7 @@ static mut bg: [libc::c_float; 3] = [
     95 as libc::c_int as libc::c_float,
     100 as libc::c_int as libc::c_float,
 ];
-unsafe extern "C" fn write_log(logbuf: &mut String, logbuf_updated: &mut i32, text: &str) {
+unsafe extern "C" fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i32, text: &str) {
     if logbuf.len() != 0 {
         logbuf.push('\n');
     }
@@ -697,7 +695,7 @@ unsafe extern "C" fn write_log(logbuf: &mut String, logbuf_updated: &mut i32, te
     }
     *logbuf_updated = 1 as libc::c_int;
 }
-unsafe extern "C" fn test_window(logbuf: &mut String, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
+unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
             "Demo Window",
@@ -859,7 +857,7 @@ unsafe extern "C" fn test_window(logbuf: &mut String, logbuf_updated: &mut i32, 
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn log_window(logbuf: &mut String, logbuf_updated: &mut i32, submit_buf: &mut Box<String>, ctx: &mut mu_Context) {
+unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
             "Log Window",
@@ -888,7 +886,7 @@ unsafe extern "C" fn log_window(logbuf: &mut String, logbuf_updated: &mut i32, s
             submitted = 1 as libc::c_int;
         }
         if submitted != 0 {
-            write_log(logbuf, logbuf_updated, submit_buf);
+            write_log(logbuf, logbuf_updated, submit_buf.as_str());
             submit_buf.clear();
         }
         ctx.mu_end_window();
@@ -1039,7 +1037,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     }
 }
 
-unsafe extern "C" fn process_frame(logbuf: &mut String, logbuf_updated: &mut i32, submit_buf: &mut Box<String>, ctx: &mut mu_Context) {
+unsafe extern "C" fn process_frame(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut mu_Context) {
     ctx.mu_begin();
     style_window(ctx);
     log_window(logbuf, logbuf_updated, submit_buf, ctx);
@@ -1307,9 +1305,9 @@ static mut key_map: [libc::c_char; 256] = [
 ];
 
 fn main() {
-    let mut logbuf = String::new();
+    let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
-    let mut submit_buf = Box::new(String::new());
+    let mut submit_buf = FixedString::<128>::new();
     unsafe {
         SDL_Init(
             0x1 as libc::c_uint

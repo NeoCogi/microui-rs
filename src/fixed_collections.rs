@@ -1,4 +1,5 @@
-use core::ops::{IndexMut, Index};
+use core::ops::{IndexMut, Index, AddAssign};
+use std::str::Chars;
 
 pub trait IVec<T: Default + Copy> {
     fn push(&mut self, t: T) -> (&mut T, usize);
@@ -10,10 +11,10 @@ pub trait IVec<T: Default + Copy> {
 
     fn capacity(&self) -> usize;
     fn len(&self) -> usize;
-    fn reset(&mut self);
+    fn clear(&mut self);
 
-    fn to_slice(&self) -> &[T];
-    fn to_slice_mut(&mut self) -> &mut [T];
+    fn as_slice(&self) -> &[T];
+    fn as_slice_mut(&mut self) -> &mut [T];
 
     fn get(&self, index: usize) -> &T;
     fn get_mut(&mut self, index: usize) -> &mut T;
@@ -67,18 +68,18 @@ impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
     fn len(&self) -> usize {
         self.idx
     }
-    fn reset(&mut self) {
+    fn clear(&mut self) {
         for i in 0..self.idx {
             self.items[i] = T::default();
         }
         self.idx = 0;
     }
 
-    fn to_slice(&self) -> &[T] {
+    fn as_slice(&self) -> &[T] {
         &self.items[0..self.idx]
     }
 
-    fn to_slice_mut(&mut self) -> &mut [T] {
+    fn as_slice_mut(&mut self) -> &mut [T] {
         &mut self.items[0..self.idx]
     }
 
@@ -140,8 +141,132 @@ impl<const N: usize> core::fmt::Write for FixedVec<char, N> {
     }
 }
 
+pub trait IString {
+    fn push(&mut self, c: char);
+    fn pop(&mut self);
+    fn as_str(&self) -> &str;
+    fn chars(&self) -> Chars<'_>;
+    fn char_count(&self) -> usize;
+    fn clear(&mut self);
+    fn len(&self) -> usize;
+    fn as_u8_slice(&self) -> &[u8];
+    fn capacity(&self) -> usize;
+    fn add_str(&mut self, s: &str);
+}
+
 #[derive(Clone)]
 pub struct FixedString<const N: usize> {
-    len: usize,
-    vec: FixedVec<char, N>,
+    char_count: usize,
+    vec: FixedVec<u8, N>,
+}
+
+impl<const N: usize> FixedString<N> {
+    pub fn new() -> Self {
+        Self {
+            char_count: 0,
+            vec: FixedVec::default(),
+        }
+    }
+}
+
+impl<const N: usize> IString for FixedString<N> {
+    fn push(&mut self, c: char) {
+        let mut encoding = [0; 4];
+        let bytes = c.encode_utf8(&mut encoding).bytes();
+        for b in bytes {
+            self.vec.push(b);
+        }
+        self.char_count += 1;
+    }
+
+    fn pop(&mut self) {
+        let ch = self.chars().rev().next().unwrap();
+
+        let bc = ch.len_utf8();
+        for i in 0..bc {
+            self.vec.pop();
+        }
+        self.char_count -= 1;
+    }
+
+    fn as_str(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(self.vec.as_slice()) }
+    }
+
+    fn chars(&self) -> Chars<'_> {
+        self.as_str().chars()
+    }
+
+    fn char_count(&self) -> usize {
+        self.char_count
+    }
+
+    fn clear(&mut self) {
+        self.char_count = 0;
+        self.vec.clear();
+    }
+
+    fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    fn as_u8_slice(&self) -> &[u8] {
+        self.vec.as_slice()
+    }
+
+    fn capacity(&self) -> usize {
+        N
+    }
+
+    fn add_str(&mut self, s: &str) {
+        for c in s.chars() {
+            self.push(c)
+        }
+    }
+
+}
+
+impl<const N: usize> AddAssign<&str> for FixedString<N> {
+    fn add_assign(&mut self, rhs: &str) {
+        for c in rhs.chars() {
+            self.push(c);
+        }
+    }
+}
+
+impl AddAssign<&str> for dyn IString {
+    fn add_assign(&mut self, rhs: &str) {
+        for c in rhs.chars() {
+            self.push(c);
+        }
+    }
+}
+
+impl<const N: usize> core::fmt::Write for FixedString<N> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for c in s.chars() {
+            if self.vec.len() < N - 1 {
+                self.push(c);
+            } else {
+                return Err(core::fmt::Error);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<const N: usize> Index<usize> for FixedString<N> {
+    type Output = u8;
+    fn index(&self, index: usize) -> &Self::Output {
+        self.vec.get(index as usize)
+    }
+}
+
+impl<const N: usize> Index<core::ops::Range<usize>> for FixedString<N> {
+    type Output = str;
+    fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
+        unsafe {
+            core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end])
+        }
+    }
 }
