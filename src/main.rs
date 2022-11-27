@@ -7,16 +7,17 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-// #![no_main]
-// #![no_std]
-//
-// use core::panic::PanicInfo;
-//
-// #[panic_handler]
-// fn panic(_panic: &PanicInfo<'_>) -> ! {
-//     loop {}
-// }
-//
+#![no_main]
+#![no_std]
+
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+
 // #[no_mangle]
 // pub extern "C" fn main() {}
 
@@ -32,6 +33,8 @@ pub type SDL_SysWMmsg = libc::c_int;
 use microui::*;
 use renderer::*;
 use fixed_collections::*;
+use core::fmt::*;
+use core::format_args;
 
 //use ::libc;
 extern "C" {
@@ -715,14 +718,20 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
         } else {
             300 as libc::c_int
         };
+
+        let mut buff = FixedString::<128>::new();
+
         if !ctx.mu_header_ex("Window Info", WidgetOption::None).is_none() {
             let win_0: *mut mu_Container = ctx.mu_get_current_container();
             let mut buf: [libc::c_char; 64] = [0; 64];
             ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_label("Position:");
-            ctx.mu_label(format!("{}, {}", (*win_0).rect.x, (*win_0).rect.y).as_str());
+            buff.write_fmt(format_args!("{}, {}", (*win_0).rect.x, (*win_0).rect.y)).unwrap();
+            ctx.mu_label(buff.as_str());
+            buff.clear();
             ctx.mu_label("Size:");
-            ctx.mu_label(format!("{}, {}", (*win_0).rect.w, (*win_0).rect.h).as_str());
+            buff.write_fmt(format_args!("{}, {}", (*win_0).rect.w, (*win_0).rect.h)).unwrap();
+            ctx.mu_label(buff.as_str());
         }
         if !ctx.mu_header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
             ctx.mu_layout_row(
@@ -848,11 +857,12 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
                     255,
                 ),
             );
-            let fm = format!(
-                "#{:#02}{:#02}{:#02}",
+            let mut buff = FixedString::<128>::new();
+            buff.write_fmt(format_args!(
+                "#{:02X}{:02X}{:02X}",
                 bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
-            );
-            ctx.mu_draw_control_text(fm.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
+            )).unwrap();
+            ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
         }
         ctx.mu_end_window();
     }
@@ -1304,7 +1314,8 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-fn main() {
+#[no_mangle]
+pub extern "C" fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();
@@ -1338,7 +1349,7 @@ fn main() {
                         (*ctx).mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
                     }
                     771 => {
-                        let mut text = String::new();
+                        let mut text = FixedString::<32>::new();
                         let u8_txt = e.text.text.as_slice();
                         for c in u8_txt {
                             if *c != 0 {

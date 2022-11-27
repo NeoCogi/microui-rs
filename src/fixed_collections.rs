@@ -1,5 +1,5 @@
 use core::ops::{IndexMut, Index, AddAssign};
-use std::str::Chars;
+use core::str::Chars;
 
 pub trait IVec<T: Default + Copy> {
     fn push(&mut self, t: T) -> (&mut T, usize);

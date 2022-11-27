@@ -1,4 +1,4 @@
-use core::fmt::{Arguments, Write, write};
+use core::fmt::{Write};
 use core::str::FromStr;
 use ::libc;
 use crate::fixed_collections::*;
@@ -1503,10 +1503,9 @@ impl mu_Context {
         thumb = mu_rect(base.x + x, base.y, w, base.h);
         self.mu_draw_control_frame(id, thumb, ControlColor::Button, opt);
         // TODO: change to variadic format
-        let s = format!("{:.2}", v);
-        //buf.write_fmt(format_args!(fmt, v)).unwrap();
-
-        self.mu_draw_control_text(s.as_str(), base, ControlColor::Text, opt);
+        let mut buff = FixedString::<64>::new();
+        buff.write_fmt(format_args!("{:.2}", v)).unwrap();
+        self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
 
@@ -1529,8 +1528,9 @@ impl mu_Context {
         }
         self.mu_draw_control_frame(id, base, ControlColor::Base, opt);
         // TODO: change to variadic format
-        let s: String = format!("{:.2}", value);
-        self.mu_draw_control_text(s.as_str(), base, ControlColor::Text, opt);
+        let mut buff = FixedString::<64>::new();
+        buff.write_fmt(format_args!("{:.2}", value)).unwrap();
+        self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
 
