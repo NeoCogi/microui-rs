@@ -4,9 +4,11 @@ authors = ["Wael El Oraiby"]
 version = "0.0.0"
 publish = false
 edition = "2021"
+build = "build-demo.rs"
 
 [dependencies]
 libc= "0.2"
+microui_proc_id = { path= "./microui_proc_id" }
 
 [profile.release]
 panic = 'abort'

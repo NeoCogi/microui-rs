@@ -1588,7 +1588,7 @@ pub unsafe extern "C" fn r_draw_rect(mut rect: mu_Rect, mut color: mu_Color) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_text(text: &[char], mut pos: mu_Vec2, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: mu_Vec2, mut color: mu_Color) {
     let mut dst: mu_Rect = {
         let mut init = mu_Rect {
             x: pos.x,
@@ -1598,13 +1598,9 @@ pub unsafe extern "C" fn r_draw_text(text: &[char], mut pos: mu_Vec2, mut color:
         };
         init
     };
-    for p in text {
-        if !(*p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
-            let mut chr: libc::c_int = if (*p as libc::c_uchar as libc::c_int) < 127 as libc::c_int {
-                *p as libc::c_uchar as libc::c_int
-            } else {
-                127 as libc::c_int
-            };
+    for p in text.chars() {
+        if !(p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
+            let mut chr: libc::c_int = i32::min(p as i32, 127);
             let mut src: mu_Rect = atlas[(ATLAS_FONT as libc::c_int + chr) as usize];
             dst.w = src.w;
             dst.h = src.h;
@@ -1623,27 +1619,13 @@ pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: mu_Rect, mut color:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_get_text_width(text: &[char]) -> libc::c_int {
-    let mut res = 0;
-    let mut p = 0;
-    let len = text.len();
-    while p < len {
-        if !(text[p] as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
-            let mut chr: libc::c_int = if (text[p] as libc::c_uchar as libc::c_int) < 127 as libc::c_int {
-                text[p] as libc::c_uchar as libc::c_int
-            } else {
-                127 as libc::c_int
-            };
-            res += atlas[(ATLAS_FONT as libc::c_int + chr) as usize].w;
-        }
-        p += 1;
-    }
-    return res;
+pub unsafe extern "C" fn r_get_char_width(_font: mu_Font, c: char) -> usize {
+    atlas[ATLAS_FONT as usize + c as usize].w as usize
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_get_text_height() -> libc::c_int {
-    return 18 as libc::c_int;
+pub unsafe extern "C" fn r_get_char_height(_font: mu_Font, _c: char) -> usize {
+    18
 }
 
 #[no_mangle]

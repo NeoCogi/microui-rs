@@ -686,17 +686,19 @@ static mut bg: [libc::c_float; 3] = [
     95 as libc::c_int as libc::c_float,
     100 as libc::c_int as libc::c_float,
 ];
-unsafe extern "C" fn write_log(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, text: &[char]) {
+unsafe extern "C" fn write_log(logbuf: &mut String, logbuf_updated: &mut i32, text: &str) {
     if logbuf.len() != 0 {
         logbuf.push('\n');
     }
-    logbuf.append(text);
+    for c in text.chars() {
+        logbuf.push(c);
+    }
     *logbuf_updated = 1 as libc::c_int;
 }
-unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
+unsafe extern "C" fn test_window(logbuf: &mut String, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
-            "Demo Window".chars().collect::<Vec<_>>().as_slice(),
+            "Demo Window",
             mu_rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
             WidgetOption::None,
         )
@@ -714,19 +716,19 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
             300 as libc::c_int
         };
         if !ctx
-            .mu_header_ex("Window Info".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+            .mu_header_ex("Window Info", WidgetOption::None)
             .is_none()
         {
             let win_0: *mut mu_Container = ctx.mu_get_current_container();
             let mut buf: [libc::c_char; 64] = [0; 64];
             ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-            ctx.mu_label("Position:".chars().collect::<Vec<_>>().as_slice());
-            ctx.mu_label(format!("{}, {}", (*win_0).rect.x, (*win_0).rect.y).chars().collect::<Vec<_>>().as_slice());
-            ctx.mu_label("Size:".chars().collect::<Vec<_>>().as_slice());
-            ctx.mu_label(format!("{}, {}", (*win_0).rect.w, (*win_0).rect.h).chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Position:");
+            ctx.mu_label(format!("{}, {}", (*win_0).rect.x, (*win_0).rect.y).as_str());
+            ctx.mu_label("Size:");
+            ctx.mu_label(format!("{}, {}", (*win_0).rect.w, (*win_0).rect.h).as_str());
         }
         if !ctx
-            .mu_header_ex("Test Buttons".chars().collect::<Vec<_>>().as_slice(), WidgetOption::Expanded)
+            .mu_header_ex("Test Buttons", WidgetOption::Expanded)
             .is_none()
         {
             ctx.mu_layout_row(
@@ -734,132 +736,132 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
                 [86 as libc::c_int, -(110 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(),
                 0 as libc::c_int,
             );
-            ctx.mu_label("Test buttons 1:".chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Test buttons 1:");
             if !ctx
-                .mu_button_ex("Button 1".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                .mu_button_ex("Button 1", Icon::None, WidgetOption::AlignCenter)
                 .is_none()
             {
-                write_log(logbuf, logbuf_updated, "Pressed button 1".chars().collect::<Vec<_>>().as_slice());
+                write_log(logbuf, logbuf_updated, "Pressed button 1");
             }
             if !ctx
-                .mu_button_ex("Button 2".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                .mu_button_ex("Button 2", Icon::None, WidgetOption::AlignCenter)
                 .is_none()
             {
-                write_log(logbuf, logbuf_updated, "Pressed button 2".chars().collect::<Vec<_>>().as_slice());
+                write_log(logbuf, logbuf_updated, "Pressed button 2");
             }
-            ctx.mu_label("Test buttons 2:".chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Test buttons 2:");
             if !ctx
-                .mu_button_ex("Button 3".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                .mu_button_ex("Button 3", Icon::None, WidgetOption::AlignCenter)
                 .is_none()
             {
-                write_log(logbuf, logbuf_updated, "Pressed button 3".chars().collect::<Vec<_>>().as_slice());
+                write_log(logbuf, logbuf_updated, "Pressed button 3");
             }
             if !ctx
-                .mu_button_ex("Popup".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                .mu_button_ex("Popup", Icon::None, WidgetOption::AlignCenter)
                 .is_none()
             {
-                ctx.mu_open_popup("Test Popup".chars().collect::<Vec<_>>().as_slice());
+                ctx.mu_open_popup("Test Popup");
             }
-            if !ctx.mu_begin_popup("Test Popup".chars().collect::<Vec<_>>().as_slice()).is_none() {
+            if !ctx.mu_begin_popup("Test Popup").is_none() {
                 if !ctx
-                    .mu_button_ex("Hello".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("Hello", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "Hello".chars().collect::<Vec<_>>().as_slice())
+                    write_log(logbuf, logbuf_updated, "Hello")
                 }
                 if !ctx
-                    .mu_button_ex("World".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("World", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "World".chars().collect::<Vec<_>>().as_slice())
+                    write_log(logbuf, logbuf_updated, "World")
                 }
                 ctx.mu_end_popup();
             }
         }
         if !ctx
-            .mu_header_ex("Tree and Text".chars().collect::<Vec<_>>().as_slice(), WidgetOption::Expanded)
+            .mu_header_ex("Tree and Text", WidgetOption::Expanded)
             .is_none()
         {
             ctx.mu_layout_row(2 as libc::c_int, [140 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_layout_begin_column();
             if !ctx
-                .mu_begin_treenode_ex("Test 1".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+                .mu_begin_treenode_ex("Test 1", WidgetOption::None)
                 .is_none()
             {
                 if !ctx
-                    .mu_begin_treenode_ex("Test 1a".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+                    .mu_begin_treenode_ex("Test 1a", WidgetOption::None)
                     .is_none()
                 {
-                    ctx.mu_label("Hello".chars().collect::<Vec<_>>().as_slice());
-                    ctx.mu_label("world".chars().collect::<Vec<_>>().as_slice());
+                    ctx.mu_label("Hello");
+                    ctx.mu_label("world");
                     ctx.mu_end_treenode();
                 }
                 if !ctx
-                    .mu_begin_treenode_ex("Test 1b".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+                    .mu_begin_treenode_ex("Test 1b", WidgetOption::None)
                     .is_none()
                 {
                     if !ctx
-                        .mu_button_ex("Button 1".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                        .mu_button_ex("Button 1", Icon::None, WidgetOption::AlignCenter)
                         .is_none()
                     {
-                        write_log(logbuf, logbuf_updated, "Pressed button 1".chars().collect::<Vec<_>>().as_slice());
+                        write_log(logbuf, logbuf_updated, "Pressed button 1");
                     }
                     if !ctx
-                        .mu_button_ex("Button 2".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                        .mu_button_ex("Button 2", Icon::None, WidgetOption::AlignCenter)
                         .is_none()
                     {
-                        write_log(logbuf, logbuf_updated, "Pressed button 2".chars().collect::<Vec<_>>().as_slice());
+                        write_log(logbuf, logbuf_updated, "Pressed button 2");
                     }
                     ctx.mu_end_treenode();
                 }
                 ctx.mu_end_treenode();
             }
             if !ctx
-                .mu_begin_treenode_ex("Test 2".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+                .mu_begin_treenode_ex("Test 2", WidgetOption::None)
                 .is_none()
             {
                 ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, 54 as libc::c_int].as_mut_ptr(), 0 as libc::c_int);
                 if !ctx
-                    .mu_button_ex("Button 3".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("Button 3", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "Pressed button 3".chars().collect::<Vec<_>>().as_slice());
+                    write_log(logbuf, logbuf_updated, "Pressed button 3");
                 }
                 if !ctx
-                    .mu_button_ex("Button 4".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("Button 4", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "Pressed button 4".chars().collect::<Vec<_>>().as_slice());
+                    write_log(logbuf, logbuf_updated, "Pressed button 4");
                 }
                 if !ctx
-                    .mu_button_ex("Button 5".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("Button 5", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "Pressed button 5".chars().collect::<Vec<_>>().as_slice());
+                    write_log(logbuf, logbuf_updated, "Pressed button 5");
                 }
                 if !ctx
-                    .mu_button_ex("Button 6".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+                    .mu_button_ex("Button 6", Icon::None, WidgetOption::AlignCenter)
                     .is_none()
                 {
-                    write_log(logbuf, logbuf_updated, "Pressed button 6".chars().collect::<Vec<_>>().as_slice());
+                    write_log(logbuf, logbuf_updated, "Pressed button 6");
                 }
                 ctx.mu_end_treenode();
             }
             if !ctx
-                .mu_begin_treenode_ex("Test 3".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None)
+                .mu_begin_treenode_ex("Test 3", WidgetOption::None)
                 .is_none()
             {
                 static mut checks: [libc::c_int; 3] = [1 as libc::c_int, 0 as libc::c_int, 1 as libc::c_int];
                 ctx.mu_checkbox(
-                    "Checkbox 1".chars().collect::<Vec<_>>().as_slice(),
+                    "Checkbox 1",
                     &mut *checks.as_mut_ptr().offset(0 as libc::c_int as isize),
                 );
                 ctx.mu_checkbox(
-                    "Checkbox 2".chars().collect::<Vec<_>>().as_slice(),
+                    "Checkbox 2",
                     &mut *checks.as_mut_ptr().offset(1 as libc::c_int as isize),
                 );
                 ctx.mu_checkbox(
-                    "Checkbox 3".chars().collect::<Vec<_>>().as_slice(),
+                    "Checkbox 3",
                     &mut *checks.as_mut_ptr().offset(2 as libc::c_int as isize),
                 );
                 ctx.mu_end_treenode();
@@ -869,18 +871,18 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
             ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_text(
                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas lacinia, sem eu lacinia molestie, mi risus faucibus ipsum, eu varius magna felis a nulla."
-                .chars().collect::<Vec<_>>().as_slice(),
+                ,
             );
             ctx.mu_layout_end_column();
         }
         if !ctx
-            .mu_header_ex("Background Color".chars().collect::<Vec<_>>().as_slice(), WidgetOption::Expanded)
+            .mu_header_ex("Background Color", WidgetOption::Expanded)
             .is_none()
         {
             ctx.mu_layout_row(2 as libc::c_int, [-(78 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 74 as libc::c_int);
             ctx.mu_layout_begin_column();
             ctx.mu_layout_row(2 as libc::c_int, [46 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-            ctx.mu_label("Red:".chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Red:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(0 as libc::c_int as isize),
                 0 as libc::c_int as mu_Real,
@@ -889,7 +891,7 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
                 "%.2",
                 WidgetOption::AlignCenter,
             );
-            ctx.mu_label("Green:".chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Green:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(1 as libc::c_int as isize),
                 0 as libc::c_int as mu_Real,
@@ -898,7 +900,7 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
                 "%.2",
                 WidgetOption::AlignCenter,
             );
-            ctx.mu_label("Blue:".chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label("Blue:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(2 as libc::c_int as isize),
                 0 as libc::c_int as mu_Real,
@@ -919,31 +921,28 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &m
                 ),
             );
             let fm = format!(
-                "#{:#02X}{:#02X}{:#02X}",
+                "#{:#02}{:#02}{:#02}",
                 bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
-            )
-            .chars()
-            .collect::<Vec<_>>();
-            let buf_0 = fm.as_slice();
-            ctx.mu_draw_control_text(buf_0, r, ControlColor::Text, WidgetOption::AlignCenter);
+            );
+            ctx.mu_draw_control_text(fm.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
         }
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, submit_buf: &mut dyn IVec<char>, ctx: &mut mu_Context) {
+unsafe extern "C" fn log_window(logbuf: &mut String, logbuf_updated: &mut i32, submit_buf: &mut String, ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
-            "Log Window".chars().collect::<Vec<_>>().as_slice(),
+            "Log Window",
             mu_rect(350 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 200 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
     {
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(25 as libc::c_int));
-        ctx.mu_begin_panel_ex("Log Output".chars().collect::<Vec<_>>().as_slice(), WidgetOption::None);
+        ctx.mu_begin_panel_ex("Log Output", WidgetOption::None);
         let mut panel: *mut mu_Container = ctx.mu_get_current_container();
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
-        ctx.mu_text(logbuf.to_slice());
+        ctx.mu_text(logbuf.as_str());
         ctx.mu_end_panel();
         if *logbuf_updated != 0 {
             (*panel).scroll.y = (*panel).content_size.y;
@@ -956,13 +955,15 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IVec<char>, logbuf_updated: &mu
             submitted = 1 as libc::c_int;
         }
         if !ctx
-            .mu_button_ex("Submit".chars().collect::<Vec<_>>().as_slice(), Icon::None, WidgetOption::AlignCenter)
+            .mu_button_ex("Submit", Icon::None, WidgetOption::AlignCenter)
             .is_none()
         {
             submitted = 1 as libc::c_int;
         }
         if submitted != 0 {
-            write_log(logbuf, logbuf_updated, submit_buf.to_slice());
+            println!("sb: {}", submit_buf);
+            write_log(logbuf, logbuf_updated, submit_buf);
+            submit_buf.clear();
         }
         ctx.mu_end_window();
     }
@@ -1087,7 +1088,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     ];
     if !ctx
         .mu_begin_window_ex(
-            "Style Editor".chars().collect::<Vec<_>>().as_slice(),
+            "Style Editor",
             mu_rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
             WidgetOption::None,
         )
@@ -1101,7 +1102,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
         );
         let mut i: libc::c_int = 0 as libc::c_int;
         while colors[i as usize].label.len() > 0 {
-            ctx.mu_label(colors[i as usize].label.chars().collect::<Vec<_>>().as_slice());
+            ctx.mu_label(colors[i as usize].label);
             let color = (*ctx).style.colors.as_mut_ptr().offset(i as isize);
             uint8_slider(ctx, &mut (*color).r, 0 as libc::c_int, 255 as libc::c_int);
             uint8_slider(ctx, &mut (*color).g, 0 as libc::c_int, 255 as libc::c_int);
@@ -1115,7 +1116,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     }
 }
 
-unsafe extern "C" fn process_frame(logbuf: &mut dyn IVec<char>, logbuf_updated: &mut i32, submit_buf: &mut dyn IVec<char>, ctx: &mut mu_Context) {
+unsafe extern "C" fn process_frame(logbuf: &mut String, logbuf_updated: &mut i32, submit_buf: &mut String, ctx: &mut mu_Context) {
     ctx.mu_begin();
     style_window(ctx);
     log_window(logbuf, logbuf_updated, submit_buf, ctx);
@@ -1381,17 +1382,11 @@ static mut key_map: [libc::c_char; 256] = [
     0,
     0,
 ];
-unsafe extern "C" fn text_width(_font: mu_Font, text: &[char]) -> libc::c_int {
-    return r_get_text_width(text);
-}
-unsafe extern "C" fn text_height(_font: mu_Font) -> libc::c_int {
-    return r_get_text_height();
-}
 
 fn main() {
-    let mut logbuf: FixedVec<char, 64000> = FixedVec::default();
+    let mut logbuf = String::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
-    let mut submit_buf = FixedVec::<char, 32>::default();
+    let mut submit_buf = String::new();
     unsafe {
         SDL_Init(
             0x1 as libc::c_uint
@@ -1406,8 +1401,8 @@ fn main() {
         r_init();
         let mut ctx: *mut mu_Context = malloc(::core::mem::size_of::<mu_Context>() as libc::c_ulong) as *mut mu_Context;
         mu_init(ctx);
-        (*ctx).text_width = Some(text_width as unsafe extern "C" fn(mu_Font, &[char]) -> libc::c_int);
-        (*ctx).text_height = Some(text_height as unsafe extern "C" fn(mu_Font) -> libc::c_int);
+        (*ctx).char_width = Some(r_get_char_width);
+        (*ctx).char_height = Some(r_get_char_height);
         loop {
             let mut e: SDL_Event = SDL_Event { type_0: 0 };
             while SDL_PollEvent(&mut e) != 0 {
@@ -1422,7 +1417,7 @@ fn main() {
                         (*ctx).mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
                     }
                     771 => {
-                        let mut text = FixedVec::<char, 32>::default();
+                        let mut text = String::new();
                         let u8_txt = e.text.text.as_slice();
                         for c in u8_txt {
                             if *c != 0 {
@@ -1431,7 +1426,8 @@ fn main() {
                                 break;
                             }
                         }
-                        (*ctx).mu_input_text(text.to_slice());
+                        println!("{}", text);
+                        (*ctx).mu_input_text(text.as_str());
                     }
                     1025 | 1026 => {
                         let b = match e.button.button {
@@ -1473,7 +1469,7 @@ fn main() {
                     Some((command, id)) => {
                         match command.type_0 {
                             Command::Text => {
-                                let str = &(*ctx).text_stack.to_slice()[command.text.str_start..command.text.str_start + command.text.str_len];
+                                let str = &(*ctx).text_stack[command.text.str_start..command.text.str_start + command.text.str_len];
                                 r_draw_text(str, command.text.pos, command.text.color);
                             }
                             Command::Rect => {
