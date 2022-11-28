@@ -1,5 +1,6 @@
 use core::ops::{IndexMut, Index, AddAssign};
 use core::str::Chars;
+use std::cmp::Ordering;
 
 pub trait IVec<T: Default + Copy> {
     fn push(&mut self, t: T) -> (&mut T, usize);
@@ -24,6 +25,43 @@ pub trait IVec<T: Default + Copy> {
             self.push(e.clone());
         }
     }
+}
+
+pub fn quick_sort_by<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], f: F) {
+    let len = arr.len();
+    _quick_sort(arr, 0, (len - 1) as isize, &f);
+}
+
+fn _quick_sort<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) {
+    if low < high {
+        let p = partition(arr, low, high, f);
+        _quick_sort(arr, low, p - 1, f);
+        _quick_sort(arr, p + 1, high, f);
+    }
+}
+
+fn partition<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) -> isize {
+    let pivot = high as usize;
+    let mut store_index = low - 1;
+    let mut last_index = high;
+
+    loop {
+        store_index += 1;
+        while f(&arr[store_index as usize], &arr[pivot]).is_lt() {
+            store_index += 1;
+        }
+        last_index -= 1;
+        while last_index >= 0 && f(&arr[last_index as usize], &arr[pivot]).is_gt() {
+            last_index -= 1;
+        }
+        if store_index >= last_index {
+            break;
+        } else {
+            arr.swap(store_index as usize, last_index as usize);
+        }
+    }
+    arr.swap(store_index as usize, pivot as usize);
+    store_index
 }
 
 #[derive(Clone)]
@@ -264,3 +302,4 @@ impl<const N: usize> Index<core::ops::Range<usize>> for FixedString<N> {
         unsafe { core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end]) }
     }
 }
+

@@ -390,13 +390,13 @@ pub struct mu_Context {
     pub last_zindex: libc::c_int,
     pub updated_focus: libc::c_int,
     pub frame: usize,
-    pub hover_root: *mut mu_Container,
-    pub next_hover_root: *mut mu_Container,
+    pub hover_root: Option<usize>,
+    pub next_hover_root: Option<usize>,
     pub scroll_target: *mut mu_Container,
     pub number_edit_buf: FixedString<127>,
     pub number_edit: mu_Id,
     pub command_list: FixedVec<mu_Command, 4096>,
-    pub root_list: C2RustUnnamed_12,
+    pub root_list: FixedVec<usize, 32>,
     pub container_stack: C2RustUnnamed_11,
     pub clip_stack: FixedVec<mu_Rect, 32>,
     pub id_stack: FixedVec<mu_Id, 32>,
@@ -432,7 +432,7 @@ pub struct mu_PoolItem {
 
 pub type mu_Id = u32;
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_Container {
     pub head_idx: Option<usize>,
@@ -694,11 +694,11 @@ fn hash_bytes(hash_0: &mut mu_Id, s: &[u8]) {
 impl mu_Context {
     pub unsafe extern "C" fn mu_begin(&mut self) {
         assert!((self.char_width).is_some() && (self.char_height).is_some());
-        self.root_list.idx = 0 as libc::c_int;
+        self.root_list.clear();
         self.text_stack.clear();
         self.scroll_target = 0 as *mut mu_Container;
         self.hover_root = self.next_hover_root;
-        self.next_hover_root = 0 as *mut mu_Container;
+        self.next_hover_root = None;
         self.mouse_delta.x = self.mouse_pos.x - self.last_mouse_pos.x;
         self.mouse_delta.y = self.mouse_pos.y - self.last_mouse_pos.y;
         self.command_list.clear();
@@ -707,8 +707,6 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_end(&mut self) {
-        let mut i: libc::c_int = 0;
-        let mut n: libc::c_int = 0;
         assert_eq!(self.container_stack.idx, 0);
         assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
@@ -722,28 +720,23 @@ impl mu_Context {
         }
         self.updated_focus = 0 as libc::c_int;
         if !self.mouse_pressed.is_none()
-            && !(self.next_hover_root).is_null()
-            && (*self.next_hover_root).zindex < self.last_zindex
-            && (*self.next_hover_root).zindex >= 0 as libc::c_int
+            && !self.next_hover_root.is_none()
+            && self.containers[self.next_hover_root.unwrap()].zindex < self.last_zindex
+            && self.containers[self.next_hover_root.unwrap()].zindex >= 0 as libc::c_int
         {
-            self.mu_bring_to_front(self.next_hover_root);
+            self.mu_bring_to_front(self.next_hover_root.unwrap());
         }
         self.key_pressed = 0 as libc::c_int;
         self.input_text.clear();
         self.mouse_pressed = MouseButton::None;
         self.scroll_delta = mu_vec2(0 as libc::c_int, 0 as libc::c_int);
         self.last_mouse_pos = self.mouse_pos;
-        n = self.root_list.idx;
-        qsort(
-            (self.root_list.items).as_mut_ptr() as *mut libc::c_void,
-            n as size_t,
-            core::mem::size_of::<*mut mu_Container>() as libc::c_ulong,
-            Some(compare_zindex as unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int),
-        );
-        i = 0 as libc::c_int;
-        while i < n {
-            let cnt: *mut mu_Container = self.root_list.items[i as usize];
-            if i == 0 as libc::c_int {
+        let n = self.root_list.len();
+        quick_sort_by(self.root_list.as_slice_mut(), |a, b| {self.containers[*a].zindex.cmp(&self.containers[*b].zindex)});
+
+        for i in 0..n {
+            let cnt: *mut mu_Container = &mut self.containers[self.root_list[i as usize]] as *mut mu_Container;
+            if i == 0 {
                 // root container!
                 // if this is the first container then make the first command jump to it.
                 // otherwise set the previous container's tail to jump to this one
@@ -753,16 +746,15 @@ impl mu_Context {
                 cmd.jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
                 assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len());
             } else {
-                let prev: *mut mu_Container = self.root_list.items[(i - 1 as libc::c_int) as usize];
+                let prev: *mut mu_Container = &mut self.containers[self.root_list[i - 1]] as *mut mu_Container;
                 self.command_list[(*prev).tail_idx.unwrap()].jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
             }
-            if i == n - 1 as libc::c_int {
+            if i == n - 1 {
                 assert!((*cnt).tail_idx.unwrap() < self.command_list.len());
                 assert!(self.command_list[(*cnt).tail_idx.unwrap()].type_0 == Command::Jump);
                 self.command_list[(*cnt).tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
                 // the snake eats its tail
             }
-            i += 1;
         }
     }
 
@@ -912,8 +904,28 @@ impl mu_Context {
         (*cnt).head_idx = None;
         (*cnt).tail_idx = None;
         (*cnt).open = 1 as libc::c_int;
-        self.mu_bring_to_front(cnt);
+        self.mu_bring_to_front(idx);
         return cnt;
+    }
+
+    fn get_container_index(&mut self, id: mu_Id, opt: WidgetOption) -> Option<usize> {
+        let idx = self.container_pool.get(id);
+        if idx.is_some() {
+            if self.containers[idx.unwrap()].open != 0 || !opt.is_closed() {
+                self.container_pool.update(idx.unwrap(), self.frame);
+            }
+            return idx;
+        }
+        if opt.is_closed() {
+            return None;
+        }
+        let idx = self.container_pool.alloc(id, self.frame);
+        self.containers[idx] = mu_Container::default();
+        self.containers[idx].head_idx = None;
+        self.containers[idx].tail_idx = None;
+        self.containers[idx].open = 1 as libc::c_int;
+        self.mu_bring_to_front(idx);
+        Some(idx)
     }
 
     pub unsafe extern "C" fn mu_get_container(&mut self, name: &str) -> *mut mu_Container {
@@ -921,10 +933,14 @@ impl mu_Context {
         self.get_container(id, WidgetOption::None)
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_bring_to_front(&mut self, mut cnt: *mut mu_Container) {
+    fn mu_get_container_index(&mut self, name: &str) -> Option<usize> {
+        let id = self.mu_get_id_from_str(name);
+       self.get_container_index(id, WidgetOption::None)
+    }
+
+    pub fn mu_bring_to_front(&mut self, cnt: usize) {
         self.last_zindex += 1;
-        (*cnt).zindex = self.last_zindex;
+        self.containers[cnt].zindex = self.last_zindex;
     }
 
     #[no_mangle]
@@ -1190,21 +1206,26 @@ impl mu_Context {
     }
 
     unsafe extern "C" fn in_hover_root(&mut self) -> libc::c_int {
-        let mut i: libc::c_int = self.container_stack.idx;
-        loop {
-            let fresh2 = i;
-            i = i - 1;
-            if !(fresh2 != 0) {
-                break;
-            }
-            if self.container_stack.items[i as usize] == self.hover_root {
-                return 1 as libc::c_int;
-            }
-            if (*self.container_stack.items[i as usize]).head_idx.is_some() {
-                break;
-            }
+        match self.hover_root {
+            Some(hover_root) => {
+                let mut i: libc::c_int = self.container_stack.idx;
+                loop {
+                    let fresh2 = i;
+                    i = i - 1;
+                    if !(fresh2 != 0) {
+                        break;
+                    }
+                    if self.container_stack.items[i as usize] == &mut self.containers[self.hover_root.unwrap()] as *mut mu_Container {
+                        return 1 as libc::c_int;
+                    }
+                    if (*self.container_stack.items[i as usize]).head_idx.is_some() {
+                        break;
+                    }
+                }
+                0
+            },
+            None => 0,
         }
-        return 0 as libc::c_int;
     }
 
     #[no_mangle]
@@ -1680,24 +1701,20 @@ impl mu_Context {
         (*cnt).body = body;
     }
 
-    unsafe extern "C" fn begin_root_container(&mut self, mut cnt: *mut mu_Container) {
+    unsafe extern "C" fn begin_root_container(&mut self, mut cnt: usize) {
         assert!(
             self.container_stack.idx
                 < (core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
                     as libc::c_int
         );
-        self.container_stack.items[self.container_stack.idx as usize] = cnt;
+        let cnt_ptr = &mut self.containers[cnt] as *mut mu_Container;
+        self.container_stack.items[self.container_stack.idx as usize] = cnt_ptr;
         self.container_stack.idx += 1;
-        assert!(
-            self.root_list.idx
-                < (core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                    as libc::c_int
-        );
-        self.root_list.items[self.root_list.idx as usize] = cnt;
-        self.root_list.idx += 1;
-        (*cnt).head_idx = Some(self.push_jump(None));
-        if rect_overlaps_vec2((*cnt).rect, self.mouse_pos) && ((self.next_hover_root).is_null() || (*cnt).zindex > (*self.next_hover_root).zindex) {
-            self.next_hover_root = cnt;
+
+        self.root_list.push(cnt);
+        (*cnt_ptr).head_idx = Some(self.push_jump(None));
+        if rect_overlaps_vec2((*cnt_ptr).rect, self.mouse_pos) && (self.next_hover_root.is_none() || (*cnt_ptr).zindex > self.containers[self.next_hover_root.unwrap()].zindex) {
+            self.next_hover_root = Some(cnt);
         }
         self.clip_stack.push(unclipped_rect);
     }
@@ -1714,16 +1731,18 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_begin_window_ex(&mut self, title: &str, mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut body: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let id: mu_Id = self.mu_get_id_from_str(title);
-        let mut cnt: *mut mu_Container = self.get_container(id, opt);
-        if cnt.is_null() || (*cnt).open == 0 {
+        let cnt_id = self.get_container_index(id, opt);
+        if cnt_id.is_none() || self.containers[cnt_id.unwrap()].open == 0 {
             return ResourceState::None;
         }
         self.id_stack.push(id);
 
+        let mut cnt = &mut self.containers[cnt_id.unwrap()] as *mut mu_Container;
+
         if (*cnt).rect.w == 0 as libc::c_int {
             (*cnt).rect = rect;
         }
-        self.begin_root_container(cnt);
+        self.begin_root_container(cnt_id.unwrap());
         body = (*cnt).rect;
         rect = body;
         if !opt.has_no_frame() {
@@ -1782,7 +1801,7 @@ impl mu_Context {
             (*cnt).rect.h = (*cnt).content_size.y + ((*cnt).rect.h - r_1.h);
         }
 
-        if opt.is_popup() && !self.mouse_pressed.is_none() && self.hover_root != cnt {
+        if opt.is_popup() && !self.mouse_pressed.is_none() && self.hover_root != cnt_id {
             (*cnt).open = 0 as libc::c_int;
         }
         self.mu_push_clip_rect((*cnt).body);
@@ -1797,12 +1816,12 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_open_popup(&mut self, name: &str) {
-        let mut cnt: *mut mu_Container = self.mu_get_container(name);
+        let cnt = self.mu_get_container_index(name);
         self.next_hover_root = cnt;
         self.hover_root = self.next_hover_root;
-        (*cnt).rect = mu_rect(self.mouse_pos.x, self.mouse_pos.y, 1 as libc::c_int, 1 as libc::c_int);
-        (*cnt).open = 1 as libc::c_int;
-        self.mu_bring_to_front(cnt);
+        self.containers[cnt.unwrap()].rect = mu_rect(self.mouse_pos.x, self.mouse_pos.y, 1 as libc::c_int, 1 as libc::c_int);
+        self.containers[cnt.unwrap()].open = 1 as libc::c_int;
+        self.mu_bring_to_front(cnt.unwrap());
     }
 
     #[no_mangle]
