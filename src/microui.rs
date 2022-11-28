@@ -8,14 +8,11 @@ pub type _IO_codecvt = libc::c_int;
 pub type _IO_marker = libc::c_int;
 
 extern "C" {
-    fn qsort(__base: *mut libc::c_void, __nmemb: size_t, __size: size_t, __compar: __compar_fn_t);
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
     fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong) -> *mut libc::c_void;
 }
 
 pub type size_t = libc::c_ulong;
-
-pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
 pub struct Pool<const N : usize> {
     vec: [mu_PoolItem; N],
@@ -568,7 +565,7 @@ pub const RELATIVE: C2RustUnnamed_14 = 1;
 
 pub type C2RustUnnamed_14 = libc::c_uint;
 
-static mut unclipped_rect: mu_Rect = mu_Rect { x: 0, y: 0, w: 0x1000000, h: 0x1000000 };
+static UNCLIPPED_RECT: mu_Rect = mu_Rect { x: 0, y: 0, w: 0x1000000, h: 0x1000000 };
 
 static mut default_style: mu_Style = mu_Style {
     font: 0 as *const libc::c_void as *mut libc::c_void,
@@ -651,10 +648,6 @@ pub extern "C" fn draw_frame(ctx: &mut mu_Context, rect: mu_Rect, colorid: Contr
     }
 }
 
-unsafe extern "C" fn compare_zindex(a: *const libc::c_void, b: *const libc::c_void) -> libc::c_int {
-    return (**(a as *mut *mut mu_Container)).zindex - (**(b as *mut *mut mu_Container)).zindex;
-}
-
 fn hash_u32(hash_0: &mut mu_Id, orig_id: u32) {
     let bytes = orig_id.to_be_bytes();
     for b in bytes {
@@ -678,7 +671,7 @@ fn hash_bytes(hash_0: &mut mu_Id, s: &[u8]) {
 }
 
 impl mu_Context {
-    pub unsafe extern "C" fn mu_begin(&mut self) {
+    pub fn mu_begin(&mut self) {
         assert!((self.char_width).is_some() && (self.char_height).is_some());
         self.root_list.clear();
         self.text_stack.clear();
@@ -691,8 +684,7 @@ impl mu_Context {
         self.frame += 1;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_end(&mut self) {
+    pub fn mu_end(&mut self) {
         assert_eq!(self.container_stack.len(), 0);
         assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
@@ -721,24 +713,23 @@ impl mu_Context {
         quick_sort_by(self.root_list.as_slice_mut(), |a, b| {self.containers[*a].zindex.cmp(&self.containers[*b].zindex)});
 
         for i in 0..n {
-            let cnt: *mut mu_Container = &mut self.containers[self.root_list[i as usize]] as *mut mu_Container;
             if i == 0 {
                 // root container!
                 // if this is the first container then make the first command jump to it.
                 // otherwise set the previous container's tail to jump to this one
 
                 let mut cmd: &mut mu_Command = &mut self.command_list[0];
-                assert!(cmd.type_0 == Command::Jump);
-                cmd.jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
-                assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len());
+                unsafe { assert!(cmd.type_0 == Command::Jump) };
+                cmd.jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
+                unsafe { assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len()) };
             } else {
-                let prev: *mut mu_Container = &mut self.containers[self.root_list[i - 1]] as *mut mu_Container;
-                self.command_list[(*prev).tail_idx.unwrap()].jump.dst_idx = Some((*cnt).head_idx.unwrap() + 1);
+                let prev= &self.containers[self.root_list[i - 1]];
+                self.command_list[prev.tail_idx.unwrap()].jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
             }
             if i == n - 1 {
-                assert!((*cnt).tail_idx.unwrap() < self.command_list.len());
-                assert!(self.command_list[(*cnt).tail_idx.unwrap()].type_0 == Command::Jump);
-                self.command_list[(*cnt).tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
+                assert!(self.containers[self.root_list[i as usize]].tail_idx.unwrap() < self.command_list.len());
+                unsafe { assert!(self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].type_0 == Command::Jump); }
+                self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
                 // the snake eats its tail
             }
         }
@@ -841,7 +832,7 @@ impl mu_Context {
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
     }
 
-    fn get_layout(&mut self) -> &mu_Layout {
+    fn get_layout(&self) -> &mu_Layout {
         return self.layout_stack.top().unwrap();
     }
 
@@ -849,46 +840,43 @@ impl mu_Context {
         return self.layout_stack.top_mut().unwrap();
     }
 
-    unsafe extern "C" fn pop_container(&mut self) {
-        let mut cnt: *mut mu_Container = self.mu_get_current_container();
-        let layout = self.get_layout();
-        (*cnt).content_size.x = layout.max.x - layout.body.x;
-        (*cnt).content_size.y = layout.max.y - layout.body.y;
+    fn pop_container(&mut self) {
+        let cnt = self.mu_get_current_container();
+        let layout = *self.get_layout();
+        self.containers[cnt].content_size.x = layout.max.x - layout.body.x;
+        self.containers[cnt].content_size.y = layout.max.y - layout.body.y;
 
         self.container_stack.pop();
         self.layout_stack.pop();
         self.mu_pop_id();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_get_current_container(&mut self) -> *mut mu_Container {
-        &mut self.containers[*self.container_stack.top().unwrap()] as *mut mu_Container
+    pub fn mu_get_current_container(&self) -> usize {
+        *self.container_stack.top().unwrap()
     }
 
-    unsafe extern "C" fn get_container(&mut self, id: mu_Id, opt: WidgetOption) -> *mut mu_Container {
-        let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
-        let idx = self.container_pool.get(id);
-        if idx.is_some() {
-            if self.containers[idx.unwrap()].open != 0 || !opt.is_closed() {
-                self.container_pool.update(idx.unwrap(), self.frame);
-            }
-            return &mut *(self.containers).as_mut_ptr().offset(idx.unwrap() as isize) as *mut mu_Container;
-        }
-        if opt.is_closed() {
-            return 0 as *mut mu_Container;
-        }
-        let idx = self.container_pool.alloc(id, self.frame);
-        cnt = &mut *(self.containers).as_mut_ptr().offset(idx as isize) as *mut mu_Container;
-        memset(
-            cnt as *mut libc::c_void,
-            0 as libc::c_int,
-            core::mem::size_of::<mu_Container>() as libc::c_ulong,
-        );
-        (*cnt).head_idx = None;
-        (*cnt).tail_idx = None;
-        (*cnt).open = 1 as libc::c_int;
-        self.mu_bring_to_front(idx);
-        return cnt;
+    pub fn mu_get_current_container_rect(&self) -> mu_Rect {
+        self.containers[*self.container_stack.top().unwrap()].rect
+    }
+
+    pub fn set_current_container_rect(&mut self, rect: &mu_Rect) {
+        self.containers[*self.container_stack.top().unwrap()].rect = *rect;
+    }
+
+    pub fn mu_get_current_container_scroll(&self) -> mu_Vec2 {
+        self.containers[*self.container_stack.top().unwrap()].scroll
+    }
+
+    pub fn set_current_container_scroll(&mut self, scroll: &mu_Vec2) {
+        self.containers[*self.container_stack.top().unwrap()].scroll = *scroll;
+    }
+
+    pub fn mu_get_current_container_content_size(&self) -> mu_Vec2 {
+        self.containers[*self.container_stack.top().unwrap()].content_size
+    }
+
+    pub fn mu_get_current_container_body(&self) -> mu_Rect {
+        self.containers[*self.container_stack.top().unwrap()].body
     }
 
     fn get_container_index(&mut self, id: mu_Id, opt: WidgetOption) -> Option<usize> {
@@ -911,11 +899,6 @@ impl mu_Context {
         Some(idx)
     }
 
-    pub unsafe extern "C" fn mu_get_container(&mut self, name: &str) -> *mut mu_Container {
-        let id = self.mu_get_id_from_str(name);
-        self.get_container(id, WidgetOption::None)
-    }
-
     fn mu_get_container_index(&mut self, name: &str) -> Option<usize> {
         let id = self.mu_get_id_from_str(name);
        self.get_container_index(id, WidgetOption::None)
@@ -926,20 +909,17 @@ impl mu_Context {
         self.containers[cnt].zindex = self.last_zindex;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_input_mousemove(&mut self, x: i32, y: i32) {
+    pub fn mu_input_mousemove(&mut self, x: i32, y: i32) {
         self.mouse_pos = mu_vec2(x, y);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_input_mousedown(&mut self, x: i32, y: i32, btn: MouseButton) {
+    pub fn mu_input_mousedown(&mut self, x: i32, y: i32, btn: MouseButton) {
         self.mu_input_mousemove(x, y);
         self.mouse_down.set(btn);
         self.mouse_pressed.set(btn);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_input_mouseup(&mut self, x: i32, y: i32, btn: MouseButton) {
+    pub fn mu_input_mouseup(&mut self, x: i32, y: i32, btn: MouseButton) {
         self.mu_input_mousemove(x, y);
         self.mouse_down.clear(btn);
     }
@@ -995,7 +975,7 @@ impl mu_Context {
         }
     }
 
-    unsafe fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
+    fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
         let (cmd, pos) = self.mu_push_command(Command::Jump);
         cmd.jump.dst_idx = dst_idx;
         pos
@@ -1030,8 +1010,7 @@ impl mu_Context {
         self.mu_draw_rect(mu_rect(rect.x + rect.w - 1 as libc::c_int, rect.y, 1 as libc::c_int, rect.h), color);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_text(&mut self, font: mu_Font, str: &str, pos: mu_Vec2, color: mu_Color) {
+    pub fn mu_draw_text(&mut self, font: mu_Font, str: &str, pos: mu_Vec2, color: mu_Color) {
         let rect: mu_Rect = mu_rect(pos.x, pos.y, self.get_text_width(font, str), self.get_text_height(font, str));
         let clipped = self.mu_check_clip(rect);
         match clipped {
@@ -1051,12 +1030,11 @@ impl mu_Context {
         cmd.text.color = color;
         cmd.text.font = font;
         if clipped != Clip::None {
-            self.mu_set_clip(unclipped_rect);
+            self.mu_set_clip(UNCLIPPED_RECT);
         }
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_icon(&mut self, id: Icon, rect: mu_Rect, color: mu_Color) {
+    pub fn mu_draw_icon(&mut self, id: Icon, rect: mu_Rect, color: mu_Color) {
         let clipped = self.mu_check_clip(rect);
         match clipped {
             Clip::All => return,
@@ -1071,7 +1049,7 @@ impl mu_Context {
         cmd.icon.rect = rect;
         cmd.icon.color = color;
         if clipped != Clip::None {
-            self.mu_set_clip(unclipped_rect);
+            self.mu_set_clip(UNCLIPPED_RECT);
         }
     }
 
@@ -1205,8 +1183,7 @@ impl mu_Context {
         }
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_control_frame(&mut self, id: mu_Id, rect: mu_Rect, mut colorid: ControlColor, opt: WidgetOption) {
+    pub fn mu_draw_control_frame(&mut self, id: mu_Id, rect: mu_Rect, mut colorid: ControlColor, opt: WidgetOption) {
         if opt.has_no_frame() {
             return;
         }
@@ -1219,8 +1196,7 @@ impl mu_Context {
         (self.draw_frame).expect("non-null function pointer")(self, rect, colorid);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_control_text(&mut self, str: &str, rect: mu_Rect, colorid: ControlColor, opt: WidgetOption) {
+    pub fn mu_draw_control_text(&mut self, str: &str, rect: mu_Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: mu_Vec2 = mu_Vec2 { x: 0, y: 0 };
         let font: mu_Font = self.style.font;
         let tw = self.get_text_width(font, str);
@@ -1242,7 +1218,6 @@ impl mu_Context {
             as libc::c_int;
     }
 
-    #[no_mangle]
     pub fn mu_update_control(&mut self, id: mu_Id, rect: mu_Rect, opt: WidgetOption) {
         let mouseover: libc::c_int = self.mu_mouse_over(rect);
         if self.focus == id {
@@ -1271,8 +1246,7 @@ impl mu_Context {
         }
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn get_text_width(&self, font: mu_Font, text: &str) -> i32 {
+    pub fn get_text_width(&self, font: mu_Font, text: &str) -> i32 {
         let mut res = 0;
         let mut acc = 0;
         for c in text.chars() {
@@ -1286,8 +1260,7 @@ impl mu_Context {
         res as i32
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn get_text_height(&self, font: mu_Font, text: &str) -> i32 {
+    pub fn get_text_height(&self, font: mu_Font, text: &str) -> i32 {
         let mut res = 0;
         let mut acc = 0;
         for c in text.chars() {
@@ -1301,8 +1274,7 @@ impl mu_Context {
         res as i32
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_text(&mut self, text: &str) {
+    pub fn mu_text(&mut self, text: &str) {
         let mut width: libc::c_int = -(1 as libc::c_int);
         let font: mu_Font = self.style.font;
         let color: mu_Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
@@ -1320,14 +1292,12 @@ impl mu_Context {
         self.mu_layout_end_column();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_label(&mut self, text: &str) {
+    pub fn mu_label(&mut self, text: &str) {
         let layout = self.mu_layout_next();
         self.mu_draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
+    pub fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = if label.len() > 0 {
             self.mu_get_id_from_str(label)
@@ -1349,8 +1319,7 @@ impl mu_Context {
         return res;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
+    pub fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id_from_ptr(state);
         let mut r: mu_Rect = self.mu_layout_next();
@@ -1369,8 +1338,7 @@ impl mu_Context {
         return res;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: mu_Id, r: mu_Rect, opt: WidgetOption) -> ResourceState {
+    pub fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: mu_Id, r: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         self.mu_update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
@@ -1411,7 +1379,7 @@ impl mu_Context {
         return res;
     }
 
-    unsafe extern "C" fn number_textbox(&mut self, value: &mut mu_Real, r: mu_Rect, id: mu_Id) -> ResourceState {
+    fn number_textbox(&mut self, value: &mut mu_Real, r: mu_Rect, id: mu_Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
             self.number_edit = id;
             write!(self.number_edit_buf, "{:.3}", value).unwrap();
@@ -1430,17 +1398,15 @@ impl mu_Context {
         return ResourceState::None;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
+    pub fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
         let id: mu_Id = self.mu_get_id_from_ptr(buf);
         let r: mu_Rect = self.mu_layout_next();
         return self.mu_textbox_raw(buf, id, r, opt);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_slider_ex(
+    pub fn mu_slider_ex(
         &mut self,
-        mut value: &mut mu_Real,
+        value: &mut mu_Real,
         low: mu_Real,
         high: mu_Real,
         step: mu_Real,
@@ -1488,9 +1454,7 @@ impl mu_Context {
         return res;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_number_ex(&mut self, value: &mut mu_Real, step: mu_Real, fmt: *const libc::c_char, opt: WidgetOption) -> ResourceState {
-        let mut buf: FixedVec<char, 128> = FixedVec::default();
+    pub fn mu_number_ex(&mut self, value: &mut mu_Real, step: mu_Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id_from_ptr(value);
         let base: mu_Rect = self.mu_layout_next();
@@ -1513,7 +1477,7 @@ impl mu_Context {
         return res;
     }
 
-    unsafe extern "C" fn header(&mut self, label: &str, istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
+    fn header(&mut self, label: &str, istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
         let mut r: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
@@ -1554,13 +1518,11 @@ impl mu_Context {
         return if expanded != 0 { ResourceState::Active } else { ResourceState::None };
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
+    pub fn mu_header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
         return self.header(label, 0 as libc::c_int, opt);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
+    pub fn mu_begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
         let res = self.header(label, 1 as libc::c_int, opt);
         if res.is_active() {
             self.get_layout_mut().indent += self.style.indent;
@@ -1569,8 +1531,7 @@ impl mu_Context {
         return res;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_end_treenode(&mut self) {
+    pub fn mu_end_treenode(&mut self) {
         self.get_layout_mut().indent -= self.style.indent;
         self.mu_pop_id();
     }
@@ -1670,7 +1631,7 @@ impl mu_Context {
         self.mu_pop_clip_rect();
     }
 
-    unsafe extern "C" fn push_container_body(&mut self, cnt_idx: usize, body: mu_Rect, opt: WidgetOption) {
+    fn push_container_body(&mut self, cnt_idx: usize, body: mu_Rect, opt: WidgetOption) {
         let mut body = body;
         if !opt.has_no_scroll() {
             self.scrollbars(cnt_idx, &mut body);
@@ -1679,28 +1640,26 @@ impl mu_Context {
         self.containers[cnt_idx].body = body;
     }
 
-    unsafe extern "C" fn begin_root_container(&mut self, mut cnt: usize) {
-        let cnt_ptr = &mut self.containers[cnt] as *mut mu_Container;
+    fn begin_root_container(&mut self, cnt: usize) {
         self.container_stack.push(cnt);
 
         self.root_list.push(cnt);
-        (*cnt_ptr).head_idx = Some(self.push_jump(None));
-        if rect_overlaps_vec2((*cnt_ptr).rect, self.mouse_pos) && (self.next_hover_root.is_none() || (*cnt_ptr).zindex > self.containers[self.next_hover_root.unwrap()].zindex) {
+        self.containers[cnt].head_idx = Some(self.push_jump(None));
+        if rect_overlaps_vec2(self.containers[cnt].rect, self.mouse_pos) && (self.next_hover_root.is_none() || self.containers[cnt].zindex > self.containers[self.next_hover_root.unwrap()].zindex) {
             self.next_hover_root = Some(cnt);
         }
-        self.clip_stack.push(unclipped_rect);
+        self.clip_stack.push(UNCLIPPED_RECT);
     }
 
-    unsafe extern "C" fn end_root_container(&mut self) {
-        let mut cnt: *mut mu_Container = self.mu_get_current_container();
-        (*cnt).tail_idx = Some(self.push_jump(None));
-        self.command_list[(*cnt).head_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
+    fn end_root_container(&mut self) {
+        let cnt = self.mu_get_current_container();
+        self.containers[cnt].tail_idx = Some(self.push_jump(None));
+        self.command_list[self.containers[cnt].head_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
         self.mu_pop_clip_rect();
         self.pop_container();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_window_ex(&mut self, title: &str, mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
+    pub fn mu_begin_window_ex(&mut self, title: &str, mut rect: mu_Rect, opt: WidgetOption) -> ResourceState {
         let mut body: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let id: mu_Id = self.mu_get_id_from_str(title);
         let cnt_id = self.get_container_index(id, opt);
@@ -1709,13 +1668,11 @@ impl mu_Context {
         }
         self.id_stack.push(id);
 
-        let mut cnt = &mut self.containers[cnt_id.unwrap()] as *mut mu_Container;
-
-        if (*cnt).rect.w == 0 as libc::c_int {
-            (*cnt).rect = rect;
+        if self.containers[cnt_id.unwrap()].rect.w == 0 as libc::c_int {
+            self.containers[cnt_id.unwrap()].rect = rect;
         }
         self.begin_root_container(cnt_id.unwrap());
-        body = (*cnt).rect;
+        body = self.containers[cnt_id.unwrap()].rect;
         rect = body;
         if !opt.has_no_frame() {
             (self.draw_frame).expect("non-null function pointer")(self, rect, ControlColor::WindowBG);
@@ -1731,8 +1688,8 @@ impl mu_Context {
                 self.mu_update_control(id_0, tr, opt);
                 self.mu_draw_control_text(title, tr, ControlColor::TitleText, opt);
                 if id_0 == self.focus && self.mouse_down.is_left() {
-                    (*cnt).rect.x += self.mouse_delta.x;
-                    (*cnt).rect.y += self.mouse_delta.y;
+                    self.containers[cnt_id.unwrap()].rect.x += self.mouse_delta.x;
+                    self.containers[cnt_id.unwrap()].rect.y += self.mouse_delta.y;
                 }
                 body.y += tr.h;
                 body.h -= tr.h;
@@ -1744,7 +1701,7 @@ impl mu_Context {
                 self.mu_draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as libc::c_int as usize]);
                 self.mu_update_control(id_1, r, opt);
                 if self.mouse_pressed.is_left() && id_1 == self.focus {
-                    (*cnt).open = 0 as libc::c_int;
+                    self.containers[cnt_id.unwrap()].open = 0 as libc::c_int;
                 }
             }
         }
@@ -1755,39 +1712,37 @@ impl mu_Context {
             let r_0: mu_Rect = mu_rect(rect.x + rect.w - sz, rect.y + rect.h - sz, sz, sz);
             self.mu_update_control(id_2, r_0, opt);
             if id_2 == self.focus && self.mouse_down.is_left() {
-                (*cnt).rect.w = if 96 as libc::c_int > (*cnt).rect.w + self.mouse_delta.x {
+                self.containers[cnt_id.unwrap()].rect.w = if 96 as libc::c_int > self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x {
                     96 as libc::c_int
                 } else {
-                    (*cnt).rect.w + self.mouse_delta.x
+                    self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x
                 };
-                (*cnt).rect.h = if 64 as libc::c_int > (*cnt).rect.h + self.mouse_delta.y {
+                self.containers[cnt_id.unwrap()].rect.h = if 64 as libc::c_int > self.containers[cnt_id.unwrap()].rect.h + self.mouse_delta.y {
                     64 as libc::c_int
                 } else {
-                    (*cnt).rect.h + self.mouse_delta.y
+                    self.containers[cnt_id.unwrap()].rect.h + self.mouse_delta.y
                 };
             }
         }
         if opt.is_auto_sizing() {
             let r_1: mu_Rect = self.get_layout().body;
-            (*cnt).rect.w = (*cnt).content_size.x + ((*cnt).rect.w - r_1.w);
-            (*cnt).rect.h = (*cnt).content_size.y + ((*cnt).rect.h - r_1.h);
+            self.containers[cnt_id.unwrap()].rect.w = self.containers[cnt_id.unwrap()].content_size.x + (self.containers[cnt_id.unwrap()].rect.w - r_1.w);
+            self.containers[cnt_id.unwrap()].rect.h = self.containers[cnt_id.unwrap()].content_size.y + (self.containers[cnt_id.unwrap()].rect.h - r_1.h);
         }
 
         if opt.is_popup() && !self.mouse_pressed.is_none() && self.hover_root != cnt_id {
-            (*cnt).open = 0 as libc::c_int;
+            self.containers[cnt_id.unwrap()].open = 0 as libc::c_int;
         }
-        self.mu_push_clip_rect((*cnt).body);
+        self.mu_push_clip_rect(self.containers[cnt_id.unwrap()].body);
         return ResourceState::Active;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_end_window(&mut self) {
+    pub fn mu_end_window(&mut self) {
         self.mu_pop_clip_rect();
         self.end_root_container();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_open_popup(&mut self, name: &str) {
+    pub fn mu_open_popup(&mut self, name: &str) {
         let cnt = self.mu_get_container_index(name);
         self.next_hover_root = cnt;
         self.hover_root = self.next_hover_root;
@@ -1796,8 +1751,7 @@ impl mu_Context {
         self.mu_bring_to_front(cnt.unwrap());
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_popup(&mut self, name: &str) -> ResourceState {
+    pub fn mu_begin_popup(&mut self, name: &str) -> ResourceState {
         let opt = WidgetOption::Popup
             .with_auto_size()
             .with_no_resize()
@@ -1807,13 +1761,11 @@ impl mu_Context {
         return self.mu_begin_window_ex(name, mu_rect(0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int), opt);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_end_popup(&mut self) {
+    pub fn mu_end_popup(&mut self) {
         self.mu_end_window();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
+    pub fn mu_begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
         self.mu_push_id_from_str(name);
         let cnt_id = self.get_container_index(self.last_id, opt);
         let rect = self.mu_layout_next();
@@ -1827,8 +1779,7 @@ impl mu_Context {
         self.mu_push_clip_rect(self.containers[cnt_id.unwrap()].body);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_end_panel(&mut self) {
+    pub fn mu_end_panel(&mut self) {
         self.mu_pop_clip_rect();
         self.pop_container();
     }

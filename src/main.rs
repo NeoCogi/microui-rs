@@ -705,30 +705,31 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
         )
         .is_none()
     {
-        let mut win: *mut mu_Container = ctx.mu_get_current_container();
-        (*win).rect.w = if (*win).rect.w > 240 as libc::c_int {
-            (*win).rect.w
+        let mut win = ctx.mu_get_current_container_rect();
+        win.w = if win.w > 240 as libc::c_int {
+            win.w
         } else {
             240 as libc::c_int
         };
-        (*win).rect.h = if (*win).rect.h > 300 as libc::c_int {
-            (*win).rect.h
+        win.h = if win.h > 300 as libc::c_int {
+            win.h
         } else {
             300 as libc::c_int
         };
 
+        ctx.set_current_container_rect(&win);
+
         let mut buff = FixedString::<128>::new();
 
         if !ctx.mu_header_ex("Window Info", WidgetOption::None).is_none() {
-            let win_0: *mut mu_Container = ctx.mu_get_current_container();
-            let mut buf: [libc::c_char; 64] = [0; 64];
+            let win_0 = ctx.mu_get_current_container_rect();
             ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_label("Position:");
-            buff.write_fmt(format_args!("{}, {}", (*win_0).rect.x, (*win_0).rect.y)).unwrap();
+            buff.write_fmt(format_args!("{}, {}", win_0.x, win_0.y)).unwrap();
             ctx.mu_label(buff.as_str());
             buff.clear();
             ctx.mu_label("Size:");
-            buff.write_fmt(format_args!("{}, {}", (*win_0).rect.w, (*win_0).rect.h)).unwrap();
+            buff.write_fmt(format_args!("{}, {}", win_0.w, win_0.h)).unwrap();
             ctx.mu_label(buff.as_str());
         }
         if !ctx.mu_header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
@@ -877,12 +878,14 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
     {
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(25 as libc::c_int));
         ctx.mu_begin_panel_ex("Log Output", WidgetOption::None);
-        let mut panel: *mut mu_Container = ctx.mu_get_current_container();
+        let mut scroll = ctx.mu_get_current_container_scroll();
+        let content_size = ctx.mu_get_current_container_content_size();
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
         ctx.mu_text(logbuf.as_str());
         ctx.mu_end_panel();
         if *logbuf_updated != 0 {
-            (*panel).scroll.y = (*panel).content_size.y;
+            scroll.y = content_size.y;
+            ctx.set_current_container_scroll(&scroll);
             *logbuf_updated = 0 as libc::c_int;
         }
         let mut submitted: libc::c_int = 0 as libc::c_int;
@@ -1024,7 +1027,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
         )
         .is_none()
     {
-        let sw: libc::c_int = ((*ctx.mu_get_current_container()).body.w as libc::c_double * 0.14f64) as libc::c_int;
+        let sw: libc::c_int = (ctx.mu_get_current_container_body().w as libc::c_double * 0.14f64) as libc::c_int;
         ctx.mu_layout_row(
             6 as libc::c_int,
             [80 as libc::c_int, sw, sw, sw, sw, -(1 as libc::c_int)].as_mut_ptr(),

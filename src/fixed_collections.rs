@@ -218,7 +218,7 @@ impl<const N: usize> IString for FixedString<N> {
         let ch = self.chars().rev().next().unwrap();
 
         let bc = ch.len_utf8();
-        for i in 0..bc {
+        for _ in 0..bc {
             self.vec.pop();
         }
         self.char_count -= 1;
