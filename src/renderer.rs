@@ -475,10 +475,10 @@ static mut atlas_texture: [libc::c_uchar; 16384] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-static mut atlas: [mu_Rect; 134] = [
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
+static mut atlas: [Rect; 134] = [
+    Rect { x: 0, y: 0, w: 0, h: 0 },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 88 as libc::c_int,
             y: 68 as libc::c_int,
             w: 16 as libc::c_int,
@@ -487,7 +487,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 0 as libc::c_int,
             y: 0 as libc::c_int,
             w: 18 as libc::c_int,
@@ -496,7 +496,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 113 as libc::c_int,
             y: 68 as libc::c_int,
             w: 5 as libc::c_int,
@@ -505,7 +505,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 118 as libc::c_int,
             y: 68 as libc::c_int,
             w: 7 as libc::c_int,
@@ -514,7 +514,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 125 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -522,40 +522,40 @@ static mut atlas: [mu_Rect; 134] = [
         };
         init
     },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
-    mu_Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
+    Rect { x: 0, y: 0, w: 0, h: 0 },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 84 as libc::c_int,
             y: 68 as libc::c_int,
             w: 2 as libc::c_int,
@@ -564,7 +564,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 39 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -573,7 +573,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 114 as libc::c_int,
             y: 51 as libc::c_int,
             w: 5 as libc::c_int,
@@ -582,7 +582,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 34 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -591,7 +591,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 28 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -600,7 +600,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 58 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
@@ -609,7 +609,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 103 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
@@ -618,7 +618,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 86 as libc::c_int,
             y: 68 as libc::c_int,
             w: 2 as libc::c_int,
@@ -627,7 +627,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 42 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -636,7 +636,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 45 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -645,7 +645,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 34 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -654,7 +654,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 40 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -663,7 +663,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 48 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -672,7 +672,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 51 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -681,7 +681,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 54 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -690,7 +690,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 124 as libc::c_int,
             y: 34 as libc::c_int,
             w: 4 as libc::c_int,
@@ -699,7 +699,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 46 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -708,7 +708,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 52 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -717,7 +717,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 58 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -726,7 +726,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 64 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -735,7 +735,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 70 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -744,7 +744,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 76 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -753,7 +753,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 82 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -762,7 +762,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 88 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -771,7 +771,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 94 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -780,7 +780,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 100 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -789,7 +789,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 57 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -798,7 +798,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 60 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -807,7 +807,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 106 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -816,7 +816,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 112 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -825,7 +825,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 118 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
@@ -834,7 +834,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 119 as libc::c_int,
             y: 51 as libc::c_int,
             w: 5 as libc::c_int,
@@ -843,7 +843,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 18 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
@@ -852,7 +852,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 41 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -861,7 +861,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 48 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -870,7 +870,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 55 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -879,7 +879,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 111 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
@@ -888,7 +888,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 0 as libc::c_int,
             y: 35 as libc::c_int,
             w: 6 as libc::c_int,
@@ -897,7 +897,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 6 as libc::c_int,
             y: 35 as libc::c_int,
             w: 6 as libc::c_int,
@@ -906,7 +906,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 119 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
@@ -915,7 +915,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 18 as libc::c_int,
             y: 17 as libc::c_int,
             w: 8 as libc::c_int,
@@ -924,7 +924,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 63 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -933,7 +933,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 66 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -942,7 +942,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 62 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -951,7 +951,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 12 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -960,7 +960,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 28 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
@@ -969,7 +969,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 67 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
@@ -978,7 +978,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 76 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
@@ -987,7 +987,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 69 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -996,7 +996,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 85 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
@@ -1005,7 +1005,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 76 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1014,7 +1014,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 18 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1023,7 +1023,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 24 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1032,7 +1032,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 26 as libc::c_int,
             y: 17 as libc::c_int,
             w: 8 as libc::c_int,
@@ -1041,7 +1041,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 83 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1050,7 +1050,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 38 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
@@ -1059,7 +1059,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 90 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1068,7 +1068,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 30 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1077,7 +1077,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 36 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1086,7 +1086,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 69 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -1095,7 +1095,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 124 as libc::c_int,
             y: 51 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1104,7 +1104,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 72 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -1113,7 +1113,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 42 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1122,7 +1122,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 15 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1131,7 +1131,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 48 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1140,7 +1140,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 54 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1149,7 +1149,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 97 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1158,7 +1158,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 0 as libc::c_int,
             y: 52 as libc::c_int,
             w: 5 as libc::c_int,
@@ -1167,7 +1167,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 104 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1176,7 +1176,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 60 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1185,7 +1185,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 19 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1194,7 +1194,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 66 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1203,7 +1203,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 111 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1212,7 +1212,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 75 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -1221,7 +1221,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 78 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -1230,7 +1230,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 72 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1239,7 +1239,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 81 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
@@ -1248,7 +1248,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 48 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
@@ -1257,7 +1257,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 118 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1266,7 +1266,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 0 as libc::c_int,
             y: 18 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1275,7 +1275,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 7 as libc::c_int,
             y: 18 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1284,7 +1284,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 14 as libc::c_int,
             y: 34 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1293,7 +1293,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 23 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1302,7 +1302,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 5 as libc::c_int,
             y: 52 as libc::c_int,
             w: 5 as libc::c_int,
@@ -1311,7 +1311,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 27 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1320,7 +1320,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 21 as libc::c_int,
             y: 34 as libc::c_int,
             w: 7 as libc::c_int,
@@ -1329,7 +1329,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 78 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1338,7 +1338,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 94 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
@@ -1347,7 +1347,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 84 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1356,7 +1356,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 90 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1365,7 +1365,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 10 as libc::c_int,
             y: 68 as libc::c_int,
             w: 5 as libc::c_int,
@@ -1374,7 +1374,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 31 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1383,7 +1383,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 96 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1392,7 +1392,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 35 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
@@ -1401,7 +1401,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 102 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1410,7 +1410,7 @@ static mut atlas: [mu_Rect; 134] = [
         init
     },
     {
-        let mut init = mu_Rect {
+        let mut init = Rect {
             x: 108 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
@@ -1525,7 +1525,7 @@ unsafe extern "C" fn flush() {
     buf_idx = 0 as libc::c_int;
 }
 
-unsafe extern "C" fn push_quad(mut dst: mu_Rect, mut src: mu_Rect, mut color: mu_Color) {
+unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: mu_Color) {
     if buf_idx == 16384 as libc::c_int {
         flush();
     }
@@ -1583,14 +1583,14 @@ unsafe extern "C" fn push_quad(mut dst: mu_Rect, mut src: mu_Rect, mut color: mu
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_rect(mut rect: mu_Rect, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: mu_Color) {
     push_quad(rect, atlas[ATLAS_WHITE as libc::c_int as usize], color);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: mu_Vec2, mut color: mu_Color) {
-    let mut dst: mu_Rect = {
-        let mut init = mu_Rect {
+pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: mu_Color) {
+    let mut dst: Rect = {
+        let mut init = Rect {
             x: pos.x,
             y: pos.y,
             w: 0 as libc::c_int,
@@ -1601,7 +1601,7 @@ pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: mu_Vec2, mut color: mu
     for p in text.chars() {
         if !(p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
             let mut chr: libc::c_int = i32::min(p as i32, 127);
-            let mut src: mu_Rect = atlas[(ATLAS_FONT as libc::c_int + chr) as usize];
+            let mut src: Rect = atlas[(ATLAS_FONT as libc::c_int + chr) as usize];
             dst.w = src.w;
             dst.h = src.h;
             push_quad(dst, src, color);
@@ -1611,8 +1611,8 @@ pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: mu_Vec2, mut color: mu
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: mu_Rect, mut color: mu_Color) {
-    let mut src: mu_Rect = atlas[id as usize];
+pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: Rect, mut color: mu_Color) {
+    let mut src: Rect = atlas[id as usize];
     let mut x: libc::c_int = rect.x + (rect.w - src.w) / 2 as libc::c_int;
     let mut y: libc::c_int = rect.y + (rect.h - src.h) / 2 as libc::c_int;
     push_quad(mu_rect(x, y, src.w, src.h), src, color);
@@ -1629,7 +1629,7 @@ pub extern "C" fn r_get_char_height(_font: mu_Font, _c: char) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_set_clip_rect(mut rect: mu_Rect) {
+pub unsafe extern "C" fn r_set_clip_rect(mut rect: Rect) {
     flush();
     glScissor(rect.x, height - (rect.y + rect.h), rect.w, rect.h);
 }

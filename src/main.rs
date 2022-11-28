@@ -838,7 +838,7 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
                 WidgetOption::AlignCenter,
             );
             ctx.mu_layout_end_column();
-            let r: mu_Rect = ctx.mu_layout_next();
+            let r: Rect = ctx.mu_layout_next();
             ctx.mu_draw_rect(
                 r,
                 mu_color(
