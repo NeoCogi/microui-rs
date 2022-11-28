@@ -1,6 +1,6 @@
 use core::ops::{IndexMut, Index, AddAssign};
 use core::str::Chars;
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 pub trait IVec<T: Default + Copy> {
     fn push(&mut self, t: T) -> (&mut T, usize);

@@ -6,15 +6,15 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-// #![no_main]
-// #![no_std]
-//
-// use core::panic::PanicInfo;
-//
-// #[panic_handler]
-// fn panic(_panic: &PanicInfo<'_>) -> ! {
-//     loop {}
-// }
+#![no_main]
+#![no_std]
+
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo<'_>) -> ! {
+    loop {}
+}
 //
 // #[no_mangle]
 // pub extern "C" fn main() {}
@@ -1313,7 +1313,8 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-fn main() {
+#[no_mangle]
+pub extern "C" fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();

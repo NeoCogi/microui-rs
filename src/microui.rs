@@ -1581,11 +1581,10 @@ impl mu_Context {
         cs.x += self.style.padding * 2 as libc::c_int;
         cs.y += self.style.padding * 2 as libc::c_int;
         self.mu_push_clip_rect(body.clone());
-        let cnt = self.containers[cnt_id];
-        if cs.y > cnt.body.h {
+        if cs.y > self.containers[cnt_id].body.h {
             body.w -= sz;
         }
-        if cs.x > cnt.body.w {
+        if cs.x > self.containers[cnt_id].body.w {
             body.h -= sz;
         }
         let body = *body;
@@ -1602,17 +1601,18 @@ impl mu_Context {
                 self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
             self.containers[cnt_id].scroll.y = if maxscroll
-                < (if 0 as libc::c_int > cnt.scroll.y {
+                < (if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
                     0 as libc::c_int
                 } else {
-                    cnt.scroll.y
+                self.containers[cnt_id].scroll.y
                 }) {
                 maxscroll
-            } else if 0 as libc::c_int > cnt.scroll.y {
+            } else if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
                 0 as libc::c_int
             } else {
-                cnt.scroll.y
+                self.containers[cnt_id].scroll.y
             };
+
             (self.draw_frame).expect("non-null function pointer")(self, base, ControlColor::ScrollBase);
             thumb = base;
             thumb.h = if self.style.thumb_size > base.h * body.h / cs.y {
@@ -1620,7 +1620,7 @@ impl mu_Context {
             } else {
                 base.h * body.h / cs.y
             };
-            thumb.y += cnt.scroll.y * (base.h - thumb.h) / maxscroll;
+            thumb.y += self.containers[cnt_id].scroll.y * (base.h - thumb.h) / maxscroll;
             (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
             if self.mu_mouse_over(body) != 0 {
                 self.scroll_target = Some(cnt_id);
@@ -1641,16 +1641,16 @@ impl mu_Context {
                 self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
             self.containers[cnt_id].scroll.x = if maxscroll_0
-                < (if 0 as libc::c_int > cnt.scroll.x {
+                < (if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
                     0 as libc::c_int
                 } else {
-                    cnt.scroll.x
+                self.containers[cnt_id].scroll.x
                 }) {
                 maxscroll_0
-            } else if 0 as libc::c_int > cnt.scroll.x {
+            } else if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
                 0 as libc::c_int
             } else {
-                cnt.scroll.x
+                self.containers[cnt_id].scroll.x
             };
             (self.draw_frame).expect("non-null function pointer")(self, base_0, ControlColor::ScrollBase);
             thumb_0 = base_0;
@@ -1659,7 +1659,7 @@ impl mu_Context {
             } else {
                 base_0.w * body.w / cs.x
             };
-            thumb_0.x += cnt.scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
+            thumb_0.x += self.containers[cnt_id].scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
             (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
             if self.mu_mouse_over(body) != 0 {
                 self.scroll_target = Some(cnt_id);
