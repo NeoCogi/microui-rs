@@ -706,16 +706,8 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
         .is_none()
     {
         let mut win = ctx.mu_get_current_container_rect();
-        win.w = if win.w > 240 as libc::c_int {
-            win.w
-        } else {
-            240 as libc::c_int
-        };
-        win.h = if win.h > 300 as libc::c_int {
-            win.h
-        } else {
-            300 as libc::c_int
-        };
+        win.w = if win.w > 240 as libc::c_int { win.w } else { 240 as libc::c_int };
+        win.h = if win.h > 300 as libc::c_int { win.h } else { 300 as libc::c_int };
 
         ctx.set_current_container_rect(&win);
 

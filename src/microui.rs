@@ -14,7 +14,7 @@ extern "C" {
 
 pub type size_t = libc::c_ulong;
 
-pub struct Pool<const N : usize> {
+pub struct Pool<const N: usize> {
     vec: [mu_PoolItem; N],
 }
 
@@ -38,7 +38,7 @@ impl<const N: usize> Pool<N> {
     pub fn get(&self, id: mu_Id) -> Option<usize> {
         for i in 0..N {
             if self.vec[i].id == id {
-                return Some(i)
+                return Some(i);
             }
         }
         None
@@ -710,7 +710,9 @@ impl mu_Context {
         self.scroll_delta = mu_vec2(0 as libc::c_int, 0 as libc::c_int);
         self.last_mouse_pos = self.mouse_pos;
         let n = self.root_list.len();
-        quick_sort_by(self.root_list.as_slice_mut(), |a, b| {self.containers[*a].zindex.cmp(&self.containers[*b].zindex)});
+        quick_sort_by(self.root_list.as_slice_mut(), |a, b| {
+            self.containers[*a].zindex.cmp(&self.containers[*b].zindex)
+        });
 
         for i in 0..n {
             if i == 0 {
@@ -723,12 +725,14 @@ impl mu_Context {
                 cmd.jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
                 unsafe { assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len()) };
             } else {
-                let prev= &self.containers[self.root_list[i - 1]];
+                let prev = &self.containers[self.root_list[i - 1]];
                 self.command_list[prev.tail_idx.unwrap()].jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
             }
             if i == n - 1 {
                 assert!(self.containers[self.root_list[i as usize]].tail_idx.unwrap() < self.command_list.len());
-                unsafe { assert!(self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].type_0 == Command::Jump); }
+                unsafe {
+                    assert!(self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].type_0 == Command::Jump);
+                }
                 self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
                 // the snake eats its tail
             }
@@ -901,7 +905,7 @@ impl mu_Context {
 
     fn mu_get_container_index(&mut self, name: &str) -> Option<usize> {
         let id = self.mu_get_id_from_str(name);
-       self.get_container_index(id, WidgetOption::None)
+        self.get_container_index(id, WidgetOption::None)
     }
 
     pub fn mu_bring_to_front(&mut self, cnt: usize) {
@@ -1178,7 +1182,7 @@ impl mu_Context {
                     }
                 }
                 false
-            },
+            }
             None => false,
         }
     }
@@ -1404,15 +1408,7 @@ impl mu_Context {
         return self.mu_textbox_raw(buf, id, r, opt);
     }
 
-    pub fn mu_slider_ex(
-        &mut self,
-        value: &mut mu_Real,
-        low: mu_Real,
-        high: mu_Real,
-        step: mu_Real,
-        fmt: &str,
-        opt: WidgetOption,
-    ) -> ResourceState {
+    pub fn mu_slider_ex(&mut self, value: &mut mu_Real, low: mu_Real, high: mu_Real, step: mu_Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut x: libc::c_int = 0;
         let mut w: libc::c_int = 0;
@@ -1565,7 +1561,7 @@ impl mu_Context {
                 < (if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
                     0 as libc::c_int
                 } else {
-                self.containers[cnt_id].scroll.y
+                    self.containers[cnt_id].scroll.y
                 }) {
                 maxscroll
             } else if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
@@ -1605,7 +1601,7 @@ impl mu_Context {
                 < (if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
                     0 as libc::c_int
                 } else {
-                self.containers[cnt_id].scroll.x
+                    self.containers[cnt_id].scroll.x
                 }) {
                 maxscroll_0
             } else if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
@@ -1645,7 +1641,9 @@ impl mu_Context {
 
         self.root_list.push(cnt);
         self.containers[cnt].head_idx = Some(self.push_jump(None));
-        if rect_overlaps_vec2(self.containers[cnt].rect, self.mouse_pos) && (self.next_hover_root.is_none() || self.containers[cnt].zindex > self.containers[self.next_hover_root.unwrap()].zindex) {
+        if rect_overlaps_vec2(self.containers[cnt].rect, self.mouse_pos)
+            && (self.next_hover_root.is_none() || self.containers[cnt].zindex > self.containers[self.next_hover_root.unwrap()].zindex)
+        {
             self.next_hover_root = Some(cnt);
         }
         self.clip_stack.push(UNCLIPPED_RECT);

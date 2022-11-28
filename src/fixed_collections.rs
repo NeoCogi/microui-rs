@@ -27,12 +27,12 @@ pub trait IVec<T: Default + Copy> {
     }
 }
 
-pub fn quick_sort_by<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], f: F) {
+pub fn quick_sort_by<T, F: Fn(&T, &T) -> Ordering>(arr: &mut [T], f: F) {
     let len = arr.len();
     _quick_sort(arr, 0, (len - 1) as isize, &f);
 }
 
-fn _quick_sort<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) {
+fn _quick_sort<T, F: Fn(&T, &T) -> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) {
     if low < high {
         let p = partition(arr, low, high, f);
         _quick_sort(arr, low, p - 1, f);
@@ -40,7 +40,7 @@ fn _quick_sort<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], low: isize, high: isi
     }
 }
 
-fn partition<T, F: Fn(&T, &T)-> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) -> isize {
+fn partition<T, F: Fn(&T, &T) -> Ordering>(arr: &mut [T], low: isize, high: isize, f: &F) -> isize {
     let pivot = high as usize;
     let mut store_index = low - 1;
     let mut last_index = high;
@@ -302,4 +302,3 @@ impl<const N: usize> Index<core::ops::Range<usize>> for FixedString<N> {
         unsafe { core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end]) }
     }
 }
-
