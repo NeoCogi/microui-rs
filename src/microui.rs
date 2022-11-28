@@ -379,9 +379,9 @@ pub const MU_KEY_SHIFT: u32 = 1;
 
 #[repr(C)]
 pub struct mu_Context {
-    pub char_width: Option<unsafe extern "C" fn(mu_Font, char) -> usize>,
-    pub char_height: Option<unsafe extern "C" fn(mu_Font, char) -> usize>,
-    pub draw_frame: Option<unsafe extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ()>,
+    pub char_width: Option<extern "C" fn(mu_Font, char) -> usize>,
+    pub char_height: Option<extern "C" fn(mu_Font, char) -> usize>,
+    pub draw_frame: Option<extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ()>,
     pub style: mu_Style,
     pub hover: mu_Id,
     pub focus: mu_Id,
@@ -392,7 +392,7 @@ pub struct mu_Context {
     pub frame: usize,
     pub hover_root: Option<usize>,
     pub next_hover_root: Option<usize>,
-    pub scroll_target: *mut mu_Container,
+    pub scroll_target: Option<usize>,
     pub number_edit_buf: FixedString<127>,
     pub number_edit: mu_Id,
     pub command_list: FixedVec<mu_Command, 4096>,
@@ -637,11 +637,11 @@ pub fn rect_overlaps_vec2(r: mu_Rect, p: mu_Vec2) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn mu_init(mut ctx: *mut mu_Context) {
     memset(ctx as *mut libc::c_void, 0 as libc::c_int, core::mem::size_of::<mu_Context>() as libc::c_ulong);
-    (*ctx).draw_frame = Some(draw_frame as unsafe extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ());
+    (*ctx).draw_frame = Some(draw_frame as extern "C" fn(&mut mu_Context, mu_Rect, ControlColor) -> ());
     (*ctx).style = default_style.clone();
 }
 
-pub unsafe extern "C" fn draw_frame(ctx: &mut mu_Context, rect: mu_Rect, colorid: ControlColor) {
+pub extern "C" fn draw_frame(ctx: &mut mu_Context, rect: mu_Rect, colorid: ControlColor) {
     ctx.mu_draw_rect(rect, ctx.style.colors[colorid as usize]);
     if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
         return;
@@ -682,7 +682,7 @@ impl mu_Context {
         assert!((self.char_width).is_some() && (self.char_height).is_some());
         self.root_list.clear();
         self.text_stack.clear();
-        self.scroll_target = 0 as *mut mu_Container;
+        self.scroll_target = None;
         self.hover_root = self.next_hover_root;
         self.next_hover_root = None;
         self.mouse_delta.x = self.mouse_pos.x - self.last_mouse_pos.x;
@@ -697,9 +697,9 @@ impl mu_Context {
         assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
         assert_eq!(self.layout_stack.len(), 0);
-        if !(self.scroll_target).is_null() {
-            (*self.scroll_target).scroll.x += self.scroll_delta.x;
-            (*self.scroll_target).scroll.y += self.scroll_delta.y;
+        if !self.scroll_target.is_none() {
+            self.containers[self.scroll_target.unwrap()].scroll.x += self.scroll_delta.x;
+            self.containers[self.scroll_target.unwrap()].scroll.y += self.scroll_delta.y;
         }
         if self.updated_focus == 0 {
             self.focus = 0 as libc::c_int as mu_Id;
@@ -795,7 +795,7 @@ impl mu_Context {
         self.id_stack.pop();
     }
 
-    pub unsafe extern "C" fn mu_push_clip_rect(&mut self, rect: mu_Rect) {
+    pub fn mu_push_clip_rect(&mut self, rect: mu_Rect) {
         let last = self.mu_get_clip_rect();
         self.clip_stack.push(intersect_rects(rect, last));
     }
@@ -1015,8 +1015,7 @@ impl mu_Context {
         }
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_draw_box(&mut self, rect: mu_Rect, color: mu_Color) {
+    pub fn mu_draw_box(&mut self, rect: mu_Rect, color: mu_Color) {
         self.mu_draw_rect(mu_rect(rect.x + 1 as libc::c_int, rect.y, rect.w - 2 as libc::c_int, 1 as libc::c_int), color);
         self.mu_draw_rect(
             mu_rect(
@@ -1188,7 +1187,7 @@ impl mu_Context {
         return self.last_rect;
     }
 
-    unsafe extern "C" fn in_hover_root(&mut self) -> bool {
+    fn in_hover_root(&mut self) -> bool {
         match self.hover_root {
             Some(hover_root) => {
                 let len = self.container_stack.len();
@@ -1238,14 +1237,13 @@ impl mu_Context {
         self.mu_pop_clip_rect();
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_mouse_over(&mut self, rect: mu_Rect) -> libc::c_int {
+    pub fn mu_mouse_over(&mut self, rect: mu_Rect) -> libc::c_int {
         return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.mu_get_clip_rect(), self.mouse_pos) && self.in_hover_root())
             as libc::c_int;
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn mu_update_control(&mut self, id: mu_Id, rect: mu_Rect, opt: WidgetOption) {
+    pub fn mu_update_control(&mut self, id: mu_Id, rect: mu_Rect, opt: WidgetOption) {
         let mouseover: libc::c_int = self.mu_mouse_over(rect);
         if self.focus == id {
             self.updated_focus = 1 as libc::c_int;
@@ -1577,7 +1575,7 @@ impl mu_Context {
         self.mu_pop_id();
     }
 
-    unsafe extern "C" fn scrollbars(&mut self, cnt_id: usize, body: &mut mu_Rect) {
+    fn scrollbars(&mut self, cnt_id: usize, body: &mut mu_Rect) {
         let sz: libc::c_int = self.style.scrollbar_size;
         let mut cs: mu_Vec2 = self.containers[cnt_id].content_size;
         cs.x += self.style.padding * 2 as libc::c_int;
@@ -1625,7 +1623,7 @@ impl mu_Context {
             thumb.y += cnt.scroll.y * (base.h - thumb.h) / maxscroll;
             (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
             if self.mu_mouse_over(body) != 0 {
-                self.scroll_target = &mut self.containers[cnt_id];
+                self.scroll_target = Some(cnt_id);
             }
         } else {
             self.containers[cnt_id].scroll.y = 0 as libc::c_int;
@@ -1664,7 +1662,7 @@ impl mu_Context {
             thumb_0.x += cnt.scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
             (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
             if self.mu_mouse_over(body) != 0 {
-                self.scroll_target = &mut self.containers[cnt_id];
+                self.scroll_target = Some(cnt_id);
             }
         } else {
             self.containers[cnt_id].scroll.x = 0 as libc::c_int;

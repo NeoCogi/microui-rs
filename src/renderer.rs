@@ -1619,12 +1619,12 @@ pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: mu_Rect, mut color:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_get_char_width(_font: mu_Font, c: char) -> usize {
-    atlas[ATLAS_FONT as usize + c as usize].w as usize
+pub extern "C" fn r_get_char_width(_font: mu_Font, c: char) -> usize {
+    unsafe { atlas[ATLAS_FONT as usize + c as usize].w as usize }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_get_char_height(_font: mu_Font, _c: char) -> usize {
+pub extern "C" fn r_get_char_height(_font: mu_Font, _c: char) -> usize {
     18
 }
 
