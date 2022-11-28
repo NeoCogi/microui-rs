@@ -398,7 +398,7 @@ pub struct mu_Context {
     pub command_list: FixedVec<mu_Command, 4096>,
     pub root_list: C2RustUnnamed_12,
     pub container_stack: C2RustUnnamed_11,
-    pub clip_stack: C2RustUnnamed_10,
+    pub clip_stack: FixedVec<mu_Rect, 32>,
     pub id_stack: FixedVec<mu_Id, 32>,
     pub layout_stack: FixedVec<mu_Layout, 16>,
     pub text_stack: FixedString<65536>,
@@ -468,13 +468,6 @@ pub struct mu_Layout {
     pub next_row: libc::c_int,
     pub next_type: libc::c_int,
     pub indent: libc::c_int,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_10 {
-    pub idx: libc::c_int,
-    pub items: [mu_Rect; 32],
 }
 
 #[derive(Copy, Clone)]
@@ -717,7 +710,7 @@ impl mu_Context {
         let mut i: libc::c_int = 0;
         let mut n: libc::c_int = 0;
         assert_eq!(self.container_stack.idx, 0);
-        assert_eq!(self.clip_stack.idx, 0);
+        assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
         assert_eq!(self.layout_stack.len(), 0);
         if !(self.scroll_target).is_null() {
@@ -826,22 +819,15 @@ impl mu_Context {
 
     pub unsafe extern "C" fn mu_push_clip_rect(&mut self, rect: mu_Rect) {
         let last = self.mu_get_clip_rect();
-        assert!(
-            self.clip_stack.idx
-                < (core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<mu_Rect>() as libc::c_ulong) as libc::c_int
-        );
-        self.clip_stack.items[self.clip_stack.idx as usize] = intersect_rects(rect, last);
-        self.clip_stack.idx += 1;
+        self.clip_stack.push(intersect_rects(rect, last));
     }
 
     pub fn mu_pop_clip_rect(&mut self) {
-        assert!(self.clip_stack.idx > 0 as libc::c_int);
-        self.clip_stack.idx -= 1;
+        self.clip_stack.pop();
     }
 
     pub fn mu_get_clip_rect(&mut self) -> mu_Rect {
-        assert!(self.clip_stack.idx > 0 as libc::c_int);
-        return self.clip_stack.items[(self.clip_stack.idx - 1 as libc::c_int) as usize];
+        *self.clip_stack.top().unwrap()
     }
 
     pub fn mu_check_clip(&mut self, r: mu_Rect) -> Clip {
@@ -1713,12 +1699,7 @@ impl mu_Context {
         if rect_overlaps_vec2((*cnt).rect, self.mouse_pos) && ((self.next_hover_root).is_null() || (*cnt).zindex > (*self.next_hover_root).zindex) {
             self.next_hover_root = cnt;
         }
-        assert!(
-            self.clip_stack.idx
-                < (core::mem::size_of::<[mu_Rect; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<mu_Rect>() as libc::c_ulong) as libc::c_int
-        );
-        self.clip_stack.items[self.clip_stack.idx as usize] = unclipped_rect;
-        self.clip_stack.idx += 1;
+        self.clip_stack.push(unclipped_rect);
     }
 
     unsafe extern "C" fn end_root_container(&mut self) {
