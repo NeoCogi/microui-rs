@@ -376,8 +376,8 @@ pub const MU_KEY_SHIFT: u32 = 1;
 
 #[repr(C)]
 pub struct Context {
-    pub char_width: Option<extern "C" fn(mu_Font, char) -> usize>,
-    pub char_height: Option<extern "C" fn(mu_Font, char) -> usize>,
+    pub char_width: Option<fn(Font, char) -> usize>,
+    pub char_height: Option<fn(Font, char) -> usize>,
     pub draw_frame: Option<fn(&mut Context, Rect, ControlColor) -> ()>,
     pub style: Style,
     pub hover: mu_Id,
@@ -465,7 +465,6 @@ pub struct Layout {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union mu_Command {
     pub type_0: Command,
     pub base: mu_BaseCommand,
@@ -483,7 +482,6 @@ impl Default for mu_Command {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_IconCommand {
     pub base: mu_BaseCommand,
     pub rect: Rect,
@@ -492,7 +490,6 @@ pub struct mu_IconCommand {
 }
 
 #[derive(Default, Copy, Clone)]
-#[repr(C)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -501,26 +498,23 @@ pub struct Color {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_BaseCommand {
     pub type_0: Command,
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_TextCommand {
     pub base: mu_BaseCommand,
-    pub font: mu_Font,
+    pub font: Font,
     pub pos: Vec2i,
     pub color: Color,
     pub str_start: usize,
     pub str_len: usize,
 }
 
-pub type mu_Font = *mut libc::c_void;
+pub type Font = *mut libc::c_void;
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_RectCommand {
     pub base: mu_BaseCommand,
     pub rect: Rect,
@@ -528,23 +522,20 @@ pub struct mu_RectCommand {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_ClipCommand {
     pub base: mu_BaseCommand,
     pub rect: Rect,
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct mu_JumpCommand {
     pub base: mu_BaseCommand,
     pub dst_idx: Option<usize>,
 }
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Style {
-    pub font: mu_Font,
+    pub font: Font,
     pub size: Vec2i,
     pub padding: libc::c_int,
     pub spacing: libc::c_int,
@@ -555,7 +546,7 @@ pub struct Style {
     pub colors: [Color; 14],
 }
 
-pub type mu_Real = f32;
+pub type Real = f32;
 
 pub const ABSOLUTE: C2RustUnnamed_14 = 2;
 pub const RELATIVE: C2RustUnnamed_14 = 1;
@@ -1010,7 +1001,7 @@ impl Context {
         self.mu_draw_rect(rect(r.x + r.w - 1, r.y, 1, r.h), color);
     }
 
-    pub fn mu_draw_text(&mut self, font: mu_Font, str: &str, pos: Vec2i, color: Color) {
+    pub fn mu_draw_text(&mut self, font: Font, str: &str, pos: Vec2i, color: Color) {
         let rect: Rect = rect(pos.x, pos.y, self.get_text_width(font, str), self.get_text_height(font, str));
         let clipped = self.mu_check_clip(rect);
         match clipped {
@@ -1198,7 +1189,7 @@ impl Context {
 
     pub fn mu_draw_control_text(&mut self, str: &str, rect: Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: Vec2i = Vec2i { x: 0, y: 0 };
-        let font: mu_Font = self.style.font;
+        let font: Font = self.style.font;
         let tw = self.get_text_width(font, str);
         self.mu_push_clip_rect(rect);
         pos.y = rect.y + (rect.h - self.get_text_height(font, str)) / 2 as libc::c_int;
@@ -1246,7 +1237,7 @@ impl Context {
         }
     }
 
-    pub fn get_text_width(&self, font: mu_Font, text: &str) -> i32 {
+    pub fn get_text_width(&self, font: Font, text: &str) -> i32 {
         let mut res = 0;
         let mut acc = 0;
         for c in text.chars() {
@@ -1260,7 +1251,7 @@ impl Context {
         res as i32
     }
 
-    pub fn get_text_height(&self, font: mu_Font, text: &str) -> i32 {
+    pub fn get_text_height(&self, font: Font, text: &str) -> i32 {
         let mut res = 0;
         let mut acc = 0;
         for c in text.chars() {
@@ -1276,7 +1267,7 @@ impl Context {
 
     pub fn mu_text(&mut self, text: &str) {
         let mut width: libc::c_int = -(1 as libc::c_int);
-        let font: mu_Font = self.style.font;
+        let font: Font = self.style.font;
         let color: Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
         self.mu_layout_begin_column();
         let first_line = match text.lines().next() {
@@ -1363,7 +1354,7 @@ impl Context {
         self.mu_draw_control_frame(id, r, ControlColor::Base, opt);
         if self.focus == id {
             let color: Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
-            let font: mu_Font = self.style.font;
+            let font: Font = self.style.font;
             let textw = self.get_text_width(font, buf.as_str());
             let texth = self.get_text_height(font, buf.as_str());
             let ofx: libc::c_int = r.w - self.style.padding - textw - 1 as libc::c_int;
@@ -1379,7 +1370,7 @@ impl Context {
         return res;
     }
 
-    fn number_textbox(&mut self, value: &mut mu_Real, r: Rect, id: mu_Id) -> ResourceState {
+    fn number_textbox(&mut self, value: &mut Real, r: Rect, id: mu_Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
             self.number_edit = id;
             write!(self.number_edit_buf, "{:.3}", value).unwrap();
@@ -1404,13 +1395,13 @@ impl Context {
         return self.mu_textbox_raw(buf, id, r, opt);
     }
 
-    pub fn mu_slider_ex(&mut self, value: &mut mu_Real, low: mu_Real, high: mu_Real, step: mu_Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+    pub fn mu_slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut x: libc::c_int = 0;
         let mut w: libc::c_int = 0;
         let mut res = ResourceState::None;
-        let last: mu_Real = *value;
-        let mut v: mu_Real = last;
+        let last: Real = *value;
+        let mut v: Real = last;
         let id: mu_Id = self.mu_get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
         if !self.number_textbox(&mut v, base, id).is_none() {
@@ -1446,11 +1437,11 @@ impl Context {
         return res;
     }
 
-    pub fn mu_number_ex(&mut self, value: &mut mu_Real, step: mu_Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+    pub fn mu_number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: mu_Id = self.mu_get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
-        let last: mu_Real = *value;
+        let last: Real = *value;
         if !self.number_textbox(value, base, id).is_none() {
             return res;
         }

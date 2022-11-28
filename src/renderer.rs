@@ -475,7 +475,7 @@ static mut atlas_texture: [libc::c_uchar; 16384] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
-static mut atlas: [Rect; 134] = [
+static ATLAS: [Rect; 134] = [
     Rect { x: 0, y: 0, w: 0, h: 0 },
     {
         let mut init = Rect {
@@ -1584,7 +1584,7 @@ unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: Color) {
 
 #[no_mangle]
 pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: Color) {
-    push_quad(rect, atlas[ATLAS_WHITE as libc::c_int as usize], color);
+    push_quad(rect, ATLAS[ATLAS_WHITE as libc::c_int as usize], color);
 }
 
 #[no_mangle]
@@ -1601,7 +1601,7 @@ pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: Colo
     for p in text.chars() {
         if !(p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
             let mut chr: libc::c_int = i32::min(p as i32, 127);
-            let mut src: Rect = atlas[(ATLAS_FONT as libc::c_int + chr) as usize];
+            let mut src: Rect = ATLAS[(ATLAS_FONT as libc::c_int + chr) as usize];
             dst.w = src.w;
             dst.h = src.h;
             push_quad(dst, src, color);
@@ -1611,39 +1611,43 @@ pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: Colo
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
-    let mut src: Rect = atlas[id as usize];
+pub fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
+    let mut src: Rect = ATLAS[id as usize];
     let mut x: libc::c_int = r.x + (r.w - src.w) / 2 as libc::c_int;
     let mut y: libc::c_int = r.y + (r.h - src.h) / 2 as libc::c_int;
-    push_quad(rect(x, y, src.w, src.h), src, color);
+    unsafe { push_quad(rect(x, y, src.w, src.h), src, color); }
 }
 
 #[no_mangle]
-pub extern "C" fn r_get_char_width(_font: mu_Font, c: char) -> usize {
-    unsafe { atlas[ATLAS_FONT as usize + c as usize].w as usize }
+pub fn r_get_char_width(_font: Font, c: char) -> usize {
+    unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
 }
 
 #[no_mangle]
-pub extern "C" fn r_get_char_height(_font: mu_Font, _c: char) -> usize {
+pub fn r_get_char_height(_font: Font, _c: char) -> usize {
     18
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_set_clip_rect(mut rect: Rect) {
-    flush();
-    glScissor(rect.x, height - (rect.y + rect.h), rect.w, rect.h);
+pub fn r_set_clip_rect(mut rect: Rect) {
+    unsafe {
+        flush();
+        glScissor(rect.x, height - (rect.y + rect.h), rect.w, rect.h);
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_clear(mut clr: Color) {
-    flush();
-    glClearColor(
-        (clr.r as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
-        (clr.g as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
-        (clr.b as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
-        (clr.a as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
-    );
-    glClear(0x4000 as libc::c_int as GLbitfield);
+pub fn r_clear(mut clr: Color) {
+    unsafe {
+        flush();
+        glClearColor(
+            (clr.r as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
+            (clr.g as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
+            (clr.b as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
+            (clr.a as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
+        );
+        glClear(0x4000 as libc::c_int as GLbitfield);
+    }
 }
 
 #[no_mangle]

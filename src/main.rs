@@ -6,15 +6,15 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-#![no_main]
-#![no_std]
-
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_panic: &PanicInfo<'_>) -> ! {
-    loop {}
-}
+// #![no_main]
+// #![no_std]
+//
+// use core::panic::PanicInfo;
+//
+// #[panic_handler]
+// fn panic(_panic: &PanicInfo<'_>) -> ! {
+//     loop {}
+// }
 //
 // #[no_mangle]
 // pub extern "C" fn main() {}
@@ -675,7 +675,7 @@ pub union SDL_Event {
     pub padding: [Uint8; 56],
 }
 
-pub type mu_Real = libc::c_float;
+pub type Real = libc::c_float;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_13<'a> {
@@ -813,27 +813,27 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
             ctx.mu_label("Red:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(0 as libc::c_int as isize),
-                0 as libc::c_int as mu_Real,
-                255 as libc::c_int as mu_Real,
-                0 as libc::c_int as mu_Real,
+                0 as libc::c_int as Real,
+                255 as libc::c_int as Real,
+                0 as libc::c_int as Real,
                 "%.2",
                 WidgetOption::AlignCenter,
             );
             ctx.mu_label("Green:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(1 as libc::c_int as isize),
-                0 as libc::c_int as mu_Real,
-                255 as libc::c_int as mu_Real,
-                0 as libc::c_int as mu_Real,
+                0 as libc::c_int as Real,
+                255 as libc::c_int as Real,
+                0 as libc::c_int as Real,
                 "%.2",
                 WidgetOption::AlignCenter,
             );
             ctx.mu_label("Blue:");
             ctx.mu_slider_ex(
                 &mut *bg.as_mut_ptr().offset(2 as libc::c_int as isize),
-                0 as libc::c_int as mu_Real,
-                255 as libc::c_int as mu_Real,
-                0 as libc::c_int as mu_Real,
+                0 as libc::c_int as Real,
+                255 as libc::c_int as Real,
+                0 as libc::c_int as Real,
                 "%.2",
                 WidgetOption::AlignCenter,
             );
@@ -902,9 +902,9 @@ unsafe extern "C" fn uint8_slider(ctx: &mut Context, value: &mut u8, low: libc::
     ctx.mu_push_id_from_ptr(value);
     let res = ctx.mu_slider_ex(
         &mut tmp,
-        low as mu_Real,
-        high as mu_Real,
-        0 as libc::c_int as mu_Real,
+        low as Real,
+        high as Real,
+        0 as libc::c_int as Real,
         ":.2",
         WidgetOption::AlignCenter,
     );
@@ -1308,8 +1308,7 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-#[no_mangle]
-pub extern "C" fn main() {
+fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();
