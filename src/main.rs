@@ -696,11 +696,11 @@ unsafe extern "C" fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i3
     }
     *logbuf_updated = 1 as libc::c_int;
 }
-unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut mu_Context) {
+unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Context) {
     if !ctx
         .mu_begin_window_ex(
             "Demo Window",
-            mu_rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
+            rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
@@ -859,11 +859,11 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut mu_Context) {
+unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut Context) {
     if !ctx
         .mu_begin_window_ex(
             "Log Window",
-            mu_rect(350 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 200 as libc::c_int),
+            rect(350 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 200 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
@@ -896,7 +896,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
         ctx.mu_end_window();
     }
 }
-unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, value: &mut u8, low: libc::c_int, high: libc::c_int) -> ResourceState {
+unsafe extern "C" fn uint8_slider(ctx: &mut Context, value: &mut u8, low: libc::c_int, high: libc::c_int) -> ResourceState {
     static mut tmp: libc::c_float = 0.;
     tmp = *value as libc::c_float;
     ctx.mu_push_id_from_ptr(value);
@@ -912,7 +912,7 @@ unsafe extern "C" fn uint8_slider(ctx: &mut mu_Context, value: &mut u8, low: lib
     ctx.mu_pop_id();
     return res;
 }
-unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
+unsafe extern "C" fn style_window(ctx: &mut Context) {
     static mut colors: [C2RustUnnamed_13; 15] = [
         {
             let init = C2RustUnnamed_13 { label: "text", idx: ControlColor::Text };
@@ -1014,7 +1014,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     if !ctx
         .mu_begin_window_ex(
             "Style Editor",
-            mu_rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
+            rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
@@ -1041,7 +1041,7 @@ unsafe extern "C" fn style_window(ctx: &mut mu_Context) {
     }
 }
 
-unsafe extern "C" fn process_frame(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut mu_Context) {
+unsafe extern "C" fn process_frame(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut Context) {
     ctx.mu_begin();
     style_window(ctx);
     log_window(logbuf, logbuf_updated, submit_buf, ctx);
@@ -1325,7 +1325,7 @@ pub extern "C" fn main() {
                 | 0x8000 as libc::c_uint,
         );
         r_init();
-        let mut ctx: *mut mu_Context = malloc(::core::mem::size_of::<mu_Context>() as libc::c_ulong) as *mut mu_Context;
+        let mut ctx: *mut Context = malloc(::core::mem::size_of::<Context>() as libc::c_ulong) as *mut Context;
         mu_init(ctx);
         (*ctx).char_width = Some(r_get_char_width);
         (*ctx).char_height = Some(r_get_char_height);

@@ -1525,7 +1525,7 @@ unsafe extern "C" fn flush() {
     buf_idx = 0 as libc::c_int;
 }
 
-unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: mu_Color) {
+unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: Color) {
     if buf_idx == 16384 as libc::c_int {
         flush();
     }
@@ -1556,22 +1556,22 @@ unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: mu_Color
     vert_buf[(texvert_idx + 7 as libc::c_int) as usize] = (dst.y + dst.h) as GLfloat;
     memcpy(
         color_buf.as_mut_ptr().offset(color_idx as isize).offset(0 as libc::c_int as isize) as *mut libc::c_void,
-        &mut color as *mut mu_Color as *const libc::c_void,
+        &mut color as *mut Color as *const libc::c_void,
         4 as libc::c_int as libc::c_ulong,
     );
     memcpy(
         color_buf.as_mut_ptr().offset(color_idx as isize).offset(4 as libc::c_int as isize) as *mut libc::c_void,
-        &mut color as *mut mu_Color as *const libc::c_void,
+        &mut color as *mut Color as *const libc::c_void,
         4 as libc::c_int as libc::c_ulong,
     );
     memcpy(
         color_buf.as_mut_ptr().offset(color_idx as isize).offset(8 as libc::c_int as isize) as *mut libc::c_void,
-        &mut color as *mut mu_Color as *const libc::c_void,
+        &mut color as *mut Color as *const libc::c_void,
         4 as libc::c_int as libc::c_ulong,
     );
     memcpy(
         color_buf.as_mut_ptr().offset(color_idx as isize).offset(12 as libc::c_int as isize) as *mut libc::c_void,
-        &mut color as *mut mu_Color as *const libc::c_void,
+        &mut color as *mut Color as *const libc::c_void,
         4 as libc::c_int as libc::c_ulong,
     );
     index_buf[(index_idx + 0 as libc::c_int) as usize] = (element_idx + 0 as libc::c_int) as GLuint;
@@ -1583,12 +1583,12 @@ unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: mu_Color
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: Color) {
     push_quad(rect, atlas[ATLAS_WHITE as libc::c_int as usize], color);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: Color) {
     let mut dst: Rect = {
         let mut init = Rect {
             x: pos.x,
@@ -1611,11 +1611,11 @@ pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: mu_C
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut rect: Rect, mut color: mu_Color) {
+pub unsafe extern "C" fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
     let mut src: Rect = atlas[id as usize];
-    let mut x: libc::c_int = rect.x + (rect.w - src.w) / 2 as libc::c_int;
-    let mut y: libc::c_int = rect.y + (rect.h - src.h) / 2 as libc::c_int;
-    push_quad(mu_rect(x, y, src.w, src.h), src, color);
+    let mut x: libc::c_int = r.x + (r.w - src.w) / 2 as libc::c_int;
+    let mut y: libc::c_int = r.y + (r.h - src.h) / 2 as libc::c_int;
+    push_quad(rect(x, y, src.w, src.h), src, color);
 }
 
 #[no_mangle]
@@ -1635,7 +1635,7 @@ pub unsafe extern "C" fn r_set_clip_rect(mut rect: Rect) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn r_clear(mut clr: mu_Color) {
+pub unsafe extern "C" fn r_clear(mut clr: Color) {
     flush();
     glClearColor(
         (clr.r as libc::c_int as libc::c_double / 255.0f64) as GLclampf,
