@@ -397,7 +397,7 @@ pub struct mu_Context {
     pub number_edit: mu_Id,
     pub command_list: FixedVec<mu_Command, 4096>,
     pub root_list: FixedVec<usize, 32>,
-    pub container_stack: C2RustUnnamed_11,
+    pub container_stack: FixedVec<usize, 32>,
     pub clip_stack: FixedVec<mu_Rect, 32>,
     pub id_stack: FixedVec<mu_Id, 32>,
     pub layout_stack: FixedVec<mu_Layout, 16>,
@@ -468,20 +468,6 @@ pub struct mu_Layout {
     pub next_row: libc::c_int,
     pub next_type: libc::c_int,
     pub indent: libc::c_int,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_11 {
-    pub idx: libc::c_int,
-    pub items: [*mut mu_Container; 32],
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_12 {
-    pub idx: libc::c_int,
-    pub items: [*mut mu_Container; 32],
 }
 
 #[derive(Copy, Clone)]
@@ -707,7 +693,7 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_end(&mut self) {
-        assert_eq!(self.container_stack.idx, 0);
+        assert_eq!(self.container_stack.len(), 0);
         assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
         assert_eq!(self.layout_stack.len(), 0);
@@ -869,17 +855,14 @@ impl mu_Context {
         (*cnt).content_size.x = layout.max.x - layout.body.x;
         (*cnt).content_size.y = layout.max.y - layout.body.y;
 
-        assert!(self.container_stack.idx > 0 as libc::c_int);
-        self.container_stack.idx -= 1;
-
+        self.container_stack.pop();
         self.layout_stack.pop();
         self.mu_pop_id();
     }
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_get_current_container(&mut self) -> *mut mu_Container {
-        assert!(self.container_stack.idx > 0 as libc::c_int);
-        return self.container_stack.items[(self.container_stack.idx - 1 as libc::c_int) as usize];
+        &mut self.containers[*self.container_stack.top().unwrap()] as *mut mu_Container
     }
 
     unsafe extern "C" fn get_container(&mut self, id: mu_Id, opt: WidgetOption) -> *mut mu_Container {
@@ -1205,26 +1188,21 @@ impl mu_Context {
         return self.last_rect;
     }
 
-    unsafe extern "C" fn in_hover_root(&mut self) -> libc::c_int {
+    unsafe extern "C" fn in_hover_root(&mut self) -> bool {
         match self.hover_root {
             Some(hover_root) => {
-                let mut i: libc::c_int = self.container_stack.idx;
-                loop {
-                    let fresh2 = i;
-                    i = i - 1;
-                    if !(fresh2 != 0) {
-                        break;
+                let len = self.container_stack.len();
+                for i in 0..len {
+                    if self.container_stack[len - i - 1] == hover_root {
+                        return true;
                     }
-                    if self.container_stack.items[i as usize] == &mut self.containers[self.hover_root.unwrap()] as *mut mu_Container {
-                        return 1 as libc::c_int;
-                    }
-                    if (*self.container_stack.items[i as usize]).head_idx.is_some() {
+                    if self.containers[self.container_stack[len - i - 1]].head_idx.is_some() {
                         break;
                     }
                 }
-                0
+                false
             },
-            None => 0,
+            None => false,
         }
     }
 
@@ -1262,7 +1240,7 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_mouse_over(&mut self, rect: mu_Rect) -> libc::c_int {
-        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.mu_get_clip_rect(), self.mouse_pos) && self.in_hover_root() != 0)
+        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.mu_get_clip_rect(), self.mouse_pos) && self.in_hover_root())
             as libc::c_int;
     }
 
@@ -1599,117 +1577,113 @@ impl mu_Context {
         self.mu_pop_id();
     }
 
-    unsafe extern "C" fn scrollbars(&mut self, mut cnt: *mut mu_Container, mut body: *mut mu_Rect) {
+    unsafe extern "C" fn scrollbars(&mut self, cnt_id: usize, body: &mut mu_Rect) {
         let sz: libc::c_int = self.style.scrollbar_size;
-        let mut cs: mu_Vec2 = (*cnt).content_size;
+        let mut cs: mu_Vec2 = self.containers[cnt_id].content_size;
         cs.x += self.style.padding * 2 as libc::c_int;
         cs.y += self.style.padding * 2 as libc::c_int;
-        self.mu_push_clip_rect(*body);
-        if cs.y > (*cnt).body.h {
-            (*body).w -= sz;
+        self.mu_push_clip_rect(body.clone());
+        let cnt = self.containers[cnt_id];
+        if cs.y > cnt.body.h {
+            body.w -= sz;
         }
-        if cs.x > (*cnt).body.w {
-            (*body).h -= sz;
+        if cs.x > cnt.body.w {
+            body.h -= sz;
         }
-        let maxscroll: libc::c_int = cs.y - (*body).h;
-        if maxscroll > 0 as libc::c_int && (*body).h > 0 as libc::c_int {
+        let body = *body;
+        let maxscroll: libc::c_int = cs.y - body.h;
+        if maxscroll > 0 as libc::c_int && body.h > 0 as libc::c_int {
             let mut base: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let id: mu_Id = self.mu_get_id_from_str("!scrollbary");
-            base = *body;
-            base.x = (*body).x + (*body).w;
+            base = body;
+            base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
             self.mu_update_control(id, base, WidgetOption::None);
             if self.focus == id && self.mouse_down.is_left() {
-                (*cnt).scroll.y += self.mouse_delta.y * cs.y / base.h;
+                self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
-            (*cnt).scroll.y = if maxscroll
-                < (if 0 as libc::c_int > (*cnt).scroll.y {
+            self.containers[cnt_id].scroll.y = if maxscroll
+                < (if 0 as libc::c_int > cnt.scroll.y {
                     0 as libc::c_int
                 } else {
-                    (*cnt).scroll.y
+                    cnt.scroll.y
                 }) {
                 maxscroll
-            } else if 0 as libc::c_int > (*cnt).scroll.y {
+            } else if 0 as libc::c_int > cnt.scroll.y {
                 0 as libc::c_int
             } else {
-                (*cnt).scroll.y
+                cnt.scroll.y
             };
             (self.draw_frame).expect("non-null function pointer")(self, base, ControlColor::ScrollBase);
             thumb = base;
-            thumb.h = if self.style.thumb_size > base.h * (*body).h / cs.y {
+            thumb.h = if self.style.thumb_size > base.h * body.h / cs.y {
                 self.style.thumb_size
             } else {
-                base.h * (*body).h / cs.y
+                base.h * body.h / cs.y
             };
-            thumb.y += (*cnt).scroll.y * (base.h - thumb.h) / maxscroll;
+            thumb.y += cnt.scroll.y * (base.h - thumb.h) / maxscroll;
             (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
-            if self.mu_mouse_over(*body) != 0 {
-                self.scroll_target = cnt;
+            if self.mu_mouse_over(body) != 0 {
+                self.scroll_target = &mut self.containers[cnt_id];
             }
         } else {
-            (*cnt).scroll.y = 0 as libc::c_int;
+            self.containers[cnt_id].scroll.y = 0 as libc::c_int;
         }
-        let maxscroll_0: libc::c_int = cs.x - (*body).w;
-        if maxscroll_0 > 0 as libc::c_int && (*body).w > 0 as libc::c_int {
+        let maxscroll_0: libc::c_int = cs.x - body.w;
+        if maxscroll_0 > 0 as libc::c_int && body.w > 0 as libc::c_int {
             let mut base_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb_0: mu_Rect = mu_Rect { x: 0, y: 0, w: 0, h: 0 };
             let id_0: mu_Id = self.mu_get_id_from_str("!scrollbarx");
-            base_0 = *body;
-            base_0.y = (*body).y + (*body).h;
+            base_0 = body;
+            base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
             self.mu_update_control(id_0, base_0, WidgetOption::None);
             if self.focus == id_0 && self.mouse_down.is_left() {
-                (*cnt).scroll.x += self.mouse_delta.x * cs.x / base_0.w;
+                self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
-            (*cnt).scroll.x = if maxscroll_0
-                < (if 0 as libc::c_int > (*cnt).scroll.x {
+            self.containers[cnt_id].scroll.x = if maxscroll_0
+                < (if 0 as libc::c_int > cnt.scroll.x {
                     0 as libc::c_int
                 } else {
-                    (*cnt).scroll.x
+                    cnt.scroll.x
                 }) {
                 maxscroll_0
-            } else if 0 as libc::c_int > (*cnt).scroll.x {
+            } else if 0 as libc::c_int > cnt.scroll.x {
                 0 as libc::c_int
             } else {
-                (*cnt).scroll.x
+                cnt.scroll.x
             };
             (self.draw_frame).expect("non-null function pointer")(self, base_0, ControlColor::ScrollBase);
             thumb_0 = base_0;
-            thumb_0.w = if self.style.thumb_size > base_0.w * (*body).w / cs.x {
+            thumb_0.w = if self.style.thumb_size > base_0.w * body.w / cs.x {
                 self.style.thumb_size
             } else {
-                base_0.w * (*body).w / cs.x
+                base_0.w * body.w / cs.x
             };
-            thumb_0.x += (*cnt).scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
+            thumb_0.x += cnt.scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
             (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
-            if self.mu_mouse_over(*body) != 0 {
-                self.scroll_target = cnt;
+            if self.mu_mouse_over(body) != 0 {
+                self.scroll_target = &mut self.containers[cnt_id];
             }
         } else {
-            (*cnt).scroll.x = 0 as libc::c_int;
+            self.containers[cnt_id].scroll.x = 0 as libc::c_int;
         }
         self.mu_pop_clip_rect();
     }
 
-    unsafe extern "C" fn push_container_body(&mut self, mut cnt: *mut mu_Container, body: mu_Rect, opt: WidgetOption) {
+    unsafe extern "C" fn push_container_body(&mut self, cnt_idx: usize, body: mu_Rect, opt: WidgetOption) {
         let mut body = body;
         if !opt.has_no_scroll() {
-            self.scrollbars(cnt, &mut body);
+            self.scrollbars(cnt_idx, &mut body);
         }
-        self.push_layout(expand_rect(body, -self.style.padding), (*cnt).scroll);
-        (*cnt).body = body;
+        self.push_layout(expand_rect(body, -self.style.padding), self.containers[cnt_idx].scroll);
+        self.containers[cnt_idx].body = body;
     }
 
     unsafe extern "C" fn begin_root_container(&mut self, mut cnt: usize) {
-        assert!(
-            self.container_stack.idx
-                < (core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                    as libc::c_int
-        );
         let cnt_ptr = &mut self.containers[cnt] as *mut mu_Container;
-        self.container_stack.items[self.container_stack.idx as usize] = cnt_ptr;
-        self.container_stack.idx += 1;
+        self.container_stack.push(cnt);
 
         self.root_list.push(cnt);
         (*cnt_ptr).head_idx = Some(self.push_jump(None));
@@ -1776,7 +1750,7 @@ impl mu_Context {
                 }
             }
         }
-        self.push_container_body(cnt, body, opt);
+        self.push_container_body(cnt_id.unwrap(), body, opt);
         if !opt.is_auto_sizing() {
             let sz: libc::c_int = self.style.title_height;
             let id_2: mu_Id = self.mu_get_id_from_str("!resize");
@@ -1842,22 +1816,17 @@ impl mu_Context {
 
     #[no_mangle]
     pub unsafe extern "C" fn mu_begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
-        let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
         self.mu_push_id_from_str(name);
-        cnt = self.get_container(self.last_id, opt);
-        (*cnt).rect = self.mu_layout_next();
+        let cnt_id = self.get_container_index(self.last_id, opt);
+        let rect = self.mu_layout_next();
+        self.containers[cnt_id.unwrap()].rect = rect;
         if !opt.has_no_frame() {
-            (self.draw_frame).expect("non-null function pointer")(self, (*cnt).rect, ControlColor::PanelBG);
+            (self.draw_frame).expect("non-null function pointer")(self, rect, ControlColor::PanelBG);
         }
-        assert!(
-            self.container_stack.idx
-                < (core::mem::size_of::<[*mut mu_Container; 32]>() as libc::c_ulong).wrapping_div(core::mem::size_of::<*mut mu_Container>() as libc::c_ulong)
-                    as libc::c_int
-        );
-        self.container_stack.items[self.container_stack.idx as usize] = cnt;
-        self.container_stack.idx += 1;
-        self.push_container_body(cnt, (*cnt).rect, opt);
-        self.mu_push_clip_rect((*cnt).body);
+
+        self.container_stack.push(cnt_id.unwrap());
+        self.push_container_body(cnt_id.unwrap(), rect, opt);
+        self.mu_push_clip_rect(self.containers[cnt_id.unwrap()].body);
     }
 
     #[no_mangle]
