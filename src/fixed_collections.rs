@@ -162,10 +162,7 @@ pub struct FixedString<const N: usize> {
 
 impl<const N: usize> FixedString<N> {
     pub fn new() -> Self {
-        Self {
-            char_count: 0,
-            vec: FixedVec::default(),
-        }
+        Self { char_count: 0, vec: FixedVec::default() }
     }
 }
 
@@ -223,7 +220,6 @@ impl<const N: usize> IString for FixedString<N> {
             self.push(c)
         }
     }
-
 }
 
 impl<const N: usize> AddAssign<&str> for FixedString<N> {
@@ -265,8 +261,6 @@ impl<const N: usize> Index<usize> for FixedString<N> {
 impl<const N: usize> Index<core::ops::Range<usize>> for FixedString<N> {
     type Output = str;
     fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
-        unsafe {
-            core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end])
-        }
+        unsafe { core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end]) }
     }
 }

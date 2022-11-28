@@ -17,6 +17,45 @@ pub type size_t = libc::c_ulong;
 
 pub type __compar_fn_t = Option<unsafe extern "C" fn(*const libc::c_void, *const libc::c_void) -> libc::c_int>;
 
+pub struct Pool<const N : usize> {
+    vec: [mu_PoolItem; N],
+}
+
+impl<const N: usize> Pool<N> {
+    pub fn alloc(&mut self, id: mu_Id, frame: usize) -> usize {
+        let mut res = None;
+        let mut latest_update = frame;
+        for i in 0..N {
+            if self.vec[i].last_update < latest_update {
+                latest_update = self.vec[i].last_update;
+                res = Some(i);
+            }
+        }
+
+        assert!(res.is_some());
+        self.vec[res.unwrap()].id = id;
+        self.update(res.unwrap(), frame);
+        return res.unwrap();
+    }
+
+    pub fn get(&self, id: mu_Id) -> Option<usize> {
+        for i in 0..N {
+            if self.vec[i].id == id {
+                return Some(i)
+            }
+        }
+        None
+    }
+
+    pub fn update(&mut self, idx: usize, frame: usize) {
+        self.vec[idx].last_update = frame;
+    }
+
+    pub fn reset(&mut self, idx: usize) {
+        self.vec[idx] = mu_PoolItem::default();
+    }
+}
+
 #[derive(PartialEq)]
 #[repr(u32)]
 pub enum Clip {
@@ -350,7 +389,7 @@ pub struct mu_Context {
     pub last_rect: mu_Rect,
     pub last_zindex: libc::c_int,
     pub updated_focus: libc::c_int,
-    pub frame: libc::c_int,
+    pub frame: usize,
     pub hover_root: *mut mu_Container,
     pub next_hover_root: *mut mu_Container,
     pub scroll_target: *mut mu_Container,
@@ -363,9 +402,9 @@ pub struct mu_Context {
     pub id_stack: FixedVec<mu_Id, 32>,
     pub layout_stack: FixedVec<mu_Layout, 16>,
     pub text_stack: FixedString<65536>,
-    pub container_pool: [mu_PoolItem; 48],
+    pub container_pool: Pool<48>,
     pub containers: [mu_Container; 48],
-    pub treenode_pool: [mu_PoolItem; 48],
+    pub treenode_pool: Pool<48>,
     pub mouse_pos: mu_Vec2,
     pub last_mouse_pos: mu_Vec2,
     pub mouse_delta: mu_Vec2,
@@ -384,11 +423,11 @@ pub struct mu_Vec2 {
     pub y: i32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct mu_PoolItem {
     pub id: mu_Id,
-    pub last_update: libc::c_int,
+    pub last_update: usize,
 }
 
 pub type mu_Id = u32;
@@ -771,22 +810,20 @@ impl mu_Context {
         return res;
     }
 
-    pub unsafe extern "C" fn mu_push_id_from_ptr<T>(&mut self, orig_id: &T) {
+    pub fn mu_push_id_from_ptr<T>(&mut self, orig_id: &T) {
         let id = self.mu_get_id_from_ptr(orig_id);
         self.id_stack.push(id);
     }
 
-    pub unsafe extern "C" fn mu_push_id_from_str(&mut self, s: &str) {
+    pub fn mu_push_id_from_str(&mut self, s: &str) {
         let id = self.mu_get_id_from_str(s);
         self.id_stack.push(id);
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_pop_id(&mut self) {
+    pub fn mu_pop_id(&mut self) {
         self.id_stack.pop();
     }
 
-    #[no_mangle]
     pub unsafe extern "C" fn mu_push_clip_rect(&mut self, rect: mu_Rect) {
         let last = self.mu_get_clip_rect();
         assert!(
@@ -869,18 +906,17 @@ impl mu_Context {
 
     unsafe extern "C" fn get_container(&mut self, id: mu_Id, opt: WidgetOption) -> *mut mu_Container {
         let mut cnt: *mut mu_Container = 0 as *mut mu_Container;
-        let pool_ptr = self.container_pool.as_mut_ptr();
-        let mut idx: libc::c_int = self.mu_pool_get(pool_ptr, 48 as libc::c_int, id);
-        if idx >= 0 as libc::c_int {
-            if self.containers[idx as usize].open != 0 || !opt.is_closed() {
-                self.mu_pool_update(pool_ptr, idx);
+        let idx = self.container_pool.get(id);
+        if idx.is_some() {
+            if self.containers[idx.unwrap()].open != 0 || !opt.is_closed() {
+                self.container_pool.update(idx.unwrap(), self.frame);
             }
-            return &mut *(self.containers).as_mut_ptr().offset(idx as isize) as *mut mu_Container;
+            return &mut *(self.containers).as_mut_ptr().offset(idx.unwrap() as isize) as *mut mu_Container;
         }
         if opt.is_closed() {
             return 0 as *mut mu_Container;
         }
-        idx = self.mu_pool_init(pool_ptr, 48 as libc::c_int, id);
+        let idx = self.container_pool.alloc(id, self.frame);
         cnt = &mut *(self.containers).as_mut_ptr().offset(idx as isize) as *mut mu_Container;
         memset(
             cnt as *mut libc::c_void,
@@ -903,43 +939,6 @@ impl mu_Context {
     pub unsafe extern "C" fn mu_bring_to_front(&mut self, mut cnt: *mut mu_Container) {
         self.last_zindex += 1;
         (*cnt).zindex = self.last_zindex;
-    }
-
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_pool_init(&mut self, items: *mut mu_PoolItem, len: libc::c_int, id: mu_Id) -> libc::c_int {
-        let mut i: libc::c_int = 0;
-        let mut n: libc::c_int = -(1 as libc::c_int);
-        let mut f: libc::c_int = self.frame;
-        i = 0 as libc::c_int;
-        while i < len {
-            if (*items.offset(i as isize)).last_update < f {
-                f = (*items.offset(i as isize)).last_update;
-                n = i;
-            }
-            i += 1;
-        }
-        assert!(n > -(1 as libc::c_int));
-        (*items.offset(n as isize)).id = id;
-        self.mu_pool_update(items, n);
-        return n;
-    }
-
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_pool_get(&mut self, items: *const mu_PoolItem, len: libc::c_int, id: mu_Id) -> libc::c_int {
-        let mut i: libc::c_int = 0;
-        i = 0 as libc::c_int;
-        while i < len {
-            if (*items.offset(i as isize)).id == id {
-                return i;
-            }
-            i += 1;
-        }
-        return -(1 as libc::c_int);
-    }
-
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_pool_update(&mut self, items: *mut mu_PoolItem, idx: libc::c_int) {
-        (*items.offset(idx as isize)).last_update = self.frame;
     }
 
     #[no_mangle]
@@ -1112,8 +1111,8 @@ impl mu_Context {
         } else {
             b.next_row + b.body.y - a.body.y
         };
-        a.max.x = if a.max.x > b.max.x { a.max.x } else { b.max.x };
-        a.max.y = if a.max.y > b.max.y { a.max.y } else { b.max.y };
+        a.max.x = i32::max(a.max.x, b.max.x);
+        a.max.y = i32::max(a.max.y, b.max.y);
     }
 
     pub unsafe fn mu_layout_row_for_layout(layout: &mut mu_Layout, items: libc::c_int, widths: *const libc::c_int, height: libc::c_int) {
@@ -1136,18 +1135,15 @@ impl mu_Context {
         unsafe { Self::mu_layout_row_for_layout(layout, items, widths, height) };
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_layout_width(&mut self, width: libc::c_int) {
+    pub fn mu_layout_width(&mut self, width: i32) {
         self.get_layout_mut().size.x = width;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_layout_height(&mut self, height: libc::c_int) {
+    pub fn mu_layout_height(&mut self, height: i32) {
         self.get_layout_mut().size.y = height;
     }
 
-    #[no_mangle]
-    pub unsafe extern "C" fn mu_layout_set_next(&mut self, r: mu_Rect, relative: libc::c_int) {
+    pub fn mu_layout_set_next(&mut self, r: mu_Rect, relative: libc::c_int) {
         let layout = self.get_layout_mut();
         layout.next = r;
         layout.next_type = if relative != 0 { RELATIVE as libc::c_int } else { ABSOLUTE as libc::c_int };
@@ -1539,28 +1535,22 @@ impl mu_Context {
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
         let id: mu_Id = self.mu_get_id_from_str(label);
-        let idx: libc::c_int = self.mu_pool_get(self.treenode_pool.as_ptr(), 48 as libc::c_int, id);
+        let idx = self.treenode_pool.get(id);
         let mut width: libc::c_int = -(1 as libc::c_int);
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
-        active = (idx >= 0 as libc::c_int) as libc::c_int;
+        active = idx.is_some() as libc::c_int;
         expanded = if opt.is_expanded() { (active == 0) as libc::c_int } else { active };
         r = self.mu_layout_next();
         self.mu_update_control(id, r, WidgetOption::None);
         active ^= (self.mouse_pressed.is_left() && self.focus == id) as libc::c_int;
-        if idx >= 0 as libc::c_int {
+        if idx.is_some() {
             if active != 0 {
-                let pool_ptr = self.treenode_pool.as_mut_ptr();
-                self.mu_pool_update(pool_ptr, idx);
+                self.treenode_pool.update(idx.unwrap(), self.frame);
             } else {
-                memset(
-                    &mut *(self.treenode_pool).as_mut_ptr().offset(idx as isize) as *mut mu_PoolItem as *mut libc::c_void,
-                    0 as libc::c_int,
-                    core::mem::size_of::<mu_PoolItem>() as libc::c_ulong,
-                );
+                self.treenode_pool.reset(idx.unwrap());
             }
         } else if active != 0 {
-            let pool_ptr = self.treenode_pool.as_mut_ptr();
-            self.mu_pool_init(pool_ptr, 48 as libc::c_int, id);
+            self.treenode_pool.alloc(id, self.frame);
         }
 
         if istreenode != 0 {

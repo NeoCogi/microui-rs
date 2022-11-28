@@ -3,30 +3,28 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(unused_assignments)]
-
 //
 // If you need to have the smallest executable, use no_std:
 //
-#![no_main]
-#![no_std]
-
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_panic: &PanicInfo<'_>) -> ! {
-    loop {}
-}
-
-
+// #![no_main]
+// #![no_std]
+//
+// use core::panic::PanicInfo;
+//
+// #[panic_handler]
+// fn panic(_panic: &PanicInfo<'_>) -> ! {
+//     loop {}
+// }
+//
 // #[no_mangle]
 // pub extern "C" fn main() {}
 
 extern crate libc;
+mod fixed_collections;
 #[path = "./microui.rs"]
 pub mod microui;
 #[path = "./renderer.rs"]
 pub mod renderer;
-mod fixed_collections;
 
 pub type SDL_SysWMmsg = libc::c_int;
 
@@ -861,7 +859,8 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
             buff.write_fmt(format_args!(
                 "#{:02X}{:02X}{:02X}",
                 bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
-            )).unwrap();
+            ))
+            .unwrap();
             ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
         }
         ctx.mu_end_window();
@@ -1314,8 +1313,7 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-#[no_mangle]
-pub extern "C" fn main() {
+fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();
