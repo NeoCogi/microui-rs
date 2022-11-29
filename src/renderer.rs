@@ -1615,7 +1615,9 @@ pub fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
     let mut src: Rect = ATLAS[id as usize];
     let mut x: libc::c_int = r.x + (r.w - src.w) / 2 as libc::c_int;
     let mut y: libc::c_int = r.y + (r.h - src.h) / 2 as libc::c_int;
-    unsafe { push_quad(rect(x, y, src.w, src.h), src, color); }
+    unsafe {
+        push_quad(rect(x, y, src.w, src.h), src, color);
+    }
 }
 
 #[no_mangle]

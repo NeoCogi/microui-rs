@@ -9,11 +9,11 @@ pub type _IO_marker = libc::c_int;
 
 extern "C" {
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
-    fn memset(_: *mut libc::c_void, _: libc::c_int, _: libc::c_ulong) -> *mut libc::c_void;
 }
 
 pub type size_t = libc::c_ulong;
 
+#[derive(Copy, Clone)]
 pub struct Pool<const N: usize> {
     vec: [PoolItem; N],
 }
@@ -53,6 +53,11 @@ impl<const N: usize> Pool<N> {
     }
 }
 
+impl<const N: usize> Default for Pool<N> {
+    fn default() -> Self {
+        Self { vec: [PoolItem::default(); N] }
+    }
+}
 #[derive(PartialEq)]
 #[repr(u32)]
 pub enum Clip {
@@ -401,6 +406,48 @@ pub struct Context {
     pub input_text: FixedString<32>,
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self {
+            char_width: None,
+            char_height: None,
+            draw_frame: None,
+            style: Style::default(),
+            hover: 0,
+            focus: 0,
+            last_id: 0,
+            last_rect: Rect::default(),
+            last_zindex: 0,
+            updated_focus: 0,
+            frame: 0,
+            hover_root: None,
+            next_hover_root: None,
+            scroll_target: None,
+            number_edit_buf: FixedString::default(),
+            number_edit: 0,
+            command_list: FixedVec::default(),
+            root_list: FixedVec::default(),
+            container_stack: FixedVec::default(),
+            clip_stack: FixedVec::default(),
+            id_stack: FixedVec::default(),
+            layout_stack: FixedVec::default(),
+            text_stack: FixedString::default(),
+            container_pool: Pool::default(),
+            containers: [Container::default(); 48],
+            treenode_pool: Pool::default(),
+            mouse_pos: Vec2i::default(),
+            last_mouse_pos: Vec2i::default(),
+            mouse_delta: Vec2i::default(),
+            scroll_delta: Vec2i::default(),
+            mouse_down: MouseButton::None,
+            mouse_pressed: MouseButton::None,
+            key_down: 0,
+            key_pressed: 0,
+            input_text: FixedString::default(),
+        }
+    }
+}
+
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct Vec2i {
@@ -454,9 +501,16 @@ pub struct Layout {
 
 #[derive(Copy, Clone)]
 pub enum Command {
-    Jump { dst_idx: Option<usize> },
-    Clip { rect: Rect },
-    Rect { rect: Rect, color: Color },
+    Jump {
+        dst_idx: Option<usize>,
+    },
+    Clip {
+        rect: Rect,
+    },
+    Rect {
+        rect: Rect,
+        color: Color,
+    },
     Text {
         font: Font,
         pos: Vec2i,
@@ -469,7 +523,7 @@ pub enum Command {
         id: Icon,
         color: Color,
     },
-    None
+    None,
 }
 
 impl Default for Command {
@@ -486,7 +540,7 @@ pub struct Color {
     pub a: u8,
 }
 
-pub type Font = *mut libc::c_void;
+pub type Font = *const libc::c_void;
 
 #[derive(Copy, Clone)]
 pub struct Style {
@@ -510,35 +564,39 @@ pub type C2RustUnnamed_14 = libc::c_uint;
 
 static UNCLIPPED_RECT: Rect = Rect { x: 0, y: 0, w: 0x1000000, h: 0x1000000 };
 
-static mut default_style: Style = Style {
-    font: 0 as *const libc::c_void as *mut libc::c_void,
-    size: Vec2i {
-        x: 68 as libc::c_int,
-        y: 10 as libc::c_int,
-    },
-    padding: 5 as libc::c_int,
-    spacing: 4 as libc::c_int,
-    indent: 24 as libc::c_int,
-    title_height: 24 as libc::c_int,
-    scrollbar_size: 12 as libc::c_int,
-    thumb_size: 8 as libc::c_int,
-    colors: [
-        Color { r: 230, g: 230, b: 230, a: 255 },
-        Color { r: 25, g: 25, b: 25, a: 255 },
-        Color { r: 50, g: 50, b: 50, a: 255 },
-        Color { r: 25, g: 25, b: 25, a: 255 },
-        Color { r: 240, g: 240, b: 240, a: 255 },
-        Color { r: 0, g: 0, b: 0, a: 0 },
-        Color { r: 75, g: 75, b: 75, a: 255 },
-        Color { r: 95, g: 95, b: 95, a: 255 },
-        Color { r: 115, g: 115, b: 115, a: 255 },
-        Color { r: 30, g: 30, b: 30, a: 255 },
-        Color { r: 35, g: 35, b: 35, a: 255 },
-        Color { r: 40, g: 40, b: 40, a: 255 },
-        Color { r: 43, g: 43, b: 43, a: 255 },
-        Color { r: 30, g: 30, b: 30, a: 255 },
-    ],
-};
+impl Default for Style {
+    fn default() -> Self {
+        Self {
+            font: 0 as *const libc::c_void,
+            size: Vec2i {
+                x: 68 as libc::c_int,
+                y: 10 as libc::c_int,
+            },
+            padding: 5 as libc::c_int,
+            spacing: 4 as libc::c_int,
+            indent: 24 as libc::c_int,
+            title_height: 24 as libc::c_int,
+            scrollbar_size: 12 as libc::c_int,
+            thumb_size: 8 as libc::c_int,
+            colors: [
+                Color { r: 230, g: 230, b: 230, a: 255 },
+                Color { r: 25, g: 25, b: 25, a: 255 },
+                Color { r: 50, g: 50, b: 50, a: 255 },
+                Color { r: 25, g: 25, b: 25, a: 255 },
+                Color { r: 240, g: 240, b: 240, a: 255 },
+                Color { r: 0, g: 0, b: 0, a: 0 },
+                Color { r: 75, g: 75, b: 75, a: 255 },
+                Color { r: 95, g: 95, b: 95, a: 255 },
+                Color { r: 115, g: 115, b: 115, a: 255 },
+                Color { r: 30, g: 30, b: 30, a: 255 },
+                Color { r: 35, g: 35, b: 35, a: 255 },
+                Color { r: 40, g: 40, b: 40, a: 255 },
+                Color { r: 43, g: 43, b: 43, a: 255 },
+                Color { r: 30, g: 30, b: 30, a: 255 },
+            ],
+        }
+    }
+}
 
 pub fn vec2(x: i32, y: i32) -> Vec2i {
     Vec2i { x, y }
@@ -574,12 +632,6 @@ pub fn rect_overlaps_vec2(r: Rect, p: Vec2i) -> bool {
     p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h
 }
 
-pub unsafe extern "C" fn mu_init(mut ctx: *mut Context) {
-    memset(ctx as *mut libc::c_void, 0 as libc::c_int, core::mem::size_of::<Context>() as libc::c_ulong);
-    (*ctx).draw_frame = Some(draw_frame as fn(&mut Context, Rect, ControlColor) -> ());
-    (*ctx).style = default_style.clone();
-}
-
 pub fn draw_frame(ctx: &mut Context, rect: Rect, colorid: ControlColor) {
     ctx.mu_draw_rect(rect, ctx.style.colors[colorid as usize]);
     if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
@@ -613,7 +665,14 @@ fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
 }
 
 impl Context {
-    pub fn mu_begin(&mut self) {
+    pub fn new() -> Self {
+        let mut s = Self::default();
+        s.draw_frame = Some(draw_frame as fn(&mut Context, Rect, ControlColor) -> ());
+        s.style = Style::default();
+        s
+    }
+
+    pub fn begin(&mut self) {
         assert!((self.char_width).is_some() && (self.char_height).is_some());
         self.root_list.clear();
         self.text_stack.clear();
@@ -626,7 +685,7 @@ impl Context {
         self.frame += 1;
     }
 
-    pub fn mu_end(&mut self) {
+    pub fn end(&mut self) {
         assert_eq!(self.container_stack.len(), 0);
         assert_eq!(self.clip_stack.len(), 0);
         assert_eq!(self.id_stack.len(), 0);
@@ -662,20 +721,26 @@ impl Context {
                 // if this is the first container then make the first command jump to it.
                 // otherwise set the previous container's tail to jump to this one
 
-                let mut cmd: &mut Command = &mut self.command_list[0];
-                assert!( match cmd { Command::Jump {..} => true, _ => false});
+                let cmd = &mut self.command_list[0];
+                assert!(match cmd {
+                    Command::Jump { .. } => true,
+                    _ => false,
+                });
                 let dst_idx = self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1;
                 *cmd = Command::Jump { dst_idx: Some(dst_idx) };
                 assert!(dst_idx < self.command_list.len());
             } else {
                 let prev = &self.containers[self.root_list[i - 1]];
-                self.command_list[prev.tail_idx.unwrap()] = Command::Jump { dst_idx: Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1) };
+                self.command_list[prev.tail_idx.unwrap()] = Command::Jump {
+                    dst_idx: Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1),
+                };
             }
             if i == n - 1 {
                 assert!(self.containers[self.root_list[i as usize]].tail_idx.unwrap() < self.command_list.len());
-                unsafe {
-                    assert!(match self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()] { Command::Jump {..} => true, _ => false });
-                }
+                assert!(match self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()] {
+                    Command::Jump { .. } => true,
+                    _ => false,
+                });
                 self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()] = Command::Jump { dst_idx: Some(self.command_list.len()) };
                 // the snake eats its tail
             }
@@ -905,22 +970,17 @@ impl Context {
     /// returns the next command to execute and the next index to use
     ///
     pub fn mu_next_command(&mut self, mut cmd_id: usize) -> Option<(Command, usize)> {
-        unsafe {
-            if cmd_id >= self.command_list.len() {
-                cmd_id = 0
-            }
-
-            while cmd_id != self.command_list.len() {
-                match self.command_list[cmd_id] {
-                    Command::Jump { dst_idx } =>  {
-                        cmd_id = dst_idx.unwrap()
-                    },
-                    _ => return Some((self.command_list[cmd_id], cmd_id + 1))
-                }
-
-            }
-            None
+        if cmd_id >= self.command_list.len() {
+            cmd_id = 0
         }
+
+        while cmd_id != self.command_list.len() {
+            match self.command_list[cmd_id] {
+                Command::Jump { dst_idx } => cmd_id = dst_idx.unwrap(),
+                _ => return Some((self.command_list[cmd_id], cmd_id + 1)),
+            }
+        }
+        None
     }
 
     fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
@@ -942,12 +1002,7 @@ impl Context {
     pub fn mu_draw_box(&mut self, r: Rect, color: Color) {
         self.mu_draw_rect(rect(r.x + 1, r.y, r.w - 2, 1), color);
         self.mu_draw_rect(
-            rect(
-                r.x + 1 as libc::c_int,
-                r.y + r.h - 1 as libc::c_int,
-                r.w - 2 as libc::c_int,
-                1 as libc::c_int,
-            ),
+            rect(r.x + 1 as libc::c_int, r.y + r.h - 1 as libc::c_int, r.w - 2 as libc::c_int, 1 as libc::c_int),
             color,
         );
         self.mu_draw_rect(rect(r.x, r.y, 1, r.h), color);
@@ -989,11 +1044,7 @@ impl Context {
             }
             _ => (),
         }
-        self.mu_push_command(Command::Icon {
-            id,
-            rect,
-            color
-        });
+        self.mu_push_command(Command::Icon { id, rect, color });
         if clipped != Clip::None {
             self.mu_set_clip(UNCLIPPED_RECT);
         }

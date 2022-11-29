@@ -6,16 +6,16 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-// #![no_main]
-// #![no_std]
-//
-// use core::panic::PanicInfo;
-//
-// #[panic_handler]
-// fn panic(_panic: &PanicInfo<'_>) -> ! {
-//     loop {}
-// }
-//
+#![no_main]
+#![no_std]
+
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
 // #[no_mangle]
 // pub extern "C" fn main() {}
 
@@ -37,7 +37,6 @@ use core::format_args;
 //use ::libc;
 extern "C" {
     fn exit(_: libc::c_int) -> !;
-    fn malloc(_: libc::c_ulong) -> *mut libc::c_void;
     fn SDL_Init(flags: Uint32) -> libc::c_int;
     fn SDL_PollEvent(event: *mut SDL_Event) -> libc::c_int;
 }
@@ -687,7 +686,7 @@ static mut bg: [libc::c_float; 3] = [
     95 as libc::c_int as libc::c_float,
     100 as libc::c_int as libc::c_float,
 ];
-unsafe extern "C" fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i32, text: &str) {
+fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i32, text: &str) {
     if logbuf.len() != 0 {
         logbuf.push('\n');
     }
@@ -696,7 +695,8 @@ unsafe extern "C" fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i3
     }
     *logbuf_updated = 1 as libc::c_int;
 }
-unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Context) {
+
+fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Context) {
     if !ctx
         .mu_begin_window_ex(
             "Demo Window",
@@ -791,10 +791,12 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
                 ctx.mu_end_treenode();
             }
             if !ctx.mu_begin_treenode_ex("Test 3", WidgetOption::None).is_none() {
-                static mut checks: [bool; 3] = [true, false, true];
-                ctx.mu_checkbox("Checkbox 1", &mut *checks.as_mut_ptr().offset(0 as libc::c_int as isize));
-                ctx.mu_checkbox("Checkbox 2", &mut *checks.as_mut_ptr().offset(1 as libc::c_int as isize));
-                ctx.mu_checkbox("Checkbox 3", &mut *checks.as_mut_ptr().offset(2 as libc::c_int as isize));
+                unsafe {
+                    static mut checks: [bool; 3] = [true, false, true];
+                    ctx.mu_checkbox("Checkbox 1", &mut checks[0]);
+                    ctx.mu_checkbox("Checkbox 2", &mut checks[1]);
+                    ctx.mu_checkbox("Checkbox 3", &mut checks[2]);
+                }
                 ctx.mu_end_treenode();
             }
             ctx.mu_layout_end_column();
@@ -807,54 +809,56 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
             ctx.mu_layout_end_column();
         }
         if !ctx.mu_header_ex("Background Color", WidgetOption::Expanded).is_none() {
-            ctx.mu_layout_row(2 as libc::c_int, [-(78 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 74 as libc::c_int);
-            ctx.mu_layout_begin_column();
-            ctx.mu_layout_row(2 as libc::c_int, [46 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-            ctx.mu_label("Red:");
-            ctx.mu_slider_ex(
-                &mut *bg.as_mut_ptr().offset(0 as libc::c_int as isize),
-                0 as libc::c_int as Real,
-                255 as libc::c_int as Real,
-                0 as libc::c_int as Real,
-                "%.2",
-                WidgetOption::AlignCenter,
-            );
-            ctx.mu_label("Green:");
-            ctx.mu_slider_ex(
-                &mut *bg.as_mut_ptr().offset(1 as libc::c_int as isize),
-                0 as libc::c_int as Real,
-                255 as libc::c_int as Real,
-                0 as libc::c_int as Real,
-                "%.2",
-                WidgetOption::AlignCenter,
-            );
-            ctx.mu_label("Blue:");
-            ctx.mu_slider_ex(
-                &mut *bg.as_mut_ptr().offset(2 as libc::c_int as isize),
-                0 as libc::c_int as Real,
-                255 as libc::c_int as Real,
-                0 as libc::c_int as Real,
-                "%.2",
-                WidgetOption::AlignCenter,
-            );
-            ctx.mu_layout_end_column();
-            let r: Rect = ctx.mu_layout_next();
-            ctx.mu_draw_rect(
-                r,
-                color(
-                    bg[0 as libc::c_int as usize] as u8,
-                    bg[1 as libc::c_int as usize] as u8,
-                    bg[2 as libc::c_int as usize] as u8,
-                    255,
-                ),
-            );
-            let mut buff = FixedString::<128>::new();
-            buff.write_fmt(format_args!(
-                "#{:02X}{:02X}{:02X}",
-                bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
-            ))
-            .unwrap();
-            ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
+            unsafe {
+                ctx.mu_layout_row(2 as libc::c_int, [-(78 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 74 as libc::c_int);
+                ctx.mu_layout_begin_column();
+                ctx.mu_layout_row(2 as libc::c_int, [46 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
+                ctx.mu_label("Red:");
+                ctx.mu_slider_ex(
+                    &mut bg[0],
+                    0 as libc::c_int as Real,
+                    255 as libc::c_int as Real,
+                    0 as libc::c_int as Real,
+                    "%.2",
+                    WidgetOption::AlignCenter,
+                );
+                ctx.mu_label("Green:");
+                ctx.mu_slider_ex(
+                    &mut bg[1],
+                    0 as libc::c_int as Real,
+                    255 as libc::c_int as Real,
+                    0 as libc::c_int as Real,
+                    "%.2",
+                    WidgetOption::AlignCenter,
+                );
+                ctx.mu_label("Blue:");
+                ctx.mu_slider_ex(
+                    &mut bg[2],
+                    0 as libc::c_int as Real,
+                    255 as libc::c_int as Real,
+                    0 as libc::c_int as Real,
+                    "%.2",
+                    WidgetOption::AlignCenter,
+                );
+                ctx.mu_layout_end_column();
+                let r: Rect = ctx.mu_layout_next();
+                ctx.mu_draw_rect(
+                    r,
+                    color(
+                        bg[0 as libc::c_int as usize] as u8,
+                        bg[1 as libc::c_int as usize] as u8,
+                        bg[2 as libc::c_int as usize] as u8,
+                        255,
+                    ),
+                );
+                let mut buff = FixedString::<128>::new();
+                buff.write_fmt(format_args!(
+                    "#{:02X}{:02X}{:02X}",
+                    bg[0 as libc::c_int as usize] as libc::c_int, bg[1 as libc::c_int as usize] as libc::c_int, bg[2 as libc::c_int as usize] as libc::c_int,
+                ))
+                .unwrap();
+                ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
+            }
         }
         ctx.mu_end_window();
     }
@@ -900,14 +904,7 @@ unsafe extern "C" fn uint8_slider(ctx: &mut Context, value: &mut u8, low: libc::
     static mut tmp: libc::c_float = 0.;
     tmp = *value as libc::c_float;
     ctx.mu_push_id_from_ptr(value);
-    let res = ctx.mu_slider_ex(
-        &mut tmp,
-        low as Real,
-        high as Real,
-        0 as libc::c_int as Real,
-        ":.2",
-        WidgetOption::AlignCenter,
-    );
+    let res = ctx.mu_slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, ":.2", WidgetOption::AlignCenter);
     *value = tmp as libc::c_uchar;
     ctx.mu_pop_id();
     return res;
@@ -1042,11 +1039,11 @@ unsafe extern "C" fn style_window(ctx: &mut Context) {
 }
 
 unsafe extern "C" fn process_frame(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut Context) {
-    ctx.mu_begin();
+    ctx.begin();
     style_window(ctx);
     log_window(logbuf, logbuf_updated, submit_buf, ctx);
     test_window(logbuf, logbuf_updated, ctx);
-    ctx.mu_end();
+    ctx.end();
 }
 
 static mut key_map: [libc::c_char; 256] = [
@@ -1308,7 +1305,8 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-fn main() {
+#[no_mangle]
+unsafe extern "C" fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();
@@ -1324,10 +1322,9 @@ fn main() {
                 | 0x8000 as libc::c_uint,
         );
         r_init();
-        let mut ctx: *mut Context = malloc(::core::mem::size_of::<Context>() as libc::c_ulong) as *mut Context;
-        mu_init(ctx);
-        (*ctx).char_width = Some(r_get_char_width);
-        (*ctx).char_height = Some(r_get_char_height);
+        let mut ctx = Context::new();
+        ctx.char_width = Some(r_get_char_width);
+        ctx.char_height = Some(r_get_char_height);
         loop {
             let mut e: SDL_Event = SDL_Event { type_0: 0 };
             while SDL_PollEvent(&mut e) != 0 {
@@ -1336,10 +1333,10 @@ fn main() {
                         exit(0 as libc::c_int);
                     }
                     1024 => {
-                        (*ctx).mu_input_mousemove(e.motion.x, e.motion.y);
+                        ctx.mu_input_mousemove(e.motion.x, e.motion.y);
                     }
                     1027 => {
-                        (*ctx).mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
+                        ctx.mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
                     }
                     771 => {
                         let mut text = FixedString::<32>::new();
@@ -1351,7 +1348,7 @@ fn main() {
                                 break;
                             }
                         }
-                        (*ctx).mu_input_text(text.as_str());
+                        ctx.mu_input_text(text.as_str());
                     }
                     1025 | 1026 => {
                         let b = match e.button.button {
@@ -1362,25 +1359,25 @@ fn main() {
                         };
 
                         if !b.is_none() && e.type_0 == SDL_MOUSEBUTTONDOWN as libc::c_int as libc::c_uint {
-                            (*ctx).mu_input_mousedown(e.button.x, e.button.y, b);
+                            ctx.mu_input_mousedown(e.button.x, e.button.y, b);
                         }
                         if !b.is_none() && e.type_0 == SDL_MOUSEBUTTONUP as libc::c_int as libc::c_uint {
-                            (*ctx).mu_input_mouseup(e.button.x, e.button.y, b);
+                            ctx.mu_input_mouseup(e.button.x, e.button.y, b);
                         }
                     }
                     768 | 769 => {
                         let c: libc::c_int = key_map[(e.key.keysym.sym & 0xff as libc::c_int) as usize] as libc::c_int;
                         if c != 0 && e.type_0 == SDL_KEYDOWN as libc::c_int as libc::c_uint {
-                            (*ctx).mu_input_keydown(c);
+                            ctx.mu_input_keydown(c);
                         }
                         if c != 0 && e.type_0 == SDL_KEYUP as libc::c_int as libc::c_uint {
-                            (*ctx).mu_input_keyup(c);
+                            ctx.mu_input_keyup(c);
                         }
                     }
                     _ => {}
                 }
             }
-            process_frame(&mut logbuf, &mut logbuf_updated, &mut submit_buf, &mut *ctx);
+            process_frame(&mut logbuf, &mut logbuf_updated, &mut submit_buf, &mut ctx);
             r_clear(color(
                 bg[0 as libc::c_int as usize] as u8,
                 bg[1 as libc::c_int as usize] as u8,
@@ -1389,11 +1386,11 @@ fn main() {
             ));
             let mut cmd_id = 0;
             loop {
-                match (*ctx).mu_next_command(cmd_id) {
+                match ctx.mu_next_command(cmd_id) {
                     Some((command, id)) => {
                         match command {
                             Command::Text { str_start, str_len, pos, color, .. } => {
-                                let str = &(*ctx).text_stack[str_start..str_start + str_len];
+                                let str = &ctx.text_stack[str_start..str_start + str_len];
                                 r_draw_text(str, pos, color);
                             }
                             Command::Rect { rect, color } => {

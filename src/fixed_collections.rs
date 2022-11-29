@@ -192,7 +192,7 @@ pub trait IString {
     fn add_str(&mut self, s: &str);
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct FixedString<const N: usize> {
     char_count: usize,
     vec: FixedVec<u8, N>,
