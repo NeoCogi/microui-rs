@@ -698,14 +698,14 @@ fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i32, text: &str) {
 
 fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Context) {
     if !ctx
-        .mu_begin_window_ex(
+        .begin_window_ex(
             "Demo Window",
             rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
     {
-        let mut win = ctx.mu_get_current_container_rect();
+        let mut win = ctx.get_current_container_rect();
         win.w = if win.w > 240 as libc::c_int { win.w } else { 240 as libc::c_int };
         win.h = if win.h > 300 as libc::c_int { win.h } else { 300 as libc::c_int };
 
@@ -713,8 +713,8 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
 
         let mut buff = FixedString::<128>::new();
 
-        if !ctx.mu_header_ex("Window Info", WidgetOption::None).is_none() {
-            let win_0 = ctx.mu_get_current_container_rect();
+        if !ctx.header_ex("Window Info", WidgetOption::None).is_none() {
+            let win_0 = ctx.get_current_container_rect();
             ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_label("Position:");
             buff.write_fmt(format_args!("{}, {}", win_0.x, win_0.y)).unwrap();
@@ -724,7 +724,7 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
             buff.write_fmt(format_args!("{}, {}", win_0.w, win_0.h)).unwrap();
             ctx.mu_label(buff.as_str());
         }
-        if !ctx.mu_header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
+        if !ctx.header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
             ctx.mu_layout_row(
                 3 as libc::c_int,
                 [86 as libc::c_int, -(110 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(),
@@ -742,39 +742,39 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
                 write_log(logbuf, logbuf_updated, "Pressed button 3");
             }
             if !ctx.mu_button_ex("Popup", Icon::None, WidgetOption::AlignCenter).is_none() {
-                ctx.mu_open_popup("Test Popup");
+                ctx.open_popup("Test Popup");
             }
-            if !ctx.mu_begin_popup("Test Popup").is_none() {
+            if !ctx.begin_popup("Test Popup").is_none() {
                 if !ctx.mu_button_ex("Hello", Icon::None, WidgetOption::AlignCenter).is_none() {
                     write_log(logbuf, logbuf_updated, "Hello")
                 }
                 if !ctx.mu_button_ex("World", Icon::None, WidgetOption::AlignCenter).is_none() {
                     write_log(logbuf, logbuf_updated, "World")
                 }
-                ctx.mu_end_popup();
+                ctx.end_popup();
             }
         }
-        if !ctx.mu_header_ex("Tree and Text", WidgetOption::Expanded).is_none() {
+        if !ctx.header_ex("Tree and Text", WidgetOption::Expanded).is_none() {
             ctx.mu_layout_row(2 as libc::c_int, [140 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
             ctx.mu_layout_begin_column();
-            if !ctx.mu_begin_treenode_ex("Test 1", WidgetOption::None).is_none() {
-                if !ctx.mu_begin_treenode_ex("Test 1a", WidgetOption::None).is_none() {
+            if !ctx.begin_treenode_ex("Test 1", WidgetOption::None).is_none() {
+                if !ctx.begin_treenode_ex("Test 1a", WidgetOption::None).is_none() {
                     ctx.mu_label("Hello");
                     ctx.mu_label("world");
-                    ctx.mu_end_treenode();
+                    ctx.end_treenode();
                 }
-                if !ctx.mu_begin_treenode_ex("Test 1b", WidgetOption::None).is_none() {
+                if !ctx.begin_treenode_ex("Test 1b", WidgetOption::None).is_none() {
                     if !ctx.mu_button_ex("Button 1", Icon::None, WidgetOption::AlignCenter).is_none() {
                         write_log(logbuf, logbuf_updated, "Pressed button 1");
                     }
                     if !ctx.mu_button_ex("Button 2", Icon::None, WidgetOption::AlignCenter).is_none() {
                         write_log(logbuf, logbuf_updated, "Pressed button 2");
                     }
-                    ctx.mu_end_treenode();
+                    ctx.end_treenode();
                 }
-                ctx.mu_end_treenode();
+                ctx.end_treenode();
             }
-            if !ctx.mu_begin_treenode_ex("Test 2", WidgetOption::None).is_none() {
+            if !ctx.begin_treenode_ex("Test 2", WidgetOption::None).is_none() {
                 ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, 54 as libc::c_int].as_mut_ptr(), 0 as libc::c_int);
                 if !ctx.mu_button_ex("Button 3", Icon::None, WidgetOption::AlignCenter).is_none() {
                     write_log(logbuf, logbuf_updated, "Pressed button 3");
@@ -788,16 +788,16 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
                 if !ctx.mu_button_ex("Button 6", Icon::None, WidgetOption::AlignCenter).is_none() {
                     write_log(logbuf, logbuf_updated, "Pressed button 6");
                 }
-                ctx.mu_end_treenode();
+                ctx.end_treenode();
             }
-            if !ctx.mu_begin_treenode_ex("Test 3", WidgetOption::None).is_none() {
+            if !ctx.begin_treenode_ex("Test 3", WidgetOption::None).is_none() {
                 unsafe {
                     static mut checks: [bool; 3] = [true, false, true];
                     ctx.mu_checkbox("Checkbox 1", &mut checks[0]);
                     ctx.mu_checkbox("Checkbox 2", &mut checks[1]);
                     ctx.mu_checkbox("Checkbox 3", &mut checks[2]);
                 }
-                ctx.mu_end_treenode();
+                ctx.end_treenode();
             }
             ctx.mu_layout_end_column();
             ctx.mu_layout_begin_column();
@@ -808,7 +808,7 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
             );
             ctx.mu_layout_end_column();
         }
-        if !ctx.mu_header_ex("Background Color", WidgetOption::Expanded).is_none() {
+        if !ctx.header_ex("Background Color", WidgetOption::Expanded).is_none() {
             unsafe {
                 ctx.mu_layout_row(2 as libc::c_int, [-(78 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 74 as libc::c_int);
                 ctx.mu_layout_begin_column();
@@ -860,12 +860,12 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
                 ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
             }
         }
-        ctx.mu_end_window();
+        ctx.end_window();
     }
 }
 unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, submit_buf: &mut dyn IString, ctx: &mut Context) {
     if !ctx
-        .mu_begin_window_ex(
+        .begin_window_ex(
             "Log Window",
             rect(350 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 200 as libc::c_int),
             WidgetOption::None,
@@ -873,12 +873,12 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
         .is_none()
     {
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(25 as libc::c_int));
-        ctx.mu_begin_panel_ex("Log Output", WidgetOption::None);
-        let mut scroll = ctx.mu_get_current_container_scroll();
-        let content_size = ctx.mu_get_current_container_content_size();
+        ctx.begin_panel_ex("Log Output", WidgetOption::None);
+        let mut scroll = ctx.get_current_container_scroll();
+        let content_size = ctx.get_current_container_content_size();
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
         ctx.mu_text(logbuf.as_str());
-        ctx.mu_end_panel();
+        ctx.end_panel();
         if *logbuf_updated != 0 {
             scroll.y = content_size.y;
             ctx.set_current_container_scroll(&scroll);
@@ -887,7 +887,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
         let mut submitted: libc::c_int = 0 as libc::c_int;
         ctx.mu_layout_row(2 as libc::c_int, [-(70 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
         if ctx.mu_textbox_ex(submit_buf, WidgetOption::None).is_submitted() {
-            ctx.mu_set_focus(ctx.last_id);
+            ctx.set_focus(ctx.last_id);
             submitted = 1 as libc::c_int;
         }
         if !ctx.mu_button_ex("Submit", Icon::None, WidgetOption::AlignCenter).is_none() {
@@ -897,16 +897,16 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
             write_log(logbuf, logbuf_updated, submit_buf.as_str());
             submit_buf.clear();
         }
-        ctx.mu_end_window();
+        ctx.end_window();
     }
 }
 unsafe extern "C" fn uint8_slider(ctx: &mut Context, value: &mut u8, low: libc::c_int, high: libc::c_int) -> ResourceState {
     static mut tmp: libc::c_float = 0.;
     tmp = *value as libc::c_float;
-    ctx.mu_push_id_from_ptr(value);
+    ctx.push_id_from_ptr(value);
     let res = ctx.mu_slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, ":.2", WidgetOption::AlignCenter);
     *value = tmp as libc::c_uchar;
-    ctx.mu_pop_id();
+    ctx.pop_id();
     return res;
 }
 unsafe extern "C" fn style_window(ctx: &mut Context) {
@@ -1009,14 +1009,14 @@ unsafe extern "C" fn style_window(ctx: &mut Context) {
         },
     ];
     if !ctx
-        .mu_begin_window_ex(
+        .begin_window_ex(
             "Style Editor",
             rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
             WidgetOption::None,
         )
         .is_none()
     {
-        let sw: libc::c_int = (ctx.mu_get_current_container_body().w as libc::c_double * 0.14f64) as libc::c_int;
+        let sw: libc::c_int = (ctx.get_current_container_body().w as libc::c_double * 0.14f64) as libc::c_int;
         ctx.mu_layout_row(
             6 as libc::c_int,
             [80 as libc::c_int, sw, sw, sw, sw, -(1 as libc::c_int)].as_mut_ptr(),
@@ -1034,7 +1034,7 @@ unsafe extern "C" fn style_window(ctx: &mut Context) {
             ctx.mu_draw_rect(next_layout, (*ctx).style.colors[i]);
             i += 1;
         }
-        ctx.mu_end_window();
+        ctx.end_window();
     }
 }
 

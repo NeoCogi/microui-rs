@@ -747,12 +747,12 @@ impl Context {
         }
     }
 
-    pub fn mu_set_focus(&mut self, id: Id) {
+    pub fn set_focus(&mut self, id: Id) {
         self.focus = id;
         self.updated_focus = 1 as libc::c_int;
     }
 
-    pub fn mu_get_id_u32(&mut self, orig_id: u32) -> Id {
+    pub fn get_id_u32(&mut self, orig_id: u32) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
             None => 2166136261 as Id,
@@ -762,7 +762,7 @@ impl Context {
         return res;
     }
 
-    pub fn mu_get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> Id {
+    pub fn get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
             None => 2166136261 as Id,
@@ -774,7 +774,7 @@ impl Context {
         return res;
     }
 
-    pub fn mu_get_id_from_str(&mut self, s: &str) -> Id {
+    pub fn get_id_from_str(&mut self, s: &str) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
             None => 2166136261 as Id,
@@ -784,35 +784,35 @@ impl Context {
         return res;
     }
 
-    pub fn mu_push_id_from_ptr<T>(&mut self, orig_id: &T) {
-        let id = self.mu_get_id_from_ptr(orig_id);
+    pub fn push_id_from_ptr<T>(&mut self, orig_id: &T) {
+        let id = self.get_id_from_ptr(orig_id);
         self.id_stack.push(id);
     }
 
-    pub fn mu_push_id_from_str(&mut self, s: &str) {
-        let id = self.mu_get_id_from_str(s);
+    pub fn push_id_from_str(&mut self, s: &str) {
+        let id = self.get_id_from_str(s);
         self.id_stack.push(id);
     }
 
-    pub fn mu_pop_id(&mut self) {
+    pub fn pop_id(&mut self) {
         self.id_stack.pop();
     }
 
-    pub fn mu_push_clip_rect(&mut self, rect: Rect) {
-        let last = self.mu_get_clip_rect();
+    pub fn push_clip_rect(&mut self, rect: Rect) {
+        let last = self.get_clip_rect();
         self.clip_stack.push(intersect_rects(rect, last));
     }
 
-    pub fn mu_pop_clip_rect(&mut self) {
+    pub fn pop_clip_rect(&mut self) {
         self.clip_stack.pop();
     }
 
-    pub fn mu_get_clip_rect(&mut self) -> Rect {
+    pub fn get_clip_rect(&mut self) -> Rect {
         *self.clip_stack.top().unwrap()
     }
 
-    pub fn mu_check_clip(&mut self, r: Rect) -> Clip {
-        let cr = self.mu_get_clip_rect();
+    pub fn check_clip(&mut self, r: Rect) -> Clip {
+        let cr = self.get_clip_rect();
         if r.x > cr.x + cr.w || r.x + r.w < cr.x || r.y > cr.y + cr.h || r.y + r.h < cr.y {
             return Clip::All;
         }
@@ -853,21 +853,21 @@ impl Context {
     }
 
     fn pop_container(&mut self) {
-        let cnt = self.mu_get_current_container();
+        let cnt = self.get_current_container();
         let layout = *self.get_layout();
         self.containers[cnt].content_size.x = layout.max.x - layout.body.x;
         self.containers[cnt].content_size.y = layout.max.y - layout.body.y;
 
         self.container_stack.pop();
         self.layout_stack.pop();
-        self.mu_pop_id();
+        self.pop_id();
     }
 
-    pub fn mu_get_current_container(&self) -> usize {
+    pub fn get_current_container(&self) -> usize {
         *self.container_stack.top().unwrap()
     }
 
-    pub fn mu_get_current_container_rect(&self) -> Rect {
+    pub fn get_current_container_rect(&self) -> Rect {
         self.containers[*self.container_stack.top().unwrap()].rect
     }
 
@@ -875,7 +875,7 @@ impl Context {
         self.containers[*self.container_stack.top().unwrap()].rect = *rect;
     }
 
-    pub fn mu_get_current_container_scroll(&self) -> Vec2i {
+    pub fn get_current_container_scroll(&self) -> Vec2i {
         self.containers[*self.container_stack.top().unwrap()].scroll
     }
 
@@ -883,11 +883,11 @@ impl Context {
         self.containers[*self.container_stack.top().unwrap()].scroll = *scroll;
     }
 
-    pub fn mu_get_current_container_content_size(&self) -> Vec2i {
+    pub fn get_current_container_content_size(&self) -> Vec2i {
         self.containers[*self.container_stack.top().unwrap()].content_size
     }
 
-    pub fn mu_get_current_container_body(&self) -> Rect {
+    pub fn get_current_container_body(&self) -> Rect {
         self.containers[*self.container_stack.top().unwrap()].body
     }
 
@@ -912,7 +912,7 @@ impl Context {
     }
 
     fn mu_get_container_index(&mut self, name: &str) -> Option<usize> {
-        let id = self.mu_get_id_from_str(name);
+        let id = self.get_id_from_str(name);
         self.get_container_index_intern(id, WidgetOption::None)
     }
 
@@ -993,7 +993,7 @@ impl Context {
     }
 
     pub fn mu_draw_rect(&mut self, mut rect: Rect, color: Color) {
-        rect = intersect_rects(rect, self.mu_get_clip_rect());
+        rect = intersect_rects(rect, self.get_clip_rect());
         if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
             self.mu_push_command(Command::Rect { rect, color });
         }
@@ -1011,11 +1011,11 @@ impl Context {
 
     pub fn mu_draw_text(&mut self, font: Font, str: &str, pos: Vec2i, color: Color) {
         let rect: Rect = rect(pos.x, pos.y, self.get_text_width(font, str), self.get_text_height(font, str));
-        let clipped = self.mu_check_clip(rect);
+        let clipped = self.check_clip(rect);
         match clipped {
             Clip::All => return,
             Clip::Part => {
-                let clip = self.mu_get_clip_rect();
+                let clip = self.get_clip_rect();
                 self.mu_set_clip(clip)
             }
             _ => (),
@@ -1035,11 +1035,11 @@ impl Context {
     }
 
     pub fn mu_draw_icon(&mut self, id: Icon, rect: Rect, color: Color) {
-        let clipped = self.mu_check_clip(rect);
+        let clipped = self.check_clip(rect);
         match clipped {
             Clip::All => return,
             Clip::Part => {
-                let clip = self.mu_get_clip_rect();
+                let clip = self.get_clip_rect();
                 self.mu_set_clip(clip)
             }
             _ => (),
@@ -1197,7 +1197,7 @@ impl Context {
         let mut pos: Vec2i = Vec2i { x: 0, y: 0 };
         let font: Font = self.style.font;
         let tw = self.get_text_width(font, str);
-        self.mu_push_clip_rect(rect);
+        self.push_clip_rect(rect);
         pos.y = rect.y + (rect.h - self.get_text_height(font, str)) / 2 as libc::c_int;
         if opt.is_aligned_center() {
             pos.x = rect.x + (rect.w - tw) / 2 as libc::c_int;
@@ -1207,11 +1207,11 @@ impl Context {
             pos.x = rect.x + self.style.padding;
         }
         self.mu_draw_text(font, str, pos, self.style.colors[colorid as usize]);
-        self.mu_pop_clip_rect();
+        self.pop_clip_rect();
     }
 
     pub fn mu_mouse_over(&mut self, rect: Rect) -> libc::c_int {
-        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.mu_get_clip_rect(), self.mouse_pos) && self.in_hover_root())
+        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.get_clip_rect(), self.mouse_pos) && self.in_hover_root())
             as libc::c_int;
     }
 
@@ -1228,17 +1228,17 @@ impl Context {
         }
         if self.focus == id {
             if !self.mouse_pressed.is_none() && mouseover == 0 {
-                self.mu_set_focus(0 as libc::c_int as Id);
+                self.set_focus(0);
             }
             if self.mouse_down.is_none() && !opt.is_holding_focus() {
-                self.mu_set_focus(0 as libc::c_int as Id);
+                self.set_focus(0);
             }
         }
         if self.hover == id {
             if !self.mouse_pressed.is_none() {
-                self.mu_set_focus(id);
+                self.set_focus(id);
             } else if mouseover == 0 {
-                self.hover = 0 as libc::c_int as Id;
+                self.hover = 0;
             }
         }
     }
@@ -1297,9 +1297,9 @@ impl Context {
     pub fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: Id = if label.len() > 0 {
-            self.mu_get_id_from_str(label)
+            self.get_id_from_str(label)
         } else {
-            self.mu_get_id_u32(icon as u32)
+            self.get_id_u32(icon as u32)
         };
         let r: Rect = self.mu_layout_next();
         self.mu_update_control(id, r, opt);
@@ -1318,7 +1318,7 @@ impl Context {
 
     pub fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: Id = self.mu_get_id_from_ptr(state);
+        let id: Id = self.get_id_from_ptr(state);
         let mut r: Rect = self.mu_layout_next();
         let box_0: Rect = rect(r.x, r.y, r.h, r.h);
         self.mu_update_control(id, r, WidgetOption::None);
@@ -1353,7 +1353,7 @@ impl Context {
                 res.change();
             }
             if self.key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
-                self.mu_set_focus(0 as libc::c_int as Id);
+                self.set_focus(0);
                 res.submit();
             }
         }
@@ -1366,10 +1366,10 @@ impl Context {
             let ofx: libc::c_int = r.w - self.style.padding - textw - 1 as libc::c_int;
             let textx: libc::c_int = r.x + (if ofx < self.style.padding { ofx } else { self.style.padding });
             let texty: libc::c_int = r.y + (r.h - texth) / 2 as libc::c_int;
-            self.mu_push_clip_rect(r);
+            self.push_clip_rect(r);
             self.mu_draw_text(font, buf.as_str(), vec2(textx, texty), color);
             self.mu_draw_rect(rect(textx + textw, texty, 1 as libc::c_int, texth), color);
-            self.mu_pop_clip_rect();
+            self.pop_clip_rect();
         } else {
             self.mu_draw_control_text(buf.as_str(), r, ControlColor::Text, opt);
         }
@@ -1396,7 +1396,7 @@ impl Context {
     }
 
     pub fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
-        let id: Id = self.mu_get_id_from_ptr(buf);
+        let id: Id = self.get_id_from_ptr(buf);
         let r: Rect = self.mu_layout_next();
         return self.mu_textbox_raw(buf, id, r, opt);
     }
@@ -1408,7 +1408,7 @@ impl Context {
         let mut res = ResourceState::None;
         let last: Real = *value;
         let mut v: Real = last;
-        let id: Id = self.mu_get_id_from_ptr(value);
+        let id: Id = self.get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
         if !self.number_textbox(&mut v, base, id).is_none() {
             return res;
@@ -1445,7 +1445,7 @@ impl Context {
 
     pub fn mu_number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: Id = self.mu_get_id_from_ptr(value);
+        let id: Id = self.get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
         let last: Real = *value;
         if !self.number_textbox(value, base, id).is_none() {
@@ -1470,7 +1470,7 @@ impl Context {
         let mut r: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
-        let id: Id = self.mu_get_id_from_str(label);
+        let id: Id = self.get_id_from_str(label);
         let idx = self.treenode_pool.get(id);
         let mut width: libc::c_int = -(1 as libc::c_int);
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
@@ -1507,11 +1507,11 @@ impl Context {
         return if expanded != 0 { ResourceState::Active } else { ResourceState::None };
     }
 
-    pub fn mu_header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
+    pub fn header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
         return self.header(label, 0 as libc::c_int, opt);
     }
 
-    pub fn mu_begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
+    pub fn begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
         let res = self.header(label, 1 as libc::c_int, opt);
         if res.is_active() {
             self.get_layout_mut().indent += self.style.indent;
@@ -1520,9 +1520,9 @@ impl Context {
         return res;
     }
 
-    pub fn mu_end_treenode(&mut self) {
+    pub fn end_treenode(&mut self) {
         self.get_layout_mut().indent -= self.style.indent;
-        self.mu_pop_id();
+        self.pop_id();
     }
 
     fn scrollbars(&mut self, cnt_id: usize, body: &mut Rect) {
@@ -1530,7 +1530,7 @@ impl Context {
         let mut cs: Vec2i = self.containers[cnt_id].content_size;
         cs.x += self.style.padding * 2 as libc::c_int;
         cs.y += self.style.padding * 2 as libc::c_int;
-        self.mu_push_clip_rect(body.clone());
+        self.push_clip_rect(body.clone());
         if cs.y > self.containers[cnt_id].body.h {
             body.w -= sz;
         }
@@ -1542,7 +1542,7 @@ impl Context {
         if maxscroll > 0 as libc::c_int && body.h > 0 as libc::c_int {
             let mut base: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let id: Id = self.mu_get_id_from_str("!scrollbary");
+            let id: Id = self.get_id_from_str("!scrollbary");
             base = body;
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
@@ -1582,7 +1582,7 @@ impl Context {
         if maxscroll_0 > 0 as libc::c_int && body.w > 0 as libc::c_int {
             let mut base_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let id_0: Id = self.mu_get_id_from_str("!scrollbarx");
+            let id_0: Id = self.get_id_from_str("!scrollbarx");
             base_0 = body;
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
@@ -1617,7 +1617,7 @@ impl Context {
         } else {
             self.containers[cnt_id].scroll.x = 0 as libc::c_int;
         }
-        self.mu_pop_clip_rect();
+        self.pop_clip_rect();
     }
 
     fn push_container_body(&mut self, cnt_idx: usize, body: Rect, opt: WidgetOption) {
@@ -1643,16 +1643,16 @@ impl Context {
     }
 
     fn end_root_container(&mut self) {
-        let cnt = self.mu_get_current_container();
+        let cnt = self.get_current_container();
         self.containers[cnt].tail_idx = Some(self.push_jump(None));
         self.command_list[self.containers[cnt].head_idx.unwrap()] = Command::Jump { dst_idx: Some(self.command_list.len()) };
-        self.mu_pop_clip_rect();
+        self.pop_clip_rect();
         self.pop_container();
     }
 
-    pub fn mu_begin_window_ex(&mut self, title: &str, mut r: Rect, opt: WidgetOption) -> ResourceState {
+    pub fn begin_window_ex(&mut self, title: &str, mut r: Rect, opt: WidgetOption) -> ResourceState {
         let mut body: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let id: Id = self.mu_get_id_from_str(title);
+        let id: Id = self.get_id_from_str(title);
         let cnt_id = self.get_container_index_intern(id, opt);
         if cnt_id.is_none() || self.containers[cnt_id.unwrap()].open == 0 {
             return ResourceState::None;
@@ -1675,7 +1675,7 @@ impl Context {
 
             // TODO: Is this necessary?
             if !opt.has_no_title() {
-                let id_0: Id = self.mu_get_id_from_str("!title");
+                let id_0: Id = self.get_id_from_str("!title");
                 self.mu_update_control(id_0, tr, opt);
                 self.mu_draw_control_text(title, tr, ControlColor::TitleText, opt);
                 if id_0 == self.focus && self.mouse_down.is_left() {
@@ -1686,7 +1686,7 @@ impl Context {
                 body.h -= tr.h;
             }
             if !opt.has_no_close() {
-                let id_1: Id = self.mu_get_id_from_str("!close");
+                let id_1: Id = self.get_id_from_str("!close");
                 let r: Rect = rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
                 tr.w -= r.w;
                 self.mu_draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as libc::c_int as usize]);
@@ -1699,7 +1699,7 @@ impl Context {
         self.push_container_body(cnt_id.unwrap(), body, opt);
         if !opt.is_auto_sizing() {
             let sz: libc::c_int = self.style.title_height;
-            let id_2: Id = self.mu_get_id_from_str("!resize");
+            let id_2: Id = self.get_id_from_str("!resize");
             let r_0: Rect = rect(r.x + r.w - sz, r.y + r.h - sz, sz, sz);
             self.mu_update_control(id_2, r_0, opt);
             if id_2 == self.focus && self.mouse_down.is_left() {
@@ -1724,16 +1724,16 @@ impl Context {
         if opt.is_popup() && !self.mouse_pressed.is_none() && self.hover_root != cnt_id {
             self.containers[cnt_id.unwrap()].open = 0 as libc::c_int;
         }
-        self.mu_push_clip_rect(self.containers[cnt_id.unwrap()].body);
+        self.push_clip_rect(self.containers[cnt_id.unwrap()].body);
         return ResourceState::Active;
     }
 
-    pub fn mu_end_window(&mut self) {
-        self.mu_pop_clip_rect();
+    pub fn end_window(&mut self) {
+        self.pop_clip_rect();
         self.end_root_container();
     }
 
-    pub fn mu_open_popup(&mut self, name: &str) {
+    pub fn open_popup(&mut self, name: &str) {
         let cnt = self.mu_get_container_index(name);
         self.next_hover_root = cnt;
         self.hover_root = self.next_hover_root;
@@ -1742,22 +1742,22 @@ impl Context {
         self.mu_bring_to_front(cnt.unwrap());
     }
 
-    pub fn mu_begin_popup(&mut self, name: &str) -> ResourceState {
+    pub fn begin_popup(&mut self, name: &str) -> ResourceState {
         let opt = WidgetOption::Popup
             .with_auto_size()
             .with_no_resize()
             .with_no_scroll()
             .with_no_title()
             .with_closed();
-        return self.mu_begin_window_ex(name, rect(0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int), opt);
+        return self.begin_window_ex(name, rect(0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int), opt);
     }
 
-    pub fn mu_end_popup(&mut self) {
-        self.mu_end_window();
+    pub fn end_popup(&mut self) {
+        self.end_window();
     }
 
-    pub fn mu_begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
-        self.mu_push_id_from_str(name);
+    pub fn begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
+        self.push_id_from_str(name);
         let cnt_id = self.get_container_index_intern(self.last_id, opt);
         let rect = self.mu_layout_next();
         self.containers[cnt_id.unwrap()].rect = rect;
@@ -1767,11 +1767,11 @@ impl Context {
 
         self.container_stack.push(cnt_id.unwrap());
         self.push_container_body(cnt_id.unwrap(), rect, opt);
-        self.mu_push_clip_rect(self.containers[cnt_id.unwrap()].body);
+        self.push_clip_rect(self.containers[cnt_id.unwrap()].body);
     }
 
-    pub fn mu_end_panel(&mut self) {
-        self.mu_pop_clip_rect();
+    pub fn end_panel(&mut self) {
+        self.pop_clip_rect();
         self.pop_container();
     }
 }
