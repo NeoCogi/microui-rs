@@ -841,7 +841,7 @@ unsafe extern "C" fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut 
             let r: Rect = ctx.mu_layout_next();
             ctx.mu_draw_rect(
                 r,
-                mu_color(
+                color(
                     bg[0 as libc::c_int as usize] as u8,
                     bg[1 as libc::c_int as usize] as u8,
                     bg[2 as libc::c_int as usize] as u8,
@@ -1381,7 +1381,7 @@ fn main() {
                 }
             }
             process_frame(&mut logbuf, &mut logbuf_updated, &mut submit_buf, &mut *ctx);
-            r_clear(mu_color(
+            r_clear(color(
                 bg[0 as libc::c_int as usize] as u8,
                 bg[1 as libc::c_int as usize] as u8,
                 bg[2 as libc::c_int as usize] as u8,

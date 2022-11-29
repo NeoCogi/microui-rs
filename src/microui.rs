@@ -19,7 +19,7 @@ pub struct Pool<const N: usize> {
 }
 
 impl<const N: usize> Pool<N> {
-    pub fn alloc(&mut self, id: mu_Id, frame: usize) -> usize {
+    pub fn alloc(&mut self, id: Id, frame: usize) -> usize {
         let mut res = None;
         let mut latest_update = frame;
         for i in 0..N {
@@ -35,7 +35,7 @@ impl<const N: usize> Pool<N> {
         return res.unwrap();
     }
 
-    pub fn get(&self, id: mu_Id) -> Option<usize> {
+    pub fn get(&self, id: Id) -> Option<usize> {
         for i in 0..N {
             if self.vec[i].id == id {
                 return Some(i);
@@ -368,9 +368,9 @@ pub struct Context {
     pub char_height: Option<fn(Font, char) -> usize>,
     pub draw_frame: Option<fn(&mut Context, Rect, ControlColor) -> ()>,
     pub style: Style,
-    pub hover: mu_Id,
-    pub focus: mu_Id,
-    pub last_id: mu_Id,
+    pub hover: Id,
+    pub focus: Id,
+    pub last_id: Id,
     pub last_rect: Rect,
     pub last_zindex: libc::c_int,
     pub updated_focus: libc::c_int,
@@ -379,12 +379,12 @@ pub struct Context {
     pub next_hover_root: Option<usize>,
     pub scroll_target: Option<usize>,
     pub number_edit_buf: FixedString<127>,
-    pub number_edit: mu_Id,
+    pub number_edit: Id,
     pub command_list: FixedVec<Command, 4096>,
     pub root_list: FixedVec<usize, 32>,
     pub container_stack: FixedVec<usize, 32>,
     pub clip_stack: FixedVec<Rect, 32>,
-    pub id_stack: FixedVec<mu_Id, 32>,
+    pub id_stack: FixedVec<Id, 32>,
     pub layout_stack: FixedVec<Layout, 16>,
     pub text_stack: FixedString<65536>,
     pub container_pool: Pool<48>,
@@ -410,11 +410,11 @@ pub struct Vec2i {
 
 #[derive(Default, Copy, Clone)]
 struct PoolItem {
-    pub id: mu_Id,
+    pub id: Id,
     pub last_update: usize,
 }
 
-pub type mu_Id = u32;
+pub type Id = u32;
 
 #[derive(Default, Copy, Clone)]
 #[repr(C)]
@@ -548,7 +548,7 @@ pub fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
-pub fn mu_color(r: u8, g: u8, b: u8, a: u8) -> Color {
+pub fn color(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color { r, g, b, a }
 }
 
@@ -590,7 +590,7 @@ pub fn draw_frame(ctx: &mut Context, rect: Rect, colorid: ControlColor) {
     }
 }
 
-fn hash_u32(hash_0: &mut mu_Id, orig_id: u32) {
+fn hash_u32(hash_0: &mut Id, orig_id: u32) {
     let bytes = orig_id.to_be_bytes();
     for b in bytes {
         let fresh1 = b;
@@ -598,14 +598,14 @@ fn hash_u32(hash_0: &mut mu_Id, orig_id: u32) {
     }
 }
 
-fn hash_str(hash_0: &mut mu_Id, s: &str) {
+fn hash_str(hash_0: &mut Id, s: &str) {
     for c in s.chars() {
         let fresh1 = c as i32;
         *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
     }
 }
 
-fn hash_bytes(hash_0: &mut mu_Id, s: &[u8]) {
+fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
     for c in s {
         let fresh1 = *c as i32;
         *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
@@ -636,7 +636,7 @@ impl Context {
             self.containers[self.scroll_target.unwrap()].scroll.y += self.scroll_delta.y;
         }
         if self.updated_focus == 0 {
-            self.focus = 0 as libc::c_int as mu_Id;
+            self.focus = 0 as libc::c_int as Id;
         }
         self.updated_focus = 0 as libc::c_int;
         if !self.mouse_pressed.is_none()
@@ -682,25 +682,25 @@ impl Context {
         }
     }
 
-    pub fn mu_set_focus(&mut self, id: mu_Id) {
+    pub fn mu_set_focus(&mut self, id: Id) {
         self.focus = id;
         self.updated_focus = 1 as libc::c_int;
     }
 
-    pub fn mu_get_id_u32(&mut self, orig_id: u32) -> mu_Id {
-        let mut res: mu_Id = match self.id_stack.top() {
+    pub fn mu_get_id_u32(&mut self, orig_id: u32) -> Id {
+        let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as mu_Id,
+            None => 2166136261 as Id,
         };
         hash_u32(&mut res, orig_id);
         self.last_id = res;
         return res;
     }
 
-    pub fn mu_get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> mu_Id {
-        let mut res: mu_Id = match self.id_stack.top() {
+    pub fn mu_get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> Id {
+        let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as mu_Id,
+            None => 2166136261 as Id,
         };
         let ptr = orig_id as *const T as *const u8 as usize;
         let bytes = ptr.to_le_bytes();
@@ -709,10 +709,10 @@ impl Context {
         return res;
     }
 
-    pub fn mu_get_id_from_str(&mut self, s: &str) -> mu_Id {
-        let mut res: mu_Id = match self.id_stack.top() {
+    pub fn mu_get_id_from_str(&mut self, s: &str) -> Id {
+        let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as mu_Id,
+            None => 2166136261 as Id,
         };
         hash_str(&mut res, s);
         self.last_id = res;
@@ -826,7 +826,7 @@ impl Context {
         self.containers[*self.container_stack.top().unwrap()].body
     }
 
-    fn get_container_index_intern(&mut self, id: mu_Id, opt: WidgetOption) -> Option<usize> {
+    fn get_container_index_intern(&mut self, id: Id, opt: WidgetOption) -> Option<usize> {
         let idx = self.container_pool.get(id);
         if idx.is_some() {
             if self.containers[idx.unwrap()].open != 0 || !opt.is_closed() {
@@ -1129,7 +1129,7 @@ impl Context {
         }
     }
 
-    pub fn mu_draw_control_frame(&mut self, id: mu_Id, rect: Rect, mut colorid: ControlColor, opt: WidgetOption) {
+    pub fn mu_draw_control_frame(&mut self, id: Id, rect: Rect, mut colorid: ControlColor, opt: WidgetOption) {
         if opt.has_no_frame() {
             return;
         }
@@ -1164,7 +1164,7 @@ impl Context {
             as libc::c_int;
     }
 
-    pub fn mu_update_control(&mut self, id: mu_Id, rect: Rect, opt: WidgetOption) {
+    pub fn mu_update_control(&mut self, id: Id, rect: Rect, opt: WidgetOption) {
         let mouseover: libc::c_int = self.mu_mouse_over(rect);
         if self.focus == id {
             self.updated_focus = 1 as libc::c_int;
@@ -1177,17 +1177,17 @@ impl Context {
         }
         if self.focus == id {
             if !self.mouse_pressed.is_none() && mouseover == 0 {
-                self.mu_set_focus(0 as libc::c_int as mu_Id);
+                self.mu_set_focus(0 as libc::c_int as Id);
             }
             if self.mouse_down.is_none() && !opt.is_holding_focus() {
-                self.mu_set_focus(0 as libc::c_int as mu_Id);
+                self.mu_set_focus(0 as libc::c_int as Id);
             }
         }
         if self.hover == id {
             if !self.mouse_pressed.is_none() {
                 self.mu_set_focus(id);
             } else if mouseover == 0 {
-                self.hover = 0 as libc::c_int as mu_Id;
+                self.hover = 0 as libc::c_int as Id;
             }
         }
     }
@@ -1245,7 +1245,7 @@ impl Context {
 
     pub fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = if label.len() > 0 {
+        let id: Id = if label.len() > 0 {
             self.mu_get_id_from_str(label)
         } else {
             self.mu_get_id_u32(icon as u32)
@@ -1267,7 +1267,7 @@ impl Context {
 
     pub fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = self.mu_get_id_from_ptr(state);
+        let id: Id = self.mu_get_id_from_ptr(state);
         let mut r: Rect = self.mu_layout_next();
         let box_0: Rect = rect(r.x, r.y, r.h, r.h);
         self.mu_update_control(id, r, WidgetOption::None);
@@ -1284,7 +1284,7 @@ impl Context {
         return res;
     }
 
-    pub fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: mu_Id, r: Rect, opt: WidgetOption) -> ResourceState {
+    pub fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: Id, r: Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         self.mu_update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
@@ -1302,7 +1302,7 @@ impl Context {
                 res.change();
             }
             if self.key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
-                self.mu_set_focus(0 as libc::c_int as mu_Id);
+                self.mu_set_focus(0 as libc::c_int as Id);
                 res.submit();
             }
         }
@@ -1325,7 +1325,7 @@ impl Context {
         return res;
     }
 
-    fn number_textbox(&mut self, value: &mut Real, r: Rect, id: mu_Id) -> ResourceState {
+    fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
             self.number_edit = id;
             write!(self.number_edit_buf, "{:.3}", value).unwrap();
@@ -1336,7 +1336,7 @@ impl Context {
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != id {
                 *value = f32::from_str(self.number_edit_buf.as_str()).unwrap();
-                self.number_edit = 0 as libc::c_int as mu_Id;
+                self.number_edit = 0 as libc::c_int as Id;
             } else {
                 return ResourceState::Active;
             }
@@ -1345,7 +1345,7 @@ impl Context {
     }
 
     pub fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
-        let id: mu_Id = self.mu_get_id_from_ptr(buf);
+        let id: Id = self.mu_get_id_from_ptr(buf);
         let r: Rect = self.mu_layout_next();
         return self.mu_textbox_raw(buf, id, r, opt);
     }
@@ -1357,7 +1357,7 @@ impl Context {
         let mut res = ResourceState::None;
         let last: Real = *value;
         let mut v: Real = last;
-        let id: mu_Id = self.mu_get_id_from_ptr(value);
+        let id: Id = self.mu_get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
         if !self.number_textbox(&mut v, base, id).is_none() {
             return res;
@@ -1394,7 +1394,7 @@ impl Context {
 
     pub fn mu_number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        let id: mu_Id = self.mu_get_id_from_ptr(value);
+        let id: Id = self.mu_get_id_from_ptr(value);
         let base: Rect = self.mu_layout_next();
         let last: Real = *value;
         if !self.number_textbox(value, base, id).is_none() {
@@ -1419,7 +1419,7 @@ impl Context {
         let mut r: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut active: libc::c_int = 0;
         let mut expanded: libc::c_int = 0;
-        let id: mu_Id = self.mu_get_id_from_str(label);
+        let id: Id = self.mu_get_id_from_str(label);
         let idx = self.treenode_pool.get(id);
         let mut width: libc::c_int = -(1 as libc::c_int);
         self.mu_layout_row(1 as libc::c_int, &mut width, 0);
@@ -1491,7 +1491,7 @@ impl Context {
         if maxscroll > 0 as libc::c_int && body.h > 0 as libc::c_int {
             let mut base: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let id: mu_Id = self.mu_get_id_from_str("!scrollbary");
+            let id: Id = self.mu_get_id_from_str("!scrollbary");
             base = body;
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
@@ -1531,7 +1531,7 @@ impl Context {
         if maxscroll_0 > 0 as libc::c_int && body.w > 0 as libc::c_int {
             let mut base_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let id_0: mu_Id = self.mu_get_id_from_str("!scrollbarx");
+            let id_0: Id = self.mu_get_id_from_str("!scrollbarx");
             base_0 = body;
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
@@ -1601,7 +1601,7 @@ impl Context {
 
     pub fn mu_begin_window_ex(&mut self, title: &str, mut r: Rect, opt: WidgetOption) -> ResourceState {
         let mut body: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let id: mu_Id = self.mu_get_id_from_str(title);
+        let id: Id = self.mu_get_id_from_str(title);
         let cnt_id = self.get_container_index_intern(id, opt);
         if cnt_id.is_none() || self.containers[cnt_id.unwrap()].open == 0 {
             return ResourceState::None;
@@ -1624,7 +1624,7 @@ impl Context {
 
             // TODO: Is this necessary?
             if !opt.has_no_title() {
-                let id_0: mu_Id = self.mu_get_id_from_str("!title");
+                let id_0: Id = self.mu_get_id_from_str("!title");
                 self.mu_update_control(id_0, tr, opt);
                 self.mu_draw_control_text(title, tr, ControlColor::TitleText, opt);
                 if id_0 == self.focus && self.mouse_down.is_left() {
@@ -1635,7 +1635,7 @@ impl Context {
                 body.h -= tr.h;
             }
             if !opt.has_no_close() {
-                let id_1: mu_Id = self.mu_get_id_from_str("!close");
+                let id_1: Id = self.mu_get_id_from_str("!close");
                 let r: Rect = rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
                 tr.w -= r.w;
                 self.mu_draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as libc::c_int as usize]);
@@ -1648,7 +1648,7 @@ impl Context {
         self.push_container_body(cnt_id.unwrap(), body, opt);
         if !opt.is_auto_sizing() {
             let sz: libc::c_int = self.style.title_height;
-            let id_2: mu_Id = self.mu_get_id_from_str("!resize");
+            let id_2: Id = self.mu_get_id_from_str("!resize");
             let r_0: Rect = rect(r.x + r.w - sz, r.y + r.h - sz, sz, sz);
             self.mu_update_control(id_2, r_0, opt);
             if id_2 == self.focus && self.mouse_down.is_left() {
