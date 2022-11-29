@@ -63,18 +63,6 @@ pub enum Clip {
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(u32)]
-pub enum Command {
-    None = 0,
-    Jump = 1,
-    Clip = 2,
-    Rect = 3,
-    Text = 4,
-    Icon = 5,
-    Max = 6,
-}
-
-#[derive(PartialEq, Copy, Clone)]
-#[repr(u32)]
 pub enum ControlColor {
     Max = 14,
     ScrollThumb = 13,
@@ -392,7 +380,7 @@ pub struct Context {
     pub scroll_target: Option<usize>,
     pub number_edit_buf: FixedString<127>,
     pub number_edit: mu_Id,
-    pub command_list: FixedVec<mu_Command, 4096>,
+    pub command_list: FixedVec<Command, 4096>,
     pub root_list: FixedVec<usize, 32>,
     pub container_stack: FixedVec<usize, 32>,
     pub clip_stack: FixedVec<Rect, 32>,
@@ -465,28 +453,29 @@ pub struct Layout {
 }
 
 #[derive(Copy, Clone)]
-pub union mu_Command {
-    pub type_0: Command,
-    pub base: mu_BaseCommand,
-    pub jump: mu_JumpCommand,
-    pub clip: mu_ClipCommand,
-    pub rect: mu_RectCommand,
-    pub text: mu_TextCommand,
-    pub icon: mu_IconCommand,
+pub enum Command {
+    Jump { dst_idx: Option<usize> },
+    Clip { rect: Rect },
+    Rect { rect: Rect, color: Color },
+    Text {
+        font: Font,
+        pos: Vec2i,
+        color: Color,
+        str_start: usize,
+        str_len: usize,
+    },
+    Icon {
+        rect: Rect,
+        id: Icon,
+        color: Color,
+    },
+    None
 }
 
-impl Default for mu_Command {
+impl Default for Command {
     fn default() -> Self {
-        Self { type_0: Command::None }
+        Command::None
     }
-}
-
-#[derive(Copy, Clone)]
-pub struct mu_IconCommand {
-    pub base: mu_BaseCommand,
-    pub rect: Rect,
-    pub id: Icon,
-    pub color: Color,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -497,41 +486,7 @@ pub struct Color {
     pub a: u8,
 }
 
-#[derive(Copy, Clone)]
-pub struct mu_BaseCommand {
-    pub type_0: Command,
-}
-
-#[derive(Copy, Clone)]
-pub struct mu_TextCommand {
-    pub base: mu_BaseCommand,
-    pub font: Font,
-    pub pos: Vec2i,
-    pub color: Color,
-    pub str_start: usize,
-    pub str_len: usize,
-}
-
 pub type Font = *mut libc::c_void;
-
-#[derive(Copy, Clone)]
-pub struct mu_RectCommand {
-    pub base: mu_BaseCommand,
-    pub rect: Rect,
-    pub color: Color,
-}
-
-#[derive(Copy, Clone)]
-pub struct mu_ClipCommand {
-    pub base: mu_BaseCommand,
-    pub rect: Rect,
-}
-
-#[derive(Copy, Clone)]
-pub struct mu_JumpCommand {
-    pub base: mu_BaseCommand,
-    pub dst_idx: Option<usize>,
-}
 
 #[derive(Copy, Clone)]
 pub struct Style {
@@ -707,20 +662,21 @@ impl Context {
                 // if this is the first container then make the first command jump to it.
                 // otherwise set the previous container's tail to jump to this one
 
-                let mut cmd: &mut mu_Command = &mut self.command_list[0];
-                unsafe { assert!(cmd.type_0 == Command::Jump) };
-                cmd.jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
-                unsafe { assert!(cmd.jump.dst_idx.unwrap() < self.command_list.len()) };
+                let mut cmd: &mut Command = &mut self.command_list[0];
+                assert!( match cmd { Command::Jump {..} => true, _ => false});
+                let dst_idx = self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1;
+                *cmd = Command::Jump { dst_idx: Some(dst_idx) };
+                assert!(dst_idx < self.command_list.len());
             } else {
                 let prev = &self.containers[self.root_list[i - 1]];
-                self.command_list[prev.tail_idx.unwrap()].jump.dst_idx = Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1);
+                self.command_list[prev.tail_idx.unwrap()] = Command::Jump { dst_idx: Some(self.containers[self.root_list[i as usize]].head_idx.unwrap() + 1) };
             }
             if i == n - 1 {
                 assert!(self.containers[self.root_list[i as usize]].tail_idx.unwrap() < self.command_list.len());
                 unsafe {
-                    assert!(self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].type_0 == Command::Jump);
+                    assert!(match self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()] { Command::Jump {..} => true, _ => false });
                 }
-                self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
+                self.command_list[self.containers[self.root_list[i as usize]].tail_idx.unwrap()] = Command::Jump { dst_idx: Some(self.command_list.len()) };
                 // the snake eats its tail
             }
         }
@@ -933,10 +889,8 @@ impl Context {
         self.input_text += text;
     }
 
-    pub fn mu_push_command(&mut self, type_0: Command) -> (&mut mu_Command, usize) {
-        let (cmd, pos) = self.command_list.push(mu_Command::default());
-        cmd.base.type_0 = type_0;
-        (cmd, pos)
+    pub fn mu_push_command(&mut self, cmd: Command) -> (&mut Command, usize) {
+        self.command_list.push(cmd)
     }
 
     pub fn mu_push_text(&mut self, str: &str) -> usize {
@@ -950,39 +904,38 @@ impl Context {
     ///
     /// returns the next command to execute and the next index to use
     ///
-    pub fn mu_next_command(&mut self, mut cmd_id: usize) -> Option<(mu_Command, usize)> {
+    pub fn mu_next_command(&mut self, mut cmd_id: usize) -> Option<(Command, usize)> {
         unsafe {
             if cmd_id >= self.command_list.len() {
                 cmd_id = 0
             }
 
             while cmd_id != self.command_list.len() {
-                if self.command_list[cmd_id].type_0 != Command::Jump {
-                    return Some((self.command_list[cmd_id], cmd_id + 1));
+                match self.command_list[cmd_id] {
+                    Command::Jump { dst_idx } =>  {
+                        cmd_id = dst_idx.unwrap()
+                    },
+                    _ => return Some((self.command_list[cmd_id], cmd_id + 1))
                 }
-                cmd_id = self.command_list[cmd_id].jump.dst_idx.unwrap();
+
             }
             None
         }
     }
 
     fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
-        let (cmd, pos) = self.mu_push_command(Command::Jump);
-        cmd.jump.dst_idx = dst_idx;
+        let (_, pos) = self.mu_push_command(Command::Jump { dst_idx });
         pos
     }
 
     pub fn mu_set_clip(&mut self, rect: Rect) {
-        let (cmd, _) = self.mu_push_command(Command::Clip);
-        cmd.clip.rect = rect;
+        self.mu_push_command(Command::Clip { rect });
     }
 
     pub fn mu_draw_rect(&mut self, mut rect: Rect, color: Color) {
         rect = intersect_rects(rect, self.mu_get_clip_rect());
         if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
-            let (cmd, _) = self.mu_push_command(Command::Rect);
-            cmd.rect.rect = rect;
-            cmd.rect.color = color;
+            self.mu_push_command(Command::Rect { rect, color });
         }
     }
 
@@ -1014,12 +967,13 @@ impl Context {
         }
 
         let str_start = self.mu_push_text(str);
-        let (cmd, _) = self.mu_push_command(Command::Text);
-        cmd.text.str_start = str_start;
-        cmd.text.str_len = str.len();
-        cmd.text.pos = pos;
-        cmd.text.color = color;
-        cmd.text.font = font;
+        self.mu_push_command(Command::Text {
+            str_start,
+            str_len: str.len(),
+            pos,
+            color,
+            font,
+        });
         if clipped != Clip::None {
             self.mu_set_clip(UNCLIPPED_RECT);
         }
@@ -1035,10 +989,11 @@ impl Context {
             }
             _ => (),
         }
-        let (cmd, _) = self.mu_push_command(Command::Icon);
-        cmd.icon.id = id;
-        cmd.icon.rect = rect;
-        cmd.icon.color = color;
+        self.mu_push_command(Command::Icon {
+            id,
+            rect,
+            color
+        });
         if clipped != Clip::None {
             self.mu_set_clip(UNCLIPPED_RECT);
         }
@@ -1639,7 +1594,7 @@ impl Context {
     fn end_root_container(&mut self) {
         let cnt = self.mu_get_current_container();
         self.containers[cnt].tail_idx = Some(self.push_jump(None));
-        self.command_list[self.containers[cnt].head_idx.unwrap()].jump.dst_idx = Some(self.command_list.len());
+        self.command_list[self.containers[cnt].head_idx.unwrap()] = Command::Jump { dst_idx: Some(self.command_list.len()) };
         self.mu_pop_clip_rect();
         self.pop_container();
     }

@@ -1391,19 +1391,19 @@ fn main() {
             loop {
                 match (*ctx).mu_next_command(cmd_id) {
                     Some((command, id)) => {
-                        match command.type_0 {
-                            Command::Text => {
-                                let str = &(*ctx).text_stack[command.text.str_start..command.text.str_start + command.text.str_len];
-                                r_draw_text(str, command.text.pos, command.text.color);
+                        match command {
+                            Command::Text { str_start, str_len, pos, color, .. } => {
+                                let str = &(*ctx).text_stack[str_start..str_start + str_len];
+                                r_draw_text(str, pos, color);
                             }
-                            Command::Rect => {
-                                r_draw_rect(command.rect.rect, command.rect.color);
+                            Command::Rect { rect, color } => {
+                                r_draw_rect(rect, color);
                             }
-                            Command::Icon => {
-                                r_draw_icon(command.icon.id, command.icon.rect, command.icon.color);
+                            Command::Icon { id, rect, color } => {
+                                r_draw_icon(id, rect, color);
                             }
-                            Command::Clip => {
-                                r_set_clip_rect(command.clip.rect);
+                            Command::Clip { rect } => {
+                                r_set_clip_rect(rect);
                             }
                             _ => {}
                         }
