@@ -1289,12 +1289,12 @@ impl Context {
         self.mu_layout_end_column();
     }
 
-    pub fn mu_label(&mut self, text: &str) {
+    pub fn label(&mut self, text: &str) {
         let layout = self.mu_layout_next();
         self.mu_draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
     }
 
-    pub fn mu_button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
+    pub fn button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: Id = if label.len() > 0 {
             self.get_id_from_str(label)
@@ -1316,7 +1316,7 @@ impl Context {
         return res;
     }
 
-    pub fn mu_checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
+    pub fn checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
         let id: Id = self.get_id_from_ptr(state);
         let mut r: Rect = self.mu_layout_next();
