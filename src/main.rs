@@ -6,15 +6,15 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-// #![no_main]
-// #![no_std]
-//
-// use core::panic::PanicInfo;
-//
-// #[panic_handler]
-// fn panic(_panic: &PanicInfo<'_>) -> ! {
-//     loop {}
-// }
+#![no_main]
+#![no_std]
+
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo<'_>) -> ! {
+    loop {}
+}
 //
 // #[no_mangle]
 // pub extern "C" fn main() {}
@@ -870,7 +870,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
     if !ctx
         .begin_window_ex(
             "Log Window",
-            rect(350 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 200 as libc::c_int),
+            rect(350, 40, 300, 200),
             WidgetOption::None,
         )
         .is_none()
@@ -881,12 +881,13 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
         let content_size = ctx.get_current_container_content_size();
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
         ctx.text(logbuf.as_str());
-        ctx.end_panel();
         if *logbuf_updated != 0 {
             scroll.y = content_size.y;
             ctx.set_current_container_scroll(&scroll);
             *logbuf_updated = 0 as libc::c_int;
         }
+        ctx.end_panel();
+
         let mut submitted: libc::c_int = 0 as libc::c_int;
         ctx.mu_layout_row(2 as libc::c_int, [-(70 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
         if ctx.mu_textbox_ex(submit_buf, WidgetOption::None).is_submitted() {
@@ -1308,7 +1309,8 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-fn main() {
+#[no_mangle]
+pub extern "C" fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();

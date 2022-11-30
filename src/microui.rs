@@ -1526,6 +1526,10 @@ impl Context {
         self.pop_id();
     }
 
+    fn clamp(x: i32, a: i32, b: i32) -> i32 {
+        i32::min(b, i32::max(a, x))
+    }
+
     fn scrollbars(&mut self, cnt_id: usize, body: &mut Rect) {
         let sz: libc::c_int = self.style.scrollbar_size;
         let mut cs: Vec2i = self.containers[cnt_id].content_size;
@@ -1551,18 +1555,7 @@ impl Context {
             if self.focus == id && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
-            self.containers[cnt_id].scroll.y = if maxscroll
-                < (if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
-                    0 as libc::c_int
-                } else {
-                    self.containers[cnt_id].scroll.y
-                }) {
-                maxscroll
-            } else if 0 as libc::c_int > self.containers[cnt_id].scroll.y {
-                0 as libc::c_int
-            } else {
-                self.containers[cnt_id].scroll.y
-            };
+            self.containers[cnt_id].scroll.y = Self::clamp(self.containers[cnt_id].scroll.y, 0, maxscroll);
 
             (self.draw_frame).expect("non-null function pointer")(self, base, ControlColor::ScrollBase);
             thumb = base;
@@ -1591,18 +1584,8 @@ impl Context {
             if self.focus == id_0 && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
-            self.containers[cnt_id].scroll.x = if maxscroll_0
-                < (if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
-                    0 as libc::c_int
-                } else {
-                    self.containers[cnt_id].scroll.x
-                }) {
-                maxscroll_0
-            } else if 0 as libc::c_int > self.containers[cnt_id].scroll.x {
-                0 as libc::c_int
-            } else {
-                self.containers[cnt_id].scroll.x
-            };
+            self.containers[cnt_id].scroll.x = Self::clamp(self.containers[cnt_id].scroll.x, 0, maxscroll_0);
+
             (self.draw_frame).expect("non-null function pointer")(self, base_0, ControlColor::ScrollBase);
             thumb_0 = base_0;
             thumb_0.w = if self.style.thumb_size > base_0.w * body.w / cs.x {
