@@ -6,16 +6,16 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-#![no_main]
-#![no_std]
-
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_panic: &PanicInfo<'_>) -> ! {
-    loop {}
-}
-
+// #![no_main]
+// #![no_std]
+//
+// use core::panic::PanicInfo;
+//
+// #[panic_handler]
+// fn panic(_panic: &PanicInfo<'_>) -> ! {
+//     loop {}
+// }
+//
 // #[no_mangle]
 // pub extern "C" fn main() {}
 
@@ -675,17 +675,20 @@ pub union SDL_Event {
 }
 
 pub type Real = libc::c_float;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_13<'a> {
     pub label: &'a str,
     pub idx: ControlColor,
 }
+
 static mut bg: [libc::c_float; 3] = [
     90 as libc::c_int as libc::c_float,
     95 as libc::c_int as libc::c_float,
     100 as libc::c_int as libc::c_float,
 ];
+
 fn write_log(logbuf: &mut dyn IString, logbuf_updated: &mut i32, text: &str) {
     if logbuf.len() != 0 {
         logbuf.push('\n');
@@ -802,7 +805,7 @@ fn test_window(logbuf: &mut dyn IString, logbuf_updated: &mut i32, ctx: &mut Con
             ctx.mu_layout_end_column();
             ctx.mu_layout_begin_column();
             ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-            ctx.mu_text(
+            ctx.text(
                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas lacinia, sem eu lacinia molestie, mi risus faucibus ipsum, eu varius magna felis a nulla."
                 ,
             );
@@ -877,7 +880,7 @@ unsafe extern "C" fn log_window(logbuf: &mut dyn IString, logbuf_updated: &mut i
         let mut scroll = ctx.get_current_container_scroll();
         let content_size = ctx.get_current_container_content_size();
         ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
-        ctx.mu_text(logbuf.as_str());
+        ctx.text(logbuf.as_str());
         ctx.end_panel();
         if *logbuf_updated != 0 {
             scroll.y = content_size.y;
@@ -1305,8 +1308,7 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-#[no_mangle]
-unsafe extern "C" fn main() {
+fn main() {
     let mut logbuf = FixedString::<65536>::new();
     let mut logbuf_updated: libc::c_int = 0 as libc::c_int;
     let mut submit_buf = FixedString::<128>::new();
@@ -1324,7 +1326,7 @@ unsafe extern "C" fn main() {
         r_init();
         let mut ctx = Context::new();
         ctx.char_width = Some(r_get_char_width);
-        ctx.char_height = Some(r_get_char_height);
+        ctx.font_height = Some(r_get_font_height);
         loop {
             let mut e: SDL_Event = SDL_Event { type_0: 0 };
             while SDL_PollEvent(&mut e) != 0 {

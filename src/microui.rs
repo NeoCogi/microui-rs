@@ -370,7 +370,7 @@ pub const MU_KEY_SHIFT: u32 = 1;
 #[repr(C)]
 pub struct Context {
     pub char_width: Option<fn(Font, char) -> usize>,
-    pub char_height: Option<fn(Font, char) -> usize>,
+    pub font_height: Option<fn(Font) -> usize>,
     pub draw_frame: Option<fn(&mut Context, Rect, ControlColor) -> ()>,
     pub style: Style,
     pub hover: Id,
@@ -410,7 +410,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             char_width: None,
-            char_height: None,
+            font_height: None,
             draw_frame: None,
             style: Style::default(),
             hover: 0,
@@ -673,7 +673,7 @@ impl Context {
     }
 
     pub fn begin(&mut self) {
-        assert!((self.char_width).is_some() && (self.char_height).is_some());
+        assert!((self.char_width).is_some() && (self.font_height).is_some());
         self.root_list.clear();
         self.text_stack.clear();
         self.scroll_target = None;
@@ -1258,33 +1258,34 @@ impl Context {
     }
 
     pub fn get_text_height(&self, font: Font, text: &str) -> i32 {
-        let mut res = 0;
-        let mut acc = 0;
-        for c in text.chars() {
-            if c == '\n' {
-                res += acc;
-                acc = 0;
-            }
-            acc = usize::max(acc, self.char_height.expect("non-null function pointer")(font, c));
-        }
-        res += acc;
-        res as i32
+        let font_height = self.font_height.expect("non-null function pointer")(font);
+        let lc = text.lines().count();
+        (lc * font_height) as i32
     }
 
-    pub fn mu_text(&mut self, text: &str) {
-        let mut width: libc::c_int = -(1 as libc::c_int);
+    pub fn text(&mut self, text: &str) {
+        let mut width = -1;
         let font: Font = self.style.font;
         let color: Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
         self.mu_layout_begin_column();
-        let first_line = match text.lines().next() {
-            Some(l) => l,
-            None => "",
-        };
-        let h = self.get_text_height(font, first_line);
-        self.mu_layout_row(1 as libc::c_int, &mut width, h);
+        let h = self.font_height.expect("non-null function pointer")(font) as i32;
+        self.mu_layout_row(1, &mut width, h);
+        let mut r = self.mu_layout_next();
         for line in text.lines() {
-            let r = self.mu_layout_next();
-            self.mu_draw_text(font, line, vec2(r.x, r.y), color);
+            let mut rx = r.x;
+            let words = line.split_inclusive(' ');
+            for w in words {
+                // TODO: split w when its width > w into many lines
+                let tw = self.get_text_width(font, w);
+                if tw + rx < r.x + r.w {
+                    self.mu_draw_text(font, w, vec2(rx, r.y), color);
+                    rx += tw;
+                } else {
+                    r = self.mu_layout_next();
+                    rx = r.x;
+                }
+            }
+            r = self.mu_layout_next();
         }
         self.mu_layout_end_column();
     }
@@ -1341,7 +1342,7 @@ impl Context {
         if self.focus == id {
             let mut len = buf.len();
 
-            if self.input_text.len() > 0 {
+            if self.input_text.len() > 0 && self.input_text.len() + len < buf.capacity() {
                 buf.add_str(self.input_text.as_str());
                 len += self.input_text.len() as usize;
                 res.change()

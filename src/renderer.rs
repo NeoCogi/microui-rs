@@ -1620,13 +1620,10 @@ pub fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
     }
 }
 
-#[no_mangle]
 pub fn r_get_char_width(_font: Font, c: char) -> usize {
     unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
 }
-
-#[no_mangle]
-pub fn r_get_char_height(_font: Font, _c: char) -> usize {
+pub fn r_get_font_height(_font: Font) -> usize {
     18
 }
 
