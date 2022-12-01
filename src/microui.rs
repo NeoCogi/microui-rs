@@ -1,5 +1,4 @@
-use core::fmt::{Write};
-use core::str::FromStr;
+use core::ptr;
 use ::libc;
 use crate::fixed_collections::*;
 
@@ -1211,8 +1210,7 @@ impl Context {
     }
 
     pub fn mu_mouse_over(&mut self, rect: Rect) -> libc::c_int {
-        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.get_clip_rect(), self.mouse_pos) && self.in_hover_root())
-            as libc::c_int;
+        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.get_clip_rect(), self.mouse_pos) && self.in_hover_root()) as libc::c_int;
     }
 
     pub fn mu_update_control(&mut self, id: Id, rect: Rect, opt: WidgetOption) {
@@ -1380,14 +1378,24 @@ impl Context {
     fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
             self.number_edit = id;
-            write!(self.number_edit_buf, "{:.3}", value).unwrap();
+            self.number_edit_buf.clear();
+            self.number_edit_buf.append_real("%.3f", *value);
         }
+
         if self.number_edit == id {
             let mut temp = self.number_edit_buf.clone();
             let res: ResourceState = self.mu_textbox_raw(&mut temp, id, r, WidgetOption::None);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != id {
-                *value = f32::from_str(self.number_edit_buf.as_str()).unwrap();
+                let mut ascii = [0u8; 32];
+                let mut i = 0;
+                for c in self.number_edit_buf.as_str().chars() {
+                    ascii[i] = c as u8;
+                    i += 1;
+                }
+                ascii[i] = '\0' as u8;
+                let v = unsafe { libc::strtod(ascii.as_ptr() as *const libc::c_char, ptr::null_mut() as *mut *mut libc::c_char) };
+                *value = v as Real;
                 self.number_edit = 0 as libc::c_int as Id;
             } else {
                 return ResourceState::Active;
@@ -1437,9 +1445,8 @@ impl Context {
         x = ((v - low) * (base.w - w) as libc::c_float / (high - low)) as libc::c_int;
         thumb = rect(base.x + x, base.y, w, base.h);
         self.mu_draw_control_frame(id, thumb, ControlColor::Button, opt);
-        // TODO: change to variadic format
         let mut buff = FixedString::<64>::new();
-        buff.write_fmt(format_args!("{:.2}", v)).unwrap();
+        buff.append_real(fmt, *value);
         self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
@@ -1460,9 +1467,8 @@ impl Context {
             res.change();
         }
         self.mu_draw_control_frame(id, base, ControlColor::Base, opt);
-        // TODO: change to variadic format
         let mut buff = FixedString::<64>::new();
-        buff.write_fmt(format_args!("{:.2}", value)).unwrap();
+        buff.append_real(fmt, *value);
         self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
