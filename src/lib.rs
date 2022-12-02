@@ -52,7 +52,9 @@
 //
 use core::ptr;
 use ::libc;
-use crate::fixed_collections::*;
+
+mod fixed_collections;
+pub use crate::fixed_collections::*;
 
 #[derive(Copy, Clone)]
 pub struct Pool<const N: usize> {
@@ -1455,9 +1457,6 @@ impl Context {
     }
 
     pub fn slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
-        let mut thumb = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let mut x = 0;
-        let mut w = 0;
         let mut res = ResourceState::None;
         let last = *value;
         let mut v = last;
@@ -1485,9 +1484,9 @@ impl Context {
             res.change();
         }
         self.draw_control_frame(id, base, ControlColor::Base, opt);
-        w = self.style.thumb_size;
-        x = ((v - low) * (base.w - w) as Real/ (high - low)) as i32;
-        thumb = rect(base.x + x, base.y, w, base.h);
+        let w = self.style.thumb_size;
+        let x = ((v - low) * (base.w - w) as Real/ (high - low)) as i32;
+        let thumb = rect(base.x + x, base.y, w, base.h);
         self.draw_control_frame(id, thumb, ControlColor::Button, opt);
         let mut buff = FixedString::<64>::new();
         buff.append_real(fmt, *value);
@@ -1518,16 +1517,12 @@ impl Context {
     }
 
     fn header(&mut self, label: &str, is_treenode: bool, opt: WidgetOption) -> ResourceState {
-        let mut r: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let mut active = 0;
-        let mut expanded = 0;
         let id: Id = self.get_id_from_str(label);
         let idx = self.treenode_pool.get(id);
-        let width = [-1];
-        self.layout_row(&width, 0);
-        active = idx.is_some() as i32;
-        expanded = if opt.is_expanded() { (active == 0) as i32 } else { active };
-        r = self.layout_next();
+        self.layout_row(&[-1], 0);
+        let mut active = idx.is_some() as i32;
+        let expanded = if opt.is_expanded() { (active == 0) as i32 } else { active };
+        let mut r = self.layout_next();
         self.update_control(id, r, WidgetOption::None);
         active ^= (self.mouse_pressed.is_left() && self.focus == id) as i32;
         if idx.is_some() {
@@ -1595,10 +1590,8 @@ impl Context {
         let body = *body;
         let maxscroll = cs.y - body.h;
         if maxscroll > 0 && body.h > 0 {
-            let mut base: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let id: Id = self.get_id_from_str("!scrollbary");
-            base = body;
+            let mut base = body;
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
             self.update_control(id, base, WidgetOption::None);
@@ -1608,7 +1601,7 @@ impl Context {
             self.containers[cnt_id].scroll.y = Self::clamp(self.containers[cnt_id].scroll.y, 0, maxscroll);
 
             (self.draw_frame).expect("non-null function pointer")(self, base, ControlColor::ScrollBase);
-            thumb = base;
+            let mut thumb = base;
             thumb.h = if self.style.thumb_size > base.h * body.h / cs.y {
                 self.style.thumb_size
             } else {
@@ -1624,10 +1617,8 @@ impl Context {
         }
         let maxscroll_0 = cs.x - body.w;
         if maxscroll_0 > 0 && body.w > 0 {
-            let mut base_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-            let mut thumb_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let id_0: Id = self.get_id_from_str("!scrollbarx");
-            base_0 = body;
+            let mut base_0 = body;
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
             self.update_control(id_0, base_0, WidgetOption::None);
@@ -1637,7 +1628,7 @@ impl Context {
             self.containers[cnt_id].scroll.x = Self::clamp(self.containers[cnt_id].scroll.x, 0, maxscroll_0);
 
             (self.draw_frame).expect("non-null function pointer")(self, base_0, ControlColor::ScrollBase);
-            thumb_0 = base_0;
+            let mut thumb_0 = base_0;
             thumb_0.w = if self.style.thumb_size > base_0.w * body.w / cs.x {
                 self.style.thumb_size
             } else {
@@ -1685,7 +1676,6 @@ impl Context {
     }
 
     pub fn begin_window_ex(&mut self, title: &str, mut r: Rect, opt: WidgetOption) -> ResourceState {
-        let mut body = Rect { x: 0, y: 0, w: 0, h: 0 };
         let id = self.get_id_from_str(title);
         let cnt_id = self.get_container_index_intern(id, opt);
         if cnt_id.is_none() || !self.containers[cnt_id.unwrap()].open {
@@ -1697,7 +1687,7 @@ impl Context {
             self.containers[cnt_id.unwrap()].rect = r;
         }
         self.begin_root_container(cnt_id.unwrap());
-        body = self.containers[cnt_id.unwrap()].rect;
+        let mut body = self.containers[cnt_id.unwrap()].rect;
         r = body;
         if !opt.has_no_frame() {
             (self.draw_frame).expect("non-null function pointer")(self, r, ControlColor::WindowBG);

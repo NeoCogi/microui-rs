@@ -58,23 +58,21 @@
 //
 // If you need to have the smallest executable, use no_std:
 //
-#![no_main]
-#![no_std]
-
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_panic: &PanicInfo<'_>) -> ! {
-    loop {}
-}
-
+// #![no_main]
+// #![no_std]
+//
+// use core::panic::PanicInfo;
+// use microui::*;
+//
+// #[panic_handler]
+// fn panic(_panic: &PanicInfo<'_>) -> ! {
+//     loop {}
+// }
+//
 // #[no_mangle]
 // pub extern "C" fn main() {}
 
 extern crate libc;
-mod fixed_collections;
-#[path = "./microui.rs"]
-pub mod microui;
 #[path = "./renderer.rs"]
 pub mod renderer;
 
@@ -82,7 +80,6 @@ pub type SDL_SysWMmsg = libc::c_int;
 
 use microui::*;
 use renderer::*;
-use fixed_collections::*;
 
 //use ::libc;
 extern "C" {
@@ -1321,8 +1318,9 @@ static mut key_map: [libc::c_char; 256] = [
     0,
 ];
 
-#[no_mangle]
-pub extern "C" fn main() {
+// #[no_mangle]
+// pub extern "C"
+fn main() {
     unsafe {
         SDL_Init(
             0x1 as libc::c_uint

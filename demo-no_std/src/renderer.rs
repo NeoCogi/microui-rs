@@ -50,7 +50,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 //
-use crate::microui::*;
+use microui::*;
 use ::libc;
 
 pub type SDL_Window = libc::c_int;

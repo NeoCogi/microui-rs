@@ -1,13 +1,14 @@
 [package]
-name = "microui-demo"
+name = "microui"
 authors = ["Wael El Oraiby"]
-version = "0.0.0"
-publish = false
+version = "0.1.0"
 edition = "2021"
-build = "build-demo.rs"
+
+[lib]
+name ="microui"
 
 [dependencies]
-libc= "0.2.137"
+libc = "0.2.137"
 
 [profile.release]
 panic = 'abort'
