@@ -2,16 +2,6 @@ use core::ptr;
 use ::libc;
 use crate::fixed_collections::*;
 
-pub type _IO_wide_data = libc::c_int;
-pub type _IO_codecvt = libc::c_int;
-pub type _IO_marker = libc::c_int;
-
-extern "C" {
-    fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
-}
-
-pub type size_t = libc::c_ulong;
-
 #[derive(Copy, Clone)]
 pub struct Pool<const N: usize> {
     vec: [PoolItem; N],
@@ -376,8 +366,8 @@ pub struct Context {
     pub focus: Id,
     pub last_id: Id,
     pub last_rect: Rect,
-    pub last_zindex: libc::c_int,
-    pub updated_focus: libc::c_int,
+    pub last_zindex: i32,
+    pub updated_focus: bool,
     pub frame: usize,
     pub hover_root: Option<usize>,
     pub next_hover_root: Option<usize>,
@@ -400,8 +390,8 @@ pub struct Context {
     pub scroll_delta: Vec2i,
     pub mouse_down: MouseButton,
     pub mouse_pressed: MouseButton,
-    pub key_down: libc::c_int,
-    pub key_pressed: libc::c_int,
+    pub key_down: u32,
+    pub key_pressed: u32,
     pub input_text: FixedString<32>,
 }
 
@@ -417,7 +407,7 @@ impl Default for Context {
             last_id: 0,
             last_rect: Rect::default(),
             last_zindex: 0,
-            updated_focus: 0,
+            updated_focus: false,
             frame: 0,
             hover_root: None,
             next_hover_root: None,
@@ -448,7 +438,6 @@ impl Default for Context {
 }
 
 #[derive(Default, Copy, Clone)]
-#[repr(C)]
 pub struct Vec2i {
     pub x: i32,
     pub y: i32,
@@ -463,7 +452,6 @@ struct PoolItem {
 pub type Id = u32;
 
 #[derive(Default, Copy, Clone)]
-#[repr(C)]
 pub struct Container {
     pub head_idx: Option<usize>,
     pub tail_idx: Option<usize>,
@@ -471,8 +459,8 @@ pub struct Container {
     pub body: Rect,
     pub content_size: Vec2i,
     pub scroll: Vec2i,
-    pub zindex: libc::c_int,
-    pub open: libc::c_int,
+    pub zindex: i32,
+    pub open: bool,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -490,12 +478,12 @@ pub struct Layout {
     pub position: Vec2i,
     pub size: Vec2i,
     pub max: Vec2i,
-    pub widths: [libc::c_int; 16],
-    pub items: libc::c_int,
-    pub item_index: libc::c_int,
-    pub next_row: libc::c_int,
-    pub next_type: libc::c_int,
-    pub indent: libc::c_int,
+    pub widths: [i32; 16],
+    pub items: usize,
+    pub item_index: usize,
+    pub next_row: i32,
+    pub next_type: LayoutPosition,
+    pub indent: i32,
 }
 
 #[derive(Copy, Clone)]
@@ -545,21 +533,30 @@ pub type Font = *const libc::c_void;
 pub struct Style {
     pub font: Font,
     pub size: Vec2i,
-    pub padding: libc::c_int,
-    pub spacing: libc::c_int,
-    pub indent: libc::c_int,
-    pub title_height: libc::c_int,
-    pub scrollbar_size: libc::c_int,
-    pub thumb_size: libc::c_int,
+    pub padding: i32,
+    pub spacing: i32,
+    pub indent: i32,
+    pub title_height: i32,
+    pub scrollbar_size: i32,
+    pub thumb_size: i32,
     pub colors: [Color; 14],
 }
 
 pub type Real = f32;
 
-pub const ABSOLUTE: C2RustUnnamed_14 = 2;
-pub const RELATIVE: C2RustUnnamed_14 = 1;
+#[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
+pub enum LayoutPosition {
+    Absolute = 2,
+    Relative = 1,
+    None = 0,
+}
 
-pub type C2RustUnnamed_14 = libc::c_uint;
+impl Default for LayoutPosition {
+    fn default() -> Self {
+        LayoutPosition::None
+    }
+}
 
 static UNCLIPPED_RECT: Rect = Rect { x: 0, y: 0, w: 0x1000000, h: 0x1000000 };
 
@@ -568,15 +565,15 @@ impl Default for Style {
         Self {
             font: 0 as *const libc::c_void,
             size: Vec2i {
-                x: 68 as libc::c_int,
-                y: 10 as libc::c_int,
+                x: 68,
+                y: 10,
             },
-            padding: 5 as libc::c_int,
-            spacing: 4 as libc::c_int,
-            indent: 24 as libc::c_int,
-            title_height: 24 as libc::c_int,
-            scrollbar_size: 12 as libc::c_int,
-            thumb_size: 8 as libc::c_int,
+            padding: 5,
+            spacing: 4,
+            indent: 24,
+            title_height: 24,
+            scrollbar_size: 12,
+            thumb_size: 8,
             colors: [
                 Color { r: 230, g: 230, b: 230, a: 255 },
                 Color { r: 25, g: 25, b: 25, a: 255 },
@@ -610,7 +607,7 @@ pub fn color(r: u8, g: u8, b: u8, a: u8) -> Color {
 }
 
 pub fn expand_rect(r: Rect, n: i32) -> Rect {
-    rect(r.x - n, r.y - n, r.w + n * 2 as libc::c_int, r.h + n * 2 as libc::c_int)
+    rect(r.x - n, r.y - n, r.w + n * 2, r.h + n * 2)
 }
 
 pub fn intersect_rects(r1: Rect, r2: Rect) -> Rect {
@@ -632,12 +629,12 @@ pub fn rect_overlaps_vec2(r: Rect, p: Vec2i) -> bool {
 }
 
 pub fn draw_frame(ctx: &mut Context, rect: Rect, colorid: ControlColor) {
-    ctx.mu_draw_rect(rect, ctx.style.colors[colorid as usize]);
+    ctx.draw_rect(rect, ctx.style.colors[colorid as usize]);
     if colorid == ControlColor::ScrollBase || colorid == ControlColor::ScrollThumb || colorid == ControlColor::TitleBG {
         return;
     }
     if ctx.style.colors[ControlColor::Border as usize].a != 0 {
-        ctx.mu_draw_box(expand_rect(rect, 1 as libc::c_int), ctx.style.colors[ControlColor::Border as usize]);
+        ctx.draw_box(expand_rect(rect, 1), ctx.style.colors[ControlColor::Border as usize]);
     }
 }
 
@@ -645,21 +642,21 @@ fn hash_u32(hash_0: &mut Id, orig_id: u32) {
     let bytes = orig_id.to_be_bytes();
     for b in bytes {
         let fresh1 = b;
-        *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
+        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
     }
 }
 
 fn hash_str(hash_0: &mut Id, s: &str) {
     for c in s.chars() {
         let fresh1 = c as i32;
-        *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
+        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
     }
 }
 
 fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
     for c in s {
         let fresh1 = *c as i32;
-        *hash_0 = (*hash_0 ^ fresh1 as libc::c_uint).wrapping_mul(16777619 as libc::c_int as libc::c_uint);
+        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
     }
 }
 
@@ -693,21 +690,21 @@ impl Context {
             self.containers[self.scroll_target.unwrap()].scroll.x += self.scroll_delta.x;
             self.containers[self.scroll_target.unwrap()].scroll.y += self.scroll_delta.y;
         }
-        if self.updated_focus == 0 {
-            self.focus = 0 as libc::c_int as Id;
+        if !self.updated_focus {
+            self.focus = 0;
         }
-        self.updated_focus = 0 as libc::c_int;
+        self.updated_focus = false;
         if !self.mouse_pressed.is_none()
             && !self.next_hover_root.is_none()
             && self.containers[self.next_hover_root.unwrap()].zindex < self.last_zindex
-            && self.containers[self.next_hover_root.unwrap()].zindex >= 0 as libc::c_int
+            && self.containers[self.next_hover_root.unwrap()].zindex >= 0
         {
-            self.mu_bring_to_front(self.next_hover_root.unwrap());
+            self.bring_to_front(self.next_hover_root.unwrap());
         }
-        self.key_pressed = 0 as libc::c_int;
+        self.key_pressed = 0;
         self.input_text.clear();
         self.mouse_pressed = MouseButton::None;
-        self.scroll_delta = vec2(0 as libc::c_int, 0 as libc::c_int);
+        self.scroll_delta = vec2(0, 0);
         self.last_mouse_pos = self.mouse_pos;
         let n = self.root_list.len();
         quick_sort_by(self.root_list.as_slice_mut(), |a, b| {
@@ -748,7 +745,7 @@ impl Context {
 
     pub fn set_focus(&mut self, id: Id) {
         self.focus = id;
-        self.updated_focus = 1 as libc::c_int;
+        self.updated_focus = true;
     }
 
     pub fn get_id_u32(&mut self, orig_id: u32) -> Id {
@@ -832,15 +829,13 @@ impl Context {
             items: 0,
             item_index: 0,
             next_row: 0,
-            next_type: 0,
+            next_type: LayoutPosition::None,
             indent: 0,
         };
-        let mut width = 0;
-
         layout.body = rect(body.x - scroll.x, body.y - scroll.y, body.w, body.h);
-        layout.max = vec2(-(0x1000000 as libc::c_int), -(0x1000000 as libc::c_int));
+        layout.max = vec2(-0x1000000, -0x1000000);
         self.layout_stack.push(layout);
-        self.mu_layout_row(1 as libc::c_int, &mut width, 0);
+        self.layout_row(&[0], 0);
     }
 
     fn get_layout(&self) -> &Layout {
@@ -893,7 +888,7 @@ impl Context {
     fn get_container_index_intern(&mut self, id: Id, opt: WidgetOption) -> Option<usize> {
         let idx = self.container_pool.get(id);
         if idx.is_some() {
-            if self.containers[idx.unwrap()].open != 0 || !opt.is_closed() {
+            if self.containers[idx.unwrap()].open || !opt.is_closed() {
                 self.container_pool.update(idx.unwrap(), self.frame);
             }
             return idx;
@@ -905,59 +900,59 @@ impl Context {
         self.containers[idx] = Container::default();
         self.containers[idx].head_idx = None;
         self.containers[idx].tail_idx = None;
-        self.containers[idx].open = 1 as libc::c_int;
-        self.mu_bring_to_front(idx);
+        self.containers[idx].open = true;
+        self.bring_to_front(idx);
         Some(idx)
     }
 
-    fn mu_get_container_index(&mut self, name: &str) -> Option<usize> {
+    fn get_container_index(&mut self, name: &str) -> Option<usize> {
         let id = self.get_id_from_str(name);
         self.get_container_index_intern(id, WidgetOption::None)
     }
 
-    pub fn mu_bring_to_front(&mut self, cnt: usize) {
+    pub fn bring_to_front(&mut self, cnt: usize) {
         self.last_zindex += 1;
         self.containers[cnt].zindex = self.last_zindex;
     }
 
-    pub fn mu_input_mousemove(&mut self, x: i32, y: i32) {
+    pub fn input_mousemove(&mut self, x: i32, y: i32) {
         self.mouse_pos = vec2(x, y);
     }
 
-    pub fn mu_input_mousedown(&mut self, x: i32, y: i32, btn: MouseButton) {
-        self.mu_input_mousemove(x, y);
+    pub fn input_mousedown(&mut self, x: i32, y: i32, btn: MouseButton) {
+        self.input_mousemove(x, y);
         self.mouse_down.set(btn);
         self.mouse_pressed.set(btn);
     }
 
-    pub fn mu_input_mouseup(&mut self, x: i32, y: i32, btn: MouseButton) {
-        self.mu_input_mousemove(x, y);
+    pub fn input_mouseup(&mut self, x: i32, y: i32, btn: MouseButton) {
+        self.input_mousemove(x, y);
         self.mouse_down.clear(btn);
     }
 
-    pub fn mu_input_scroll(&mut self, x: i32, y: i32) {
+    pub fn input_scroll(&mut self, x: i32, y: i32) {
         self.scroll_delta.x += x;
         self.scroll_delta.y += y;
     }
 
-    pub fn mu_input_keydown(&mut self, key: libc::c_int) {
+    pub fn input_keydown(&mut self, key: u32) {
         self.key_pressed |= key;
         self.key_down |= key;
     }
 
-    pub fn mu_input_keyup(&mut self, key: libc::c_int) {
+    pub fn input_keyup(&mut self, key: u32) {
         self.key_down &= !key;
     }
 
-    pub fn mu_input_text(&mut self, text: &str) {
+    pub fn input_text(&mut self, text: &str) {
         self.input_text += text;
     }
 
-    pub fn mu_push_command(&mut self, cmd: Command) -> (&mut Command, usize) {
+    pub fn push_command(&mut self, cmd: Command) -> (&mut Command, usize) {
         self.command_list.push(cmd)
     }
 
-    pub fn mu_push_text(&mut self, str: &str) -> usize {
+    pub fn push_text(&mut self, str: &str) -> usize {
         let str_start = self.text_stack.len();
         for c in str.chars() {
             self.text_stack.push(c);
@@ -983,45 +978,45 @@ impl Context {
     }
 
     fn push_jump(&mut self, dst_idx: Option<usize>) -> usize {
-        let (_, pos) = self.mu_push_command(Command::Jump { dst_idx });
+        let (_, pos) = self.push_command(Command::Jump { dst_idx });
         pos
     }
 
-    pub fn mu_set_clip(&mut self, rect: Rect) {
-        self.mu_push_command(Command::Clip { rect });
+    pub fn set_clip(&mut self, rect: Rect) {
+        self.push_command(Command::Clip { rect });
     }
 
-    pub fn mu_draw_rect(&mut self, mut rect: Rect, color: Color) {
+    pub fn draw_rect(&mut self, mut rect: Rect, color: Color) {
         rect = intersect_rects(rect, self.get_clip_rect());
-        if rect.w > 0 as libc::c_int && rect.h > 0 as libc::c_int {
-            self.mu_push_command(Command::Rect { rect, color });
+        if rect.w > 0 && rect.h > 0 {
+            self.push_command(Command::Rect { rect, color });
         }
     }
 
-    pub fn mu_draw_box(&mut self, r: Rect, color: Color) {
-        self.mu_draw_rect(rect(r.x + 1, r.y, r.w - 2, 1), color);
-        self.mu_draw_rect(
-            rect(r.x + 1 as libc::c_int, r.y + r.h - 1 as libc::c_int, r.w - 2 as libc::c_int, 1 as libc::c_int),
+    pub fn draw_box(&mut self, r: Rect, color: Color) {
+        self.draw_rect(rect(r.x + 1, r.y, r.w - 2, 1), color);
+        self.draw_rect(
+            rect(r.x + 1, r.y + r.h - 1, r.w - 2, 1),
             color,
         );
-        self.mu_draw_rect(rect(r.x, r.y, 1, r.h), color);
-        self.mu_draw_rect(rect(r.x + r.w - 1, r.y, 1, r.h), color);
+        self.draw_rect(rect(r.x, r.y, 1, r.h), color);
+        self.draw_rect(rect(r.x + r.w - 1, r.y, 1, r.h), color);
     }
 
-    pub fn mu_draw_text(&mut self, font: Font, str: &str, pos: Vec2i, color: Color) {
+    pub fn draw_text(&mut self, font: Font, str: &str, pos: Vec2i, color: Color) {
         let rect: Rect = rect(pos.x, pos.y, self.get_text_width(font, str), self.get_text_height(font, str));
         let clipped = self.check_clip(rect);
         match clipped {
             Clip::All => return,
             Clip::Part => {
                 let clip = self.get_clip_rect();
-                self.mu_set_clip(clip)
+                self.set_clip(clip)
             }
             _ => (),
         }
 
-        let str_start = self.mu_push_text(str);
-        self.mu_push_command(Command::Text {
+        let str_start = self.push_text(str);
+        self.push_command(Command::Text {
             str_start,
             str_len: str.len(),
             pos,
@@ -1029,32 +1024,32 @@ impl Context {
             font,
         });
         if clipped != Clip::None {
-            self.mu_set_clip(UNCLIPPED_RECT);
+            self.set_clip(UNCLIPPED_RECT);
         }
     }
 
-    pub fn mu_draw_icon(&mut self, id: Icon, rect: Rect, color: Color) {
+    pub fn draw_icon(&mut self, id: Icon, rect: Rect, color: Color) {
         let clipped = self.check_clip(rect);
         match clipped {
             Clip::All => return,
             Clip::Part => {
                 let clip = self.get_clip_rect();
-                self.mu_set_clip(clip)
+                self.set_clip(clip)
             }
             _ => (),
         }
-        self.mu_push_command(Command::Icon { id, rect, color });
+        self.push_command(Command::Icon { id, rect, color });
         if clipped != Clip::None {
-            self.mu_set_clip(UNCLIPPED_RECT);
+            self.set_clip(UNCLIPPED_RECT);
         }
     }
 
-    pub fn mu_layout_begin_column(&mut self) {
-        let layout = self.mu_layout_next();
-        self.push_layout(layout, vec2(0 as libc::c_int, 0 as libc::c_int));
+    pub fn layout_begin_column(&mut self) {
+        let layout = self.layout_next();
+        self.push_layout(layout, vec2(0, 0));
     }
 
-    pub fn mu_layout_end_column(&mut self) {
+    pub fn layout_end_column(&mut self) {
         let b = self.get_layout().clone();
         self.layout_stack.pop();
 
@@ -1073,77 +1068,75 @@ impl Context {
         a.max.y = i32::max(a.max.y, b.max.y);
     }
 
-    pub unsafe fn mu_layout_row_for_layout(layout: &mut Layout, items: libc::c_int, widths: *const libc::c_int, height: libc::c_int) {
-        if !widths.is_null() {
-            assert!(items <= 16 as libc::c_int);
-            memcpy(
-                (layout.widths).as_mut_ptr() as *mut libc::c_void,
-                widths as *const libc::c_void,
-                (items as libc::c_ulong).wrapping_mul(core::mem::size_of::<libc::c_int>() as libc::c_ulong),
-            );
+    pub unsafe fn layout_row_for_layout(layout: &mut Layout, widths: &[i32], height: i32) {
+        layout.items = widths.len();
+        assert!(widths.len() <= 16);
+        for i in 0..widths.len() {
+            layout.widths[i] = widths[i];
         }
-        layout.items = items;
         layout.position = vec2(layout.indent, layout.next_row);
         layout.size.y = height;
-        layout.item_index = 0 as libc::c_int;
+        layout.item_index = 0;
     }
 
-    pub fn mu_layout_row(&mut self, items: libc::c_int, widths: *const libc::c_int, height: libc::c_int) {
+    pub fn layout_row(&mut self, widths: &[i32], height: i32) {
         let layout = self.get_layout_mut();
-        unsafe { Self::mu_layout_row_for_layout(layout, items, widths, height) };
+        unsafe { Self::layout_row_for_layout(layout, widths, height) };
     }
 
-    pub fn mu_layout_width(&mut self, width: i32) {
+    pub fn layout_width(&mut self, width: i32) {
         self.get_layout_mut().size.x = width;
     }
 
-    pub fn mu_layout_height(&mut self, height: i32) {
+    pub fn layout_height(&mut self, height: i32) {
         self.get_layout_mut().size.y = height;
     }
 
-    pub fn mu_layout_set_next(&mut self, r: Rect, relative: libc::c_int) {
+    pub fn layout_set_next(&mut self, r: Rect, position: LayoutPosition) {
         let layout = self.get_layout_mut();
         layout.next = r;
-        layout.next_type = if relative != 0 { RELATIVE as libc::c_int } else { ABSOLUTE as libc::c_int };
+        layout.next_type = position;
     }
 
-    pub fn mu_layout_next(&mut self) -> Rect {
+    pub fn layout_next(&mut self) -> Rect {
         let style = self.style;
         let layout = self.get_layout_mut();
         let mut res: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        if layout.next_type != 0 {
-            let type_0: libc::c_int = layout.next_type;
-            layout.next_type = 0 as libc::c_int;
+        if layout.next_type != LayoutPosition::None {
+            let type_0 = layout.next_type;
+            layout.next_type = LayoutPosition::None;
             res = layout.next;
-            if type_0 == ABSOLUTE as libc::c_int {
+            if type_0 == LayoutPosition::Absolute {
                 self.last_rect = res;
                 return self.last_rect;
             }
         } else {
             let litems = layout.items;
             let lsize_y = layout.size.y;
+            let mut undefined_widths = [0; 16];
+            undefined_widths[0..litems as usize].copy_from_slice(&layout.widths[0..litems as usize]);
             if layout.item_index == layout.items {
-                unsafe { Self::mu_layout_row_for_layout(layout, litems, 0 as *const libc::c_int, lsize_y) };
+                unsafe { Self::layout_row_for_layout(layout, &undefined_widths[0..litems as usize], lsize_y) };
             }
             res.x = layout.position.x;
             res.y = layout.position.y;
-            res.w = if layout.items > 0 as libc::c_int {
+            res.w = if layout.items > 0 {
                 layout.widths[layout.item_index as usize]
             } else {
                 layout.size.x
             };
             res.h = layout.size.y;
-            if res.w == 0 as libc::c_int {
-                res.w = style.size.x + style.padding * 2 as libc::c_int;
+            if res.w == 0 {
+                res.w = style.size.x + style.padding * 2;
             }
-            if res.h == 0 as libc::c_int {
-                res.h = style.size.y + style.padding * 2 as libc::c_int;
+            if res.h == 0 {
+                res.h = style.size.y + style.padding * 2;
             }
-            if res.w < 0 as libc::c_int {
-                res.w += layout.body.w - res.x + 1 as libc::c_int;
+            if res.w < 0 {
+                res.w += layout.body.w - res.x + 1;
             }
-            if res.h < 0 as libc::c_int {
-                res.h += layout.body.h - res.y + 1 as libc::c_int;
+            if res.h < 0 {
+                res.h += layout.body.h - res.y + 1;
             }
             layout.item_index += 1;
         }
@@ -1179,7 +1172,7 @@ impl Context {
         }
     }
 
-    pub fn mu_draw_control_frame(&mut self, id: Id, rect: Rect, mut colorid: ControlColor, opt: WidgetOption) {
+    pub fn draw_control_frame(&mut self, id: Id, rect: Rect, mut colorid: ControlColor, opt: WidgetOption) {
         if opt.has_no_frame() {
             return;
         }
@@ -1192,40 +1185,40 @@ impl Context {
         (self.draw_frame).expect("non-null function pointer")(self, rect, colorid);
     }
 
-    pub fn mu_draw_control_text(&mut self, str: &str, rect: Rect, colorid: ControlColor, opt: WidgetOption) {
+    pub fn draw_control_text(&mut self, str: &str, rect: Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: Vec2i = Vec2i { x: 0, y: 0 };
         let font: Font = self.style.font;
         let tw = self.get_text_width(font, str);
         self.push_clip_rect(rect);
-        pos.y = rect.y + (rect.h - self.get_text_height(font, str)) / 2 as libc::c_int;
+        pos.y = rect.y + (rect.h - self.get_text_height(font, str)) / 2;
         if opt.is_aligned_center() {
-            pos.x = rect.x + (rect.w - tw) / 2 as libc::c_int;
+            pos.x = rect.x + (rect.w - tw) / 2;
         } else if opt.is_aligned_right() {
             pos.x = rect.x + rect.w - tw - self.style.padding;
         } else {
             pos.x = rect.x + self.style.padding;
         }
-        self.mu_draw_text(font, str, pos, self.style.colors[colorid as usize]);
+        self.draw_text(font, str, pos, self.style.colors[colorid as usize]);
         self.pop_clip_rect();
     }
 
-    pub fn mu_mouse_over(&mut self, rect: Rect) -> libc::c_int {
-        return (rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.get_clip_rect(), self.mouse_pos) && self.in_hover_root()) as libc::c_int;
+    pub fn mouse_over(&mut self, rect: Rect) -> bool {
+        rect_overlaps_vec2(rect, self.mouse_pos) && rect_overlaps_vec2(self.get_clip_rect(), self.mouse_pos) && self.in_hover_root()
     }
 
-    pub fn mu_update_control(&mut self, id: Id, rect: Rect, opt: WidgetOption) {
-        let mouseover: libc::c_int = self.mu_mouse_over(rect);
+    pub fn update_control(&mut self, id: Id, rect: Rect, opt: WidgetOption) {
+        let mouseover = self.mouse_over(rect);
         if self.focus == id {
-            self.updated_focus = 1 as libc::c_int;
+            self.updated_focus = true;
         }
         if opt.is_not_interactive() {
             return;
         }
-        if mouseover != 0 && self.mouse_down.is_none() {
+        if mouseover && self.mouse_down.is_none() {
             self.hover = id;
         }
         if self.focus == id {
-            if !self.mouse_pressed.is_none() && mouseover == 0 {
+            if !self.mouse_pressed.is_none() && !mouseover {
                 self.set_focus(0);
             }
             if self.mouse_down.is_none() && !opt.is_holding_focus() {
@@ -1235,7 +1228,7 @@ impl Context {
         if self.hover == id {
             if !self.mouse_pressed.is_none() {
                 self.set_focus(id);
-            } else if mouseover == 0 {
+            } else if !mouseover {
                 self.hover = 0;
             }
         }
@@ -1262,13 +1255,12 @@ impl Context {
     }
 
     pub fn text(&mut self, text: &str) {
-        let mut width = -1;
         let font: Font = self.style.font;
-        let color: Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
-        self.mu_layout_begin_column();
+        let color: Color = self.style.colors[ControlColor::Text as usize];
+        self.layout_begin_column();
         let h = self.font_height.expect("non-null function pointer")(font) as i32;
-        self.mu_layout_row(1, &mut width, h);
-        let mut r = self.mu_layout_next();
+        self.layout_row(&[-1], h);
+        let mut r = self.layout_next();
         for line in text.lines() {
             let mut rx = r.x;
             let words = line.split_inclusive(' ');
@@ -1276,21 +1268,21 @@ impl Context {
                 // TODO: split w when its width > w into many lines
                 let tw = self.get_text_width(font, w);
                 if tw + rx < r.x + r.w {
-                    self.mu_draw_text(font, w, vec2(rx, r.y), color);
+                    self.draw_text(font, w, vec2(rx, r.y), color);
                     rx += tw;
                 } else {
-                    r = self.mu_layout_next();
+                    r = self.layout_next();
                     rx = r.x;
                 }
             }
-            r = self.mu_layout_next();
+            r = self.layout_next();
         }
-        self.mu_layout_end_column();
+        self.layout_end_column();
     }
 
     pub fn label(&mut self, text: &str) {
-        let layout = self.mu_layout_next();
-        self.mu_draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
+        let layout = self.layout_next();
+        self.draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
     }
 
     pub fn button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
@@ -1300,17 +1292,17 @@ impl Context {
         } else {
             self.get_id_u32(icon as u32)
         };
-        let r: Rect = self.mu_layout_next();
-        self.mu_update_control(id, r, opt);
+        let r: Rect = self.layout_next();
+        self.update_control(id, r, opt);
         if self.mouse_pressed.is_left() && self.focus == id {
             res.submit();
         }
-        self.mu_draw_control_frame(id, r, ControlColor::Button, opt);
+        self.draw_control_frame(id, r, ControlColor::Button, opt);
         if label.len() > 0 {
-            self.mu_draw_control_text(label, r, ControlColor::Text, opt);
+            self.draw_control_text(label, r, ControlColor::Text, opt);
         }
         if icon != Icon::None {
-            self.mu_draw_icon(icon, r, self.style.colors[ControlColor::Text as libc::c_int as usize]);
+            self.draw_icon(icon, r, self.style.colors[ControlColor::Text as usize]);
         }
         return res;
     }
@@ -1318,25 +1310,25 @@ impl Context {
     pub fn checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
         let mut res = ResourceState::None;
         let id: Id = self.get_id_from_ptr(state);
-        let mut r: Rect = self.mu_layout_next();
+        let mut r: Rect = self.layout_next();
         let box_0: Rect = rect(r.x, r.y, r.h, r.h);
-        self.mu_update_control(id, r, WidgetOption::None);
+        self.update_control(id, r, WidgetOption::None);
         if self.mouse_pressed.is_left() && self.focus == id {
             res.change();
             *state = *state == false;
         }
-        self.mu_draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::None);
+        self.draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::None);
         if *state {
-            self.mu_draw_icon(Icon::Check, box_0, self.style.colors[ControlColor::Text as libc::c_int as usize]);
+            self.draw_icon(Icon::Check, box_0, self.style.colors[ControlColor::Text as usize]);
         }
         r = rect(r.x + box_0.w, r.y, r.w - box_0.w, r.h);
-        self.mu_draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
+        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
         return res;
     }
 
-    pub fn mu_textbox_raw(&mut self, buf: &mut dyn IString, id: Id, r: Rect, opt: WidgetOption) -> ResourceState {
+    pub fn textbox_raw(&mut self, buf: &mut dyn IString, id: Id, r: Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
-        self.mu_update_control(id, r, opt.with_hold_focus());
+        self.update_control(id, r, opt.with_hold_focus());
         if self.focus == id {
             let mut len = buf.len();
 
@@ -1346,37 +1338,37 @@ impl Context {
                 res.change()
             }
 
-            if self.key_pressed & MU_KEY_BACKSPACE as i32 != 0 && len > 0 {
+            if self.key_pressed & MU_KEY_BACKSPACE != 0 && len > 0 {
                 // skip utf-8 continuation bytes
                 buf.pop();
                 res.change();
             }
-            if self.key_pressed & MU_KEY_RETURN as libc::c_int != 0 {
+            if self.key_pressed & MU_KEY_RETURN != 0 {
                 self.set_focus(0);
                 res.submit();
             }
         }
-        self.mu_draw_control_frame(id, r, ControlColor::Base, opt);
+        self.draw_control_frame(id, r, ControlColor::Base, opt);
         if self.focus == id {
-            let color: Color = self.style.colors[ControlColor::Text as libc::c_int as usize];
-            let font: Font = self.style.font;
+            let color = self.style.colors[ControlColor::Text as usize];
+            let font = self.style.font;
             let textw = self.get_text_width(font, buf.as_str());
             let texth = self.get_text_height(font, buf.as_str());
-            let ofx: libc::c_int = r.w - self.style.padding - textw - 1 as libc::c_int;
-            let textx: libc::c_int = r.x + (if ofx < self.style.padding { ofx } else { self.style.padding });
-            let texty: libc::c_int = r.y + (r.h - texth) / 2 as libc::c_int;
+            let ofx = r.w - self.style.padding - textw - 1;
+            let textx = r.x + (if ofx < self.style.padding { ofx } else { self.style.padding });
+            let texty = r.y + (r.h - texth) / 2;
             self.push_clip_rect(r);
-            self.mu_draw_text(font, buf.as_str(), vec2(textx, texty), color);
-            self.mu_draw_rect(rect(textx + textw, texty, 1 as libc::c_int, texth), color);
+            self.draw_text(font, buf.as_str(), vec2(textx, texty), color);
+            self.draw_rect(rect(textx + textw, texty, 1, texth), color);
             self.pop_clip_rect();
         } else {
-            self.mu_draw_control_text(buf.as_str(), r, ControlColor::Text, opt);
+            self.draw_control_text(buf.as_str(), r, ControlColor::Text, opt);
         }
         return res;
     }
 
     fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
-        if self.mouse_pressed.is_left() && self.key_down & MU_KEY_SHIFT as libc::c_int != 0 && self.hover == id {
+        if self.mouse_pressed.is_left() && (self.key_down & MU_KEY_SHIFT) != 0 && self.hover == id {
             self.number_edit = id;
             self.number_edit_buf.clear();
             self.number_edit_buf.append_real("%.3f", *value);
@@ -1384,7 +1376,7 @@ impl Context {
 
         if self.number_edit == id {
             let mut temp = self.number_edit_buf.clone();
-            let res: ResourceState = self.mu_textbox_raw(&mut temp, id, r, WidgetOption::None);
+            let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::None);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != id {
                 let mut ascii = [0u8; 32];
@@ -1396,7 +1388,7 @@ impl Context {
                 ascii[i] = '\0' as u8;
                 let v = unsafe { libc::strtod(ascii.as_ptr() as *const libc::c_char, ptr::null_mut() as *mut *mut libc::c_char) };
                 *value = v as Real;
-                self.number_edit = 0 as libc::c_int as Id;
+                self.number_edit = 0;
             } else {
                 return ResourceState::Active;
             }
@@ -1404,29 +1396,29 @@ impl Context {
         return ResourceState::None;
     }
 
-    pub fn mu_textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
+    pub fn textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
         let id: Id = self.get_id_from_ptr(buf);
-        let r: Rect = self.mu_layout_next();
-        return self.mu_textbox_raw(buf, id, r, opt);
+        let r: Rect = self.layout_next();
+        return self.textbox_raw(buf, id, r, opt);
     }
 
-    pub fn mu_slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
-        let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let mut x: libc::c_int = 0;
-        let mut w: libc::c_int = 0;
+    pub fn slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+        let mut thumb = Rect { x: 0, y: 0, w: 0, h: 0 };
+        let mut x = 0;
+        let mut w = 0;
         let mut res = ResourceState::None;
-        let last: Real = *value;
-        let mut v: Real = last;
-        let id: Id = self.get_id_from_ptr(value);
-        let base: Rect = self.mu_layout_next();
+        let last = *value;
+        let mut v = last;
+        let id = self.get_id_from_ptr(value);
+        let base = self.layout_next();
         if !self.number_textbox(&mut v, base, id).is_none() {
             return res;
         }
-        self.mu_update_control(id, base, opt);
+        self.update_control(id, base, opt);
         if self.focus == id && (!self.mouse_down.is_none() | self.mouse_pressed.is_left()) {
-            v = low + (self.mouse_pos.x - base.x) as libc::c_float * (high - low) / base.w as libc::c_float;
+            v = low + (self.mouse_pos.x - base.x) as Real * (high - low) / base.w as Real;
             if step != 0. {
-                v = (v + step / 2 as libc::c_int as libc::c_float) / step * step;
+                v = (v + step / 2 as Real) / step * step;
             }
         }
         v = if high < (if low > v { low } else { v }) {
@@ -1440,52 +1432,52 @@ impl Context {
         if last != v {
             res.change();
         }
-        self.mu_draw_control_frame(id, base, ControlColor::Base, opt);
+        self.draw_control_frame(id, base, ControlColor::Base, opt);
         w = self.style.thumb_size;
-        x = ((v - low) * (base.w - w) as libc::c_float / (high - low)) as libc::c_int;
+        x = ((v - low) * (base.w - w) as Real/ (high - low)) as i32;
         thumb = rect(base.x + x, base.y, w, base.h);
-        self.mu_draw_control_frame(id, thumb, ControlColor::Button, opt);
+        self.draw_control_frame(id, thumb, ControlColor::Button, opt);
         let mut buff = FixedString::<64>::new();
         buff.append_real(fmt, *value);
-        self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
+        self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
 
-    pub fn mu_number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+    pub fn number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::None;
         let id: Id = self.get_id_from_ptr(value);
-        let base: Rect = self.mu_layout_next();
+        let base: Rect = self.layout_next();
         let last: Real = *value;
         if !self.number_textbox(value, base, id).is_none() {
             return res;
         }
-        self.mu_update_control(id, base, opt);
+        self.update_control(id, base, opt);
         if self.focus == id && self.mouse_down.is_left() {
-            *value += self.mouse_delta.x as libc::c_float * step;
+            *value += self.mouse_delta.x as Real * step;
         }
         if *value != last {
             res.change();
         }
-        self.mu_draw_control_frame(id, base, ControlColor::Base, opt);
+        self.draw_control_frame(id, base, ControlColor::Base, opt);
         let mut buff = FixedString::<64>::new();
         buff.append_real(fmt, *value);
-        self.mu_draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
+        self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
 
-    fn header(&mut self, label: &str, istreenode: libc::c_int, opt: WidgetOption) -> ResourceState {
+    fn header(&mut self, label: &str, is_treenode: bool, opt: WidgetOption) -> ResourceState {
         let mut r: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let mut active: libc::c_int = 0;
-        let mut expanded: libc::c_int = 0;
+        let mut active = 0;
+        let mut expanded = 0;
         let id: Id = self.get_id_from_str(label);
         let idx = self.treenode_pool.get(id);
-        let mut width: libc::c_int = -(1 as libc::c_int);
-        self.mu_layout_row(1 as libc::c_int, &mut width, 0);
-        active = idx.is_some() as libc::c_int;
-        expanded = if opt.is_expanded() { (active == 0) as libc::c_int } else { active };
-        r = self.mu_layout_next();
-        self.mu_update_control(id, r, WidgetOption::None);
-        active ^= (self.mouse_pressed.is_left() && self.focus == id) as libc::c_int;
+        let width = [-1];
+        self.layout_row(&width, 0);
+        active = idx.is_some() as i32;
+        expanded = if opt.is_expanded() { (active == 0) as i32 } else { active };
+        r = self.layout_next();
+        self.update_control(id, r, WidgetOption::None);
+        active ^= (self.mouse_pressed.is_left() && self.focus == id) as i32;
         if idx.is_some() {
             if active != 0 {
                 self.treenode_pool.update(idx.unwrap(), self.frame);
@@ -1496,30 +1488,30 @@ impl Context {
             self.treenode_pool.alloc(id, self.frame);
         }
 
-        if istreenode != 0 {
+        if is_treenode {
             if self.hover == id {
                 (self.draw_frame).expect("non-null function pointer")(self, r, ControlColor::ButtonHover);
             }
         } else {
-            self.mu_draw_control_frame(id, r, ControlColor::Button, WidgetOption::None);
+            self.draw_control_frame(id, r, ControlColor::Button, WidgetOption::None);
         }
-        self.mu_draw_icon(
+        self.draw_icon(
             if expanded != 0 { Icon::Expanded } else { Icon::Collapsed },
             rect(r.x, r.y, r.h, r.h),
-            self.style.colors[ControlColor::Text as libc::c_int as usize],
+            self.style.colors[ControlColor::Text as usize],
         );
         r.x += r.h - self.style.padding;
         r.w -= r.h - self.style.padding;
-        self.mu_draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
+        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
         return if expanded != 0 { ResourceState::Active } else { ResourceState::None };
     }
 
     pub fn header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
-        return self.header(label, 0 as libc::c_int, opt);
+        return self.header(label, false, opt);
     }
 
     pub fn begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
-        let res = self.header(label, 1 as libc::c_int, opt);
+        let res = self.header(label, true, opt);
         if res.is_active() {
             self.get_layout_mut().indent += self.style.indent;
             self.id_stack.push(self.last_id);
@@ -1537,10 +1529,10 @@ impl Context {
     }
 
     fn scrollbars(&mut self, cnt_id: usize, body: &mut Rect) {
-        let sz: libc::c_int = self.style.scrollbar_size;
+        let sz = self.style.scrollbar_size;
         let mut cs: Vec2i = self.containers[cnt_id].content_size;
-        cs.x += self.style.padding * 2 as libc::c_int;
-        cs.y += self.style.padding * 2 as libc::c_int;
+        cs.x += self.style.padding * 2;
+        cs.y += self.style.padding * 2;
         self.push_clip_rect(body.clone());
         if cs.y > self.containers[cnt_id].body.h {
             body.w -= sz;
@@ -1549,15 +1541,15 @@ impl Context {
             body.h -= sz;
         }
         let body = *body;
-        let maxscroll: libc::c_int = cs.y - body.h;
-        if maxscroll > 0 as libc::c_int && body.h > 0 as libc::c_int {
+        let maxscroll = cs.y - body.h;
+        if maxscroll > 0 && body.h > 0 {
             let mut base: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let id: Id = self.get_id_from_str("!scrollbary");
             base = body;
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
-            self.mu_update_control(id, base, WidgetOption::None);
+            self.update_control(id, base, WidgetOption::None);
             if self.focus == id && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
@@ -1572,21 +1564,21 @@ impl Context {
             };
             thumb.y += self.containers[cnt_id].scroll.y * (base.h - thumb.h) / maxscroll;
             (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
-            if self.mu_mouse_over(body) != 0 {
+            if !self.mouse_over(body) {
                 self.scroll_target = Some(cnt_id);
             }
         } else {
-            self.containers[cnt_id].scroll.y = 0 as libc::c_int;
+            self.containers[cnt_id].scroll.y = 0;
         }
-        let maxscroll_0: libc::c_int = cs.x - body.w;
-        if maxscroll_0 > 0 as libc::c_int && body.w > 0 as libc::c_int {
+        let maxscroll_0 = cs.x - body.w;
+        if maxscroll_0 > 0 && body.w > 0 {
             let mut base_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let mut thumb_0: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
             let id_0: Id = self.get_id_from_str("!scrollbarx");
             base_0 = body;
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
-            self.mu_update_control(id_0, base_0, WidgetOption::None);
+            self.update_control(id_0, base_0, WidgetOption::None);
             if self.focus == id_0 && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
@@ -1601,11 +1593,11 @@ impl Context {
             };
             thumb_0.x += self.containers[cnt_id].scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
             (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
-            if self.mu_mouse_over(body) != 0 {
+            if !self.mouse_over(body) {
                 self.scroll_target = Some(cnt_id);
             }
         } else {
-            self.containers[cnt_id].scroll.x = 0 as libc::c_int;
+            self.containers[cnt_id].scroll.x = 0;
         }
         self.pop_clip_rect();
     }
@@ -1641,15 +1633,15 @@ impl Context {
     }
 
     pub fn begin_window_ex(&mut self, title: &str, mut r: Rect, opt: WidgetOption) -> ResourceState {
-        let mut body: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
-        let id: Id = self.get_id_from_str(title);
+        let mut body = Rect { x: 0, y: 0, w: 0, h: 0 };
+        let id = self.get_id_from_str(title);
         let cnt_id = self.get_container_index_intern(id, opt);
-        if cnt_id.is_none() || self.containers[cnt_id.unwrap()].open == 0 {
+        if cnt_id.is_none() || !self.containers[cnt_id.unwrap()].open {
             return ResourceState::None;
         }
         self.id_stack.push(id);
 
-        if self.containers[cnt_id.unwrap()].rect.w == 0 as libc::c_int {
+        if self.containers[cnt_id.unwrap()].rect.w == 0 {
             self.containers[cnt_id.unwrap()].rect = r;
         }
         self.begin_root_container(cnt_id.unwrap());
@@ -1666,8 +1658,8 @@ impl Context {
             // TODO: Is this necessary?
             if !opt.has_no_title() {
                 let id_0: Id = self.get_id_from_str("!title");
-                self.mu_update_control(id_0, tr, opt);
-                self.mu_draw_control_text(title, tr, ControlColor::TitleText, opt);
+                self.update_control(id_0, tr, opt);
+                self.draw_control_text(title, tr, ControlColor::TitleText, opt);
                 if id_0 == self.focus && self.mouse_down.is_left() {
                     self.containers[cnt_id.unwrap()].rect.x += self.mouse_delta.x;
                     self.containers[cnt_id.unwrap()].rect.y += self.mouse_delta.y;
@@ -1679,40 +1671,40 @@ impl Context {
                 let id_1: Id = self.get_id_from_str("!close");
                 let r: Rect = rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
                 tr.w -= r.w;
-                self.mu_draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as libc::c_int as usize]);
-                self.mu_update_control(id_1, r, opt);
+                self.draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as usize]);
+                self.update_control(id_1, r, opt);
                 if self.mouse_pressed.is_left() && id_1 == self.focus {
-                    self.containers[cnt_id.unwrap()].open = 0 as libc::c_int;
+                    self.containers[cnt_id.unwrap()].open = false;
                 }
             }
         }
         self.push_container_body(cnt_id.unwrap(), body, opt);
         if !opt.is_auto_sizing() {
-            let sz: libc::c_int = self.style.title_height;
-            let id_2: Id = self.get_id_from_str("!resize");
-            let r_0: Rect = rect(r.x + r.w - sz, r.y + r.h - sz, sz, sz);
-            self.mu_update_control(id_2, r_0, opt);
+            let sz = self.style.title_height;
+            let id_2 = self.get_id_from_str("!resize");
+            let r_0 = rect(r.x + r.w - sz, r.y + r.h - sz, sz, sz);
+            self.update_control(id_2, r_0, opt);
             if id_2 == self.focus && self.mouse_down.is_left() {
-                self.containers[cnt_id.unwrap()].rect.w = if 96 as libc::c_int > self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x {
-                    96 as libc::c_int
+                self.containers[cnt_id.unwrap()].rect.w = if 96 > self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x {
+                    96
                 } else {
                     self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x
                 };
-                self.containers[cnt_id.unwrap()].rect.h = if 64 as libc::c_int > self.containers[cnt_id.unwrap()].rect.h + self.mouse_delta.y {
-                    64 as libc::c_int
+                self.containers[cnt_id.unwrap()].rect.h = if 64 > self.containers[cnt_id.unwrap()].rect.h + self.mouse_delta.y {
+                    64
                 } else {
                     self.containers[cnt_id.unwrap()].rect.h + self.mouse_delta.y
                 };
             }
         }
         if opt.is_auto_sizing() {
-            let r_1: Rect = self.get_layout().body;
+            let r_1 = self.get_layout().body;
             self.containers[cnt_id.unwrap()].rect.w = self.containers[cnt_id.unwrap()].content_size.x + (self.containers[cnt_id.unwrap()].rect.w - r_1.w);
             self.containers[cnt_id.unwrap()].rect.h = self.containers[cnt_id.unwrap()].content_size.y + (self.containers[cnt_id.unwrap()].rect.h - r_1.h);
         }
 
         if opt.is_popup() && !self.mouse_pressed.is_none() && self.hover_root != cnt_id {
-            self.containers[cnt_id.unwrap()].open = 0 as libc::c_int;
+            self.containers[cnt_id.unwrap()].open = false;
         }
         self.push_clip_rect(self.containers[cnt_id.unwrap()].body);
         return ResourceState::Active;
@@ -1724,12 +1716,12 @@ impl Context {
     }
 
     pub fn open_popup(&mut self, name: &str) {
-        let cnt = self.mu_get_container_index(name);
+        let cnt = self.get_container_index(name);
         self.next_hover_root = cnt;
         self.hover_root = self.next_hover_root;
-        self.containers[cnt.unwrap()].rect = rect(self.mouse_pos.x, self.mouse_pos.y, 1 as libc::c_int, 1 as libc::c_int);
-        self.containers[cnt.unwrap()].open = 1 as libc::c_int;
-        self.mu_bring_to_front(cnt.unwrap());
+        self.containers[cnt.unwrap()].rect = rect(self.mouse_pos.x, self.mouse_pos.y, 1, 1);
+        self.containers[cnt.unwrap()].open = true;
+        self.bring_to_front(cnt.unwrap());
     }
 
     pub fn begin_popup(&mut self, name: &str) -> ResourceState {
@@ -1739,7 +1731,7 @@ impl Context {
             .with_no_scroll()
             .with_no_title()
             .with_closed();
-        return self.begin_window_ex(name, rect(0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int, 0 as libc::c_int), opt);
+        return self.begin_window_ex(name, rect(0, 0, 0, 0), opt);
     }
 
     pub fn end_popup(&mut self) {
@@ -1749,7 +1741,7 @@ impl Context {
     pub fn begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
         self.push_id_from_str(name);
         let cnt_id = self.get_container_index_intern(self.last_id, opt);
-        let rect = self.mu_layout_next();
+        let rect = self.layout_next();
         self.containers[cnt_id.unwrap()].rect = rect;
         if !opt.has_no_frame() {
             (self.draw_frame).expect("non-null function pointer")(self, rect, ControlColor::PanelBG);

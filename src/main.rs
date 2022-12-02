@@ -756,7 +756,6 @@ impl<'a> State<'a> {
         }
     }
 
-
     fn write_log(&mut self, text: &str) {
         if self.logbuf.len() != 0 {
             self.logbuf.push('\n');
@@ -768,7 +767,8 @@ impl<'a> State<'a> {
     }
 
     fn test_window(&mut self) {
-        if !self.ctx
+        if !self
+            .ctx
             .begin_window_ex(
                 "Demo Window",
                 rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
@@ -786,7 +786,7 @@ impl<'a> State<'a> {
 
             if !self.ctx.header_ex("Window Info", WidgetOption::None).is_none() {
                 let win_0 = self.ctx.get_current_container_rect();
-                self.ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
+                self.ctx.layout_row(&[54, -1], 0);
                 self.ctx.label("Position:");
 
                 buff.clear();
@@ -805,11 +805,7 @@ impl<'a> State<'a> {
                 self.ctx.label(buff.as_str());
             }
             if !self.ctx.header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
-                self.ctx.mu_layout_row(
-                    3 as libc::c_int,
-                    [86 as libc::c_int, -(110 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(),
-                    0 as libc::c_int,
-                );
+                self.ctx.layout_row(&[86, -110, -1], 0);
                 self.ctx.label("Test buttons 1:");
                 if !self.ctx.button_ex("Button 1", Icon::None, WidgetOption::AlignCenter).is_none() {
                     self.write_log("Pressed button 1");
@@ -835,8 +831,8 @@ impl<'a> State<'a> {
                 }
             }
             if !self.ctx.header_ex("Tree and Text", WidgetOption::Expanded).is_none() {
-                self.ctx.mu_layout_row(2 as libc::c_int, [140 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
-                self.ctx.mu_layout_begin_column();
+                self.ctx.layout_row(&[140, -1], 0);
+                self.ctx.layout_begin_column();
                 if !self.ctx.begin_treenode_ex("Test 1", WidgetOption::None).is_none() {
                     if !self.ctx.begin_treenode_ex("Test 1a", WidgetOption::None).is_none() {
                         self.ctx.label("Hello");
@@ -855,7 +851,7 @@ impl<'a> State<'a> {
                     self.ctx.end_treenode();
                 }
                 if !self.ctx.begin_treenode_ex("Test 2", WidgetOption::None).is_none() {
-                    self.ctx.mu_layout_row(2 as libc::c_int, [54 as libc::c_int, 54 as libc::c_int].as_mut_ptr(), 0 as libc::c_int);
+                    self.ctx.layout_row(&[54, 54], 0);
                     if !self.ctx.button_ex("Button 3", Icon::None, WidgetOption::AlignCenter).is_none() {
                         self.write_log("Pressed button 3");
                     }
@@ -879,21 +875,21 @@ impl<'a> State<'a> {
                     }
                     self.ctx.end_treenode();
                 }
-                self.ctx.mu_layout_end_column();
-                self.ctx.mu_layout_begin_column();
-                self.ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
+                self.ctx.layout_end_column();
+                self.ctx.layout_begin_column();
+                self.ctx.layout_row(&[-1], 0);
                 self.ctx.text(
                     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas lacinia, sem eu lacinia molestie, mi risus faucibus ipsum, eu varius magna felis a nulla."
                     ,
                 );
-                self.ctx.mu_layout_end_column();
+                self.ctx.layout_end_column();
             }
             if !self.ctx.header_ex("Background Color", WidgetOption::Expanded).is_none() {
-                self.ctx.mu_layout_row(2 as libc::c_int, [-(78 as libc::c_int), -(1 as libc::c_int)].as_mut_ptr(), 74 as libc::c_int);
-                self.ctx.mu_layout_begin_column();
-                self.ctx.mu_layout_row(2 as libc::c_int, [46 as libc::c_int, -(1 as libc::c_int)].as_mut_ptr(), 0 as libc::c_int);
+                self.ctx.layout_row(&[-78, -1], 74);
+                self.ctx.layout_begin_column();
+                self.ctx.layout_row(&[46, -1], 0);
                 self.ctx.label("Red:");
-                self.ctx.mu_slider_ex(
+                self.ctx.slider_ex(
                     &mut self.bg[0],
                     0 as libc::c_int as Real,
                     255 as libc::c_int as Real,
@@ -902,7 +898,7 @@ impl<'a> State<'a> {
                     WidgetOption::AlignCenter,
                 );
                 self.ctx.label("Green:");
-                self.ctx.mu_slider_ex(
+                self.ctx.slider_ex(
                     &mut self.bg[1],
                     0 as libc::c_int as Real,
                     255 as libc::c_int as Real,
@@ -911,7 +907,7 @@ impl<'a> State<'a> {
                     WidgetOption::AlignCenter,
                 );
                 self.ctx.label("Blue:");
-                self.ctx.mu_slider_ex(
+                self.ctx.slider_ex(
                     &mut self.bg[2],
                     0 as libc::c_int as Real,
                     255 as libc::c_int as Real,
@@ -919,23 +915,15 @@ impl<'a> State<'a> {
                     "%.2",
                     WidgetOption::AlignCenter,
                 );
-                self.ctx.mu_layout_end_column();
-                let r: Rect = self.ctx.mu_layout_next();
-                self.ctx.mu_draw_rect(
-                    r,
-                    color(
-                        self.bg[0] as u8,
-                        self.bg[1] as u8,
-                        self.bg[2] as u8,
-                        255,
-                    ),
-                );
+                self.ctx.layout_end_column();
+                let r: Rect = self.ctx.layout_next();
+                self.ctx.draw_rect(r, color(self.bg[0] as u8, self.bg[1] as u8, self.bg[2] as u8, 255));
                 let mut buff = FixedString::<128>::new();
                 buff.add_str("#");
                 buff.append_int("%02X", self.bg[0] as _);
                 buff.append_int("%02X", self.bg[1] as _);
                 buff.append_int("%02X", self.bg[2] as _);
-                self.ctx.mu_draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
+                self.ctx.draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
             }
             self.ctx.end_window();
         }
@@ -943,11 +931,11 @@ impl<'a> State<'a> {
 
     fn log_window(&mut self) {
         if !self.ctx.begin_window_ex("Log Window", rect(350, 40, 300, 200), WidgetOption::None).is_none() {
-            self.ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(25 as libc::c_int));
+            self.ctx.layout_row(&[-1], -25);
             self.ctx.begin_panel_ex("Log Output", WidgetOption::None);
             let mut scroll = self.ctx.get_current_container_scroll();
             let content_size = self.ctx.get_current_container_content_size();
-            self.ctx.mu_layout_row(1 as libc::c_int, [-(1 as libc::c_int)].as_mut_ptr(), -(1 as libc::c_int));
+            self.ctx.layout_row(&[-1], -1);
             self.ctx.text(self.logbuf.as_str());
             if self.logbuf_updated {
                 scroll.y = content_size.y;
@@ -957,8 +945,8 @@ impl<'a> State<'a> {
             self.ctx.end_panel();
 
             let mut submitted = false;
-            self.ctx.mu_layout_row(2, [-70, -1].as_mut_ptr(), 0);
-            if self.ctx.mu_textbox_ex(&mut self.submit_buf, WidgetOption::None).is_submitted() {
+            self.ctx.layout_row(&[-70, -1], 0);
+            if self.ctx.textbox_ex(&mut self.submit_buf, WidgetOption::None).is_submitted() {
                 self.ctx.set_focus(self.ctx.last_id);
                 submitted = true;
             }
@@ -978,13 +966,16 @@ impl<'a> State<'a> {
         static mut tmp: libc::c_float = 0.;
         tmp = *value as libc::c_float;
         self.ctx.push_id_from_ptr(value);
-        let res = self.ctx.mu_slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, "%.2f", WidgetOption::AlignCenter);
+        let res = self
+            .ctx
+            .slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, "%.2f", WidgetOption::AlignCenter);
         *value = tmp as libc::c_uchar;
         self.ctx.pop_id();
         return res;
     }
     unsafe extern "C" fn style_window(&mut self) {
-        if !self.ctx
+        if !self
+            .ctx
             .begin_window_ex(
                 "Style Editor",
                 rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
@@ -993,11 +984,7 @@ impl<'a> State<'a> {
             .is_none()
         {
             let sw: libc::c_int = (self.ctx.get_current_container_body().w as libc::c_double * 0.14f64) as libc::c_int;
-            self.ctx.mu_layout_row(
-                6 as libc::c_int,
-                [80 as libc::c_int, sw, sw, sw, sw, -(1 as libc::c_int)].as_mut_ptr(),
-                0 as libc::c_int,
-            );
+            self.ctx.layout_row(&[80, sw, sw, sw, sw, -1], 0);
             let mut i = 0;
             while self.label_colors[i].label.len() > 0 {
                 self.ctx.label(self.label_colors[i].label);
@@ -1006,8 +993,8 @@ impl<'a> State<'a> {
                 self.uint8_slider(&mut (*color).g, 0 as libc::c_int, 255 as libc::c_int);
                 self.uint8_slider(&mut (*color).b, 0 as libc::c_int, 255 as libc::c_int);
                 self.uint8_slider(&mut (*color).a, 0 as libc::c_int, 255 as libc::c_int);
-                let next_layout = self.ctx.mu_layout_next();
-                self.ctx.mu_draw_rect(next_layout, self.ctx.style.colors[i]);
+                let next_layout = self.ctx.layout_next();
+                self.ctx.draw_rect(next_layout, self.ctx.style.colors[i]);
                 i += 1;
             }
             self.ctx.end_window();
@@ -1298,7 +1285,6 @@ pub extern "C" fn main() {
         r_init();
         let mut state = State::new();
 
-
         loop {
             let mut e: SDL_Event = SDL_Event { type_0: 0 };
             while SDL_PollEvent(&mut e) != 0 {
@@ -1307,10 +1293,10 @@ pub extern "C" fn main() {
                         exit(0 as libc::c_int);
                     }
                     1024 => {
-                        state.ctx.mu_input_mousemove(e.motion.x, e.motion.y);
+                        state.ctx.input_mousemove(e.motion.x, e.motion.y);
                     }
                     1027 => {
-                        state.ctx.mu_input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
+                        state.ctx.input_scroll(0 as libc::c_int, e.wheel.y * -(30 as libc::c_int));
                     }
                     771 => {
                         let mut text = FixedString::<32>::new();
@@ -1322,7 +1308,7 @@ pub extern "C" fn main() {
                                 break;
                             }
                         }
-                        state.ctx.mu_input_text(text.as_str());
+                        state.ctx.input_text(text.as_str());
                     }
                     1025 | 1026 => {
                         let b = match e.button.button {
@@ -1333,19 +1319,19 @@ pub extern "C" fn main() {
                         };
 
                         if !b.is_none() && e.type_0 == SDL_MOUSEBUTTONDOWN as libc::c_int as libc::c_uint {
-                            state.ctx.mu_input_mousedown(e.button.x, e.button.y, b);
+                            state.ctx.input_mousedown(e.button.x, e.button.y, b);
                         }
                         if !b.is_none() && e.type_0 == SDL_MOUSEBUTTONUP as libc::c_int as libc::c_uint {
-                            state.ctx.mu_input_mouseup(e.button.x, e.button.y, b);
+                            state.ctx.input_mouseup(e.button.x, e.button.y, b);
                         }
                     }
                     768 | 769 => {
                         let c: libc::c_int = key_map[(e.key.keysym.sym & 0xff as libc::c_int) as usize] as libc::c_int;
                         if c != 0 && e.type_0 == SDL_KEYDOWN as libc::c_int as libc::c_uint {
-                            state.ctx.mu_input_keydown(c);
+                            state.ctx.input_keydown(c as u32);
                         }
                         if c != 0 && e.type_0 == SDL_KEYUP as libc::c_int as libc::c_uint {
-                            state.ctx.mu_input_keyup(c);
+                            state.ctx.input_keyup(c as u32);
                         }
                     }
                     _ => {}
