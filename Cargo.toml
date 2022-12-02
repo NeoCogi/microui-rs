@@ -4,6 +4,7 @@ authors = ["Wael El Oraiby"]
 version = "0.1.0"
 edition = "2021"
 readme = "README.md"
+description = "MicroUI (immediate mode GUI) library in pure rust"
 
 [lib]
 name ="microui"
