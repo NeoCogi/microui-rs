@@ -56,6 +56,9 @@ use ::libc;
 mod fixed_collections;
 pub use crate::fixed_collections::*;
 
+mod atlas;
+pub use atlas::*;
+
 #[derive(Copy, Clone)]
 pub struct Pool<const N: usize> {
     vec: [PoolItem; N],
@@ -618,10 +621,7 @@ impl Default for Style {
     fn default() -> Self {
         Self {
             font: 0 as *const libc::c_void,
-            size: Vec2i {
-                x: 68,
-                y: 10,
-            },
+            size: Vec2i { x: 68, y: 10 },
             padding: 5,
             spacing: 4,
             indent: 24,
@@ -1049,10 +1049,7 @@ impl Context {
 
     pub fn draw_box(&mut self, r: Rect, color: Color) {
         self.draw_rect(rect(r.x + 1, r.y, r.w - 2, 1), color);
-        self.draw_rect(
-            rect(r.x + 1, r.y + r.h - 1, r.w - 2, 1),
-            color,
-        );
+        self.draw_rect(rect(r.x + 1, r.y + r.h - 1, r.w - 2, 1), color);
         self.draw_rect(rect(r.x, r.y, 1, r.h), color);
         self.draw_rect(rect(r.x + r.w - 1, r.y, 1, r.h), color);
     }
@@ -1485,7 +1482,7 @@ impl Context {
         }
         self.draw_control_frame(id, base, ControlColor::Base, opt);
         let w = self.style.thumb_size;
-        let x = ((v - low) * (base.w - w) as Real/ (high - low)) as i32;
+        let x = ((v - low) * (base.w - w) as Real / (high - low)) as i32;
         let thumb = rect(base.x + x, base.y, w, base.h);
         self.draw_control_frame(id, thumb, ControlColor::Button, opt);
         let mut buff = FixedString::<64>::new();
@@ -1699,10 +1696,10 @@ impl Context {
 
             // TODO: Is this necessary?
             if !opt.has_no_title() {
-                let id_0: Id = self.get_id_from_str("!title");
-                self.update_control(id_0, tr, opt);
+                let id = self.get_id_from_str("!title");
+                self.update_control(id, tr, opt);
                 self.draw_control_text(title, tr, ControlColor::TitleText, opt);
-                if id_0 == self.focus && self.mouse_down.is_left() {
+                if id == self.focus && self.mouse_down.is_left() {
                     self.containers[cnt_id.unwrap()].rect.x += self.mouse_delta.x;
                     self.containers[cnt_id.unwrap()].rect.y += self.mouse_delta.y;
                 }
@@ -1710,12 +1707,12 @@ impl Context {
                 body.h -= tr.h;
             }
             if !opt.has_no_close() {
-                let id_1: Id = self.get_id_from_str("!close");
+                let id = self.get_id_from_str("!close");
                 let r: Rect = rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
                 tr.w -= r.w;
                 self.draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as usize]);
-                self.update_control(id_1, r, opt);
-                if self.mouse_pressed.is_left() && id_1 == self.focus {
+                self.update_control(id, r, opt);
+                if self.mouse_pressed.is_left() && id == self.focus {
                     self.containers[cnt_id.unwrap()].open = false;
                 }
             }
