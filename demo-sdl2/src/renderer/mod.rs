@@ -55,7 +55,7 @@ use ::libc;
 use glow::*;
 
 const VERTEX_SHADER: &str = "#version 100
-uniform highp vec2 uViewport;
+uniform highp mat4 uTransform;
 attribute highp vec2 vertexPosition;
 attribute highp vec2 vertexTexCoord;
 attribute lowp vec4 vertexColor;
@@ -65,8 +65,8 @@ void main()
 {
     vVertexColor = vertexColor;
     vTexCoord = vertexTexCoord;
-    highp vec2 pos = vec2(vertexPosition.x, uViewport.y - vertexPosition.y);
-    gl_Position = vec4(pos * 2.0 / uViewport - 1.0, 0.0, 1.0);
+    highp vec4 pos = vec4(vertexPosition.x, vertexPosition.y, 0.0, 1.0);
+    gl_Position = uTransform * pos;
 }";
 
 const FRAGMENT_SHADER: &str = "#version 100
@@ -75,8 +75,8 @@ varying lowp vec4 vVertexColor;
 uniform sampler2D uTexture;
 void main()
 {
-    lowp vec4 col = texture2D(uTexture, vTexCoord);
-    gl_FragColor = vVertexColor * col;
+    lowp vec4 col = texture2D(uTexture, vTexCoord).aaaa;
+    gl_FragColor = vec4(vVertexColor.rgb, col.a * vVertexColor.a);
 }";
 
 #[derive(Default, Copy, Clone)]
@@ -94,11 +94,18 @@ struct Vertex {
     color: Color,
 }
 
-static mut tex_buf: [f32; 131072] = [0.; 131072];
-static mut vert_buf: [f32; 131072] = [0.; 131072];
-static mut color_buf: [u8; 262144] = [0; 262144];
-static mut index_buf: [u32; 98304] = [0; 98304];
-static mut buf_idx: libc::c_int = 0;
+pub fn ortho4(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> [f32; 16] {
+    let width = right - left;
+    let height = top - bottom;
+    let depth = far - near;
+    let r00 = 2.0 / width;
+    let r11 = 2.0 / height;
+    let r22 = -2.0 / depth;
+    let r03 = -(right + left) / width;
+    let r13 = -(top + bottom) / height;
+    let r23 = -(far + near) / depth;
+    [r00, 0.0, 0.0, 0.0, 0.0, r11, 0.0, 0.0, 0.0, 0.0, r22, 0.0, r03, r13, r23, 1.0]
+}
 
 pub struct Renderer {
     verts: Vec<Vertex>,
@@ -149,20 +156,9 @@ impl Renderer {
     }
 
     pub fn new(gl: &glow::Context, atlas_texture: &[u8], width: u32, height: u32) -> Self {
+        assert_eq!(core::mem::size_of::<Vertex>(), 20);
         unsafe {
-            /* init gl */
-            gl.enable(glow::BLEND);
-            debug_assert!(gl.get_error() == 0);
-            gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
-            debug_assert!(gl.get_error() == 0);
-            gl.disable(glow::CULL_FACE);
-            debug_assert!(gl.get_error() == 0);
-            gl.disable(glow::DEPTH_TEST);
-            debug_assert!(gl.get_error() == 0);
-            gl.enable(glow::SCISSOR_TEST);
-            debug_assert!(gl.get_error() == 0);
-
-            /* init texture */
+            // init texture
             let tex_o = gl.create_texture().unwrap();
             debug_assert!(gl.get_error() == 0);
             gl.bind_texture(glow::TEXTURE_2D, Some(tex_o));
@@ -192,32 +188,53 @@ impl Renderer {
                 verts: Vec::new(),
                 indices: Vec::new(),
 
-                vbo, ibo, tex_o,
+                vbo,
+                ibo,
+                tex_o,
                 program,
 
-                width, height
+                width,
+                height,
             }
         }
     }
 
     pub fn flush(&mut self, gl: &glow::Context) {
         if self.verts.len() == 0 || self.indices.len() == 0 {
-            return
+            return;
         }
 
         unsafe {
+            // opengl rendering states
+            gl.viewport(0, 0, self.width as i32, self.height as i32);
+
+            gl.enable(glow::BLEND);
+            debug_assert!(gl.get_error() == 0);
+            gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+            debug_assert!(gl.get_error() == 0);
+            gl.disable(glow::CULL_FACE);
+            debug_assert!(gl.get_error() == 0);
+            gl.disable(glow::DEPTH_TEST);
+            debug_assert!(gl.get_error() == 0);
+            gl.enable(glow::SCISSOR_TEST);
+            debug_assert!(gl.get_error() == 0);
+
             // set the program
             gl.use_program(Some(self.program));
+            debug_assert!(gl.get_error() == 0);
 
             // set the texture
             gl.bind_texture(glow::TEXTURE_2D, Some(self.tex_o));
             gl.active_texture(glow::TEXTURE0 + 0);
             let tex_uniform_id = gl.get_uniform_location(self.program, "uTexture").unwrap();
-            gl.uniform_1_u32(Some(&tex_uniform_id), 0);
+            gl.uniform_1_i32(Some(&tex_uniform_id), 0);
+            debug_assert_eq!(gl.get_error(), 0);
 
             // set the viewport
-            let viewport = gl.get_uniform_location(self.program, "uViewport").unwrap();
-            gl.uniform_2_f32(Some(&viewport), self.width as f32, self.height as f32);
+            let viewport = gl.get_uniform_location(self.program, "uTransform").unwrap();
+            let tm = ortho4(0.0, self.width as f32, self.height as f32, 0.0, -1.0, 1.0);
+            gl.uniform_matrix_4_f32_slice(Some(&viewport), false, &tm);
+            debug_assert_eq!(gl.get_error(), 0);
 
             // set the vertex buffer
             let pos_attrib_id = gl.get_attrib_location(self.program, "vertexPosition").unwrap();
@@ -225,27 +242,37 @@ impl Renderer {
             let col_attrib_id = gl.get_attrib_location(self.program, "vertexColor").unwrap();
             gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
             gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(self.ibo));
+            debug_assert!(gl.get_error() == 0);
 
+            // update the vertex buffer
             let vertices_u8: &[u8] = core::slice::from_raw_parts(self.verts.as_ptr() as *const u8, self.verts.len() * core::mem::size_of::<Vertex>());
             gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertices_u8, glow::DYNAMIC_DRAW);
+            debug_assert!(gl.get_error() == 0);
 
+            // update the index buffer
             let indices_u8: &[u8] = core::slice::from_raw_parts(self.indices.as_ptr() as *const u8, self.indices.len() * core::mem::size_of::<u16>());
             gl.buffer_data_u8_slice(glow::ELEMENT_ARRAY_BUFFER, indices_u8, glow::DYNAMIC_DRAW);
+            debug_assert!(gl.get_error() == 0);
 
             gl.enable_vertex_attrib_array(pos_attrib_id);
             gl.enable_vertex_attrib_array(tex_attrib_id);
             gl.enable_vertex_attrib_array(col_attrib_id);
+            debug_assert!(gl.get_error() == 0);
 
             gl.vertex_attrib_pointer_f32(pos_attrib_id, 2, glow::FLOAT, false, 20, 0);
             gl.vertex_attrib_pointer_f32(tex_attrib_id, 2, glow::FLOAT, false, 20, 8);
-            gl.vertex_attrib_pointer_i32(col_attrib_id, 4, glow::UNSIGNED_BYTE, 20, 16);
+            gl.vertex_attrib_pointer_f32(col_attrib_id, 4, glow::UNSIGNED_BYTE, true, 20, 16);
+            debug_assert!(gl.get_error() == 0);
 
             gl.draw_elements(glow::TRIANGLES, self.indices.len() as i32, glow::UNSIGNED_SHORT, 0);
+            debug_assert!(gl.get_error() == 0);
 
             gl.disable_vertex_attrib_array(pos_attrib_id);
             gl.disable_vertex_attrib_array(tex_attrib_id);
             gl.disable_vertex_attrib_array(col_attrib_id);
+            debug_assert!(gl.get_error() == 0);
             gl.use_program(None);
+            debug_assert!(gl.get_error() == 0);
 
             self.verts.clear();
             self.indices.clear();
@@ -303,165 +330,65 @@ impl Renderer {
         v3.pos.y = dst.y as f32 + dst.h as f32;
 
         // color
-        v0.color    = microui::color(color.r, color.g, color.b, color.a);
-        v1.color    = v0.color;
-        v2.color    = v0.color;
-        v3.color    = v0.color;
+        v0.color = microui::color(color.r, color.g, color.b, color.a);
+        v1.color = v0.color;
+        v2.color = v0.color;
+        v3.color = v0.color;
 
         self.push_quad_vertices(gl, &v0, &v1, &v2, &v3);
-
     }
-    // unsafe extern "C" fn push_quad(mut dst: Rect, mut src: Rect, mut color: Color) {
-    //     if buf_idx == 16384 as libc::c_int {
-    //         flush();
-    //     }
-    //     let mut texvert_idx: libc::c_int = buf_idx * 8 as libc::c_int;
-    //     let mut color_idx: libc::c_int = buf_idx * 16 as libc::c_int;
-    //     let mut element_idx: libc::c_int = buf_idx * 4 as libc::c_int;
-    //     let mut index_idx: libc::c_int = buf_idx * 6 as libc::c_int;
-    //     buf_idx += 1;
-    //     let mut x: libc::c_float = src.x as libc::c_float / ATLAS_WIDTH as libc::c_int as libc::c_float;
-    //     let mut y: libc::c_float = src.y as libc::c_float / ATLAS_HEIGHT as libc::c_int as libc::c_float;
-    //     let mut w: libc::c_float = src.w as libc::c_float / ATLAS_WIDTH as libc::c_int as libc::c_float;
-    //     let mut h: libc::c_float = src.h as libc::c_float / ATLAS_HEIGHT as libc::c_int as libc::c_float;
-    //     tex_buf[(texvert_idx + 0 as libc::c_int) as usize] = x;
-    //     tex_buf[(texvert_idx + 1 as libc::c_int) as usize] = y;
-    //     tex_buf[(texvert_idx + 2 as libc::c_int) as usize] = x + w;
-    //     tex_buf[(texvert_idx + 3 as libc::c_int) as usize] = y;
-    //     tex_buf[(texvert_idx + 4 as libc::c_int) as usize] = x;
-    //     tex_buf[(texvert_idx + 5 as libc::c_int) as usize] = y + h;
-    //     tex_buf[(texvert_idx + 6 as libc::c_int) as usize] = x + w;
-    //     tex_buf[(texvert_idx + 7 as libc::c_int) as usize] = y + h;
-    //     vert_buf[(texvert_idx + 0 as libc::c_int) as usize] = dst.x as GLfloat;
-    //     vert_buf[(texvert_idx + 1 as libc::c_int) as usize] = dst.y as GLfloat;
-    //     vert_buf[(texvert_idx + 2 as libc::c_int) as usize] = (dst.x + dst.w) as GLfloat;
-    //     vert_buf[(texvert_idx + 3 as libc::c_int) as usize] = dst.y as GLfloat;
-    //     vert_buf[(texvert_idx + 4 as libc::c_int) as usize] = dst.x as GLfloat;
-    //     vert_buf[(texvert_idx + 5 as libc::c_int) as usize] = (dst.y + dst.h) as GLfloat;
-    //     vert_buf[(texvert_idx + 6 as libc::c_int) as usize] = (dst.x + dst.w) as GLfloat;
-    //     vert_buf[(texvert_idx + 7 as libc::c_int) as usize] = (dst.y + dst.h) as GLfloat;
-    //     memcpy(
-    //         color_buf.as_mut_ptr().offset(color_idx as isize).offset(0 as libc::c_int as isize) as *mut libc::c_void,
-    //         &mut color as *mut Color as *const libc::c_void,
-    //         4 as libc::c_int as libc::c_ulong,
-    //     );
-    //     memcpy(
-    //         color_buf.as_mut_ptr().offset(color_idx as isize).offset(4 as libc::c_int as isize) as *mut libc::c_void,
-    //         &mut color as *mut Color as *const libc::c_void,
-    //         4 as libc::c_int as libc::c_ulong,
-    //     );
-    //     memcpy(
-    //         color_buf.as_mut_ptr().offset(color_idx as isize).offset(8 as libc::c_int as isize) as *mut libc::c_void,
-    //         &mut color as *mut Color as *const libc::c_void,
-    //         4 as libc::c_int as libc::c_ulong,
-    //     );
-    //     memcpy(
-    //         color_buf.as_mut_ptr().offset(color_idx as isize).offset(12 as libc::c_int as isize) as *mut libc::c_void,
-    //         &mut color as *mut Color as *const libc::c_void,
-    //         4 as libc::c_int as libc::c_ulong,
-    //     );
-    //     index_buf[(index_idx + 0 as libc::c_int) as usize] = (element_idx + 0 as libc::c_int) as GLuint;
-    //     index_buf[(index_idx + 1 as libc::c_int) as usize] = (element_idx + 1 as libc::c_int) as GLuint;
-    //     index_buf[(index_idx + 2 as libc::c_int) as usize] = (element_idx + 2 as libc::c_int) as GLuint;
-    //     index_buf[(index_idx + 3 as libc::c_int) as usize] = (element_idx + 2 as libc::c_int) as GLuint;
-    //     index_buf[(index_idx + 4 as libc::c_int) as usize] = (element_idx + 3 as libc::c_int) as GLuint;
-    //     index_buf[(index_idx + 5 as libc::c_int) as usize] = (element_idx + 1 as libc::c_int) as GLuint;
-    // }
-    //
-    // #[no_mangle]
-    // pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: Color) {
-    //     push_quad(rect, ATLAS[ATLAS_WHITE as libc::c_int as usize], color);
-    // }
-    //
-    // #[no_mangle]
-    // pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: Color) {
-    //     let mut dst: Rect = {
-    //         let mut init = Rect {
-    //             x: pos.x,
-    //             y: pos.y,
-    //             w: 0 as libc::c_int,
-    //             h: 0 as libc::c_int,
-    //         };
-    //         init
-    //     };
-    //     for p in text.chars() {
-    //         if !(p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
-    //             let mut chr: libc::c_int = i32::min(p as i32, 127);
-    //             let mut src: Rect = ATLAS[(ATLAS_FONT as libc::c_int + chr) as usize];
-    //             dst.w = src.w;
-    //             dst.h = src.h;
-    //             push_quad(dst, src, color);
-    //             dst.x += dst.w;
-    //         }
-    //     }
-    // }
-    //
-    // pub fn r_draw_icon(mut id: Icon, mut r: Rect, mut color: Color) {
-    //     let mut src: Rect = ATLAS[id as usize];
-    //     let mut x: libc::c_int = r.x + (r.w - src.w) / 2 as libc::c_int;
-    //     let mut y: libc::c_int = r.y + (r.h - src.h) / 2 as libc::c_int;
-    //     unsafe {
-    //         push_quad(rect(x, y, src.w, src.h), src, color);
-    //     }
-    // }
-    //
-    // pub fn r_get_char_width(_font: Font, c: char) -> usize {
-    //     unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
-    // }
-    // pub fn r_get_font_height(_font: Font) -> usize {
-    //     18
-    // }
-    //
-    // pub fn r_set_clip_rect(gl: &mut glow::Context, width: i32, height: i32, rect: Rect) {
-    //     unsafe {
-    //         flush(gl, width, height);
-    //         gl.scissor(rect.x, height - (rect.y + rect.h), rect.w, rect.h);
-    //     }
-    // }
-    //
-    // pub fn r_clear(gl: &mut glow::Context, width: i32, height: i32, clr: Color) {
-    //     unsafe {
-    //         flush(gl, width, height);
-    //         gl.clear_color((clr.r as f32 / 255.0), (clr.g as f32 / 255.0), (clr.b as f32 / 255.0), (clr.a as f32 / 255.0));
-    //         gl.clear(glow::COLOR_BUFFER_BIT);
-    //     }
-    // }
-    //
-    // #[no_mangle]
-    // pub unsafe extern "C" fn r_present(window: &mut sdl2::video::Window, gl: &mut glow::Context) {
-    //     let (w, h) = window.size();
-    //     flush(gl, w as i32, h as i32);
-    //     window.gl_swap_window()
-    // }
-    //
 
-    //
-    // unsafe fn create_buffer(gl: &glow::Context) -> NativeBuffer {
-    //     // We construct a buffer and upload the data
-    //     let vbo = gl.create_buffer().unwrap();
-    //     gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-    //     gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, triangle_vertices_u8, glow::DYNAMIC_DRAW);
-    //
-    //     // We now construct a vertex array to describe the format of the input buffer
-    //     let vao = gl.create_vertex_array().unwrap();
-    //     gl.bind_vertex_array(Some(vao));
-    //     gl.enable_vertex_attrib_array(0);
-    //     gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
-    //
-    //     (vbo, vao)
-    // }
-    //
-    // unsafe fn update_vertex_buffer<T: ?Sized>(gl: &glow::Context, vb: NativeBuffer, vertices: &[T]) {
-    //     let vertices_u8: &[u8] = core::slice::from_raw_parts(vertices.as_ptr() as *const u8, vertices.len() * core::mem::size_of::<T>());
-    //     gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-    //     gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertices_u8, glow::DYNAMIC_DRAW);
-    // }
-    //
-    // unsafe fn set_uniform(gl: &glow::Context, program: NativeProgram, name: &str, value: f32) {
-    //     let uniform_location = gl.get_uniform_location(program, name);
-    //     // See also `uniform_n_i32`, `uniform_n_u32`, `uniform_matrix_4_f32_slice` etc.
-    //     gl.uniform_1_f32(uniform_location.as_ref(), value)
-    // }
-    //
-    // unsafe fn render_quads<T: ?Sized>(gl: &glow::Context) {}
+    pub fn draw_rect(&mut self, gl: &glow::Context, rect: Rect, color: Color) {
+        self.push_rect(gl, rect, ATLAS[ATLAS_WHITE as usize], color);
+    }
+
+    pub fn draw_text(&mut self, gl: &glow::Context, text: &str, mut pos: Vec2i, mut color: Color) {
+        let mut dst = Rect { x: pos.x, y: pos.y, w: 0, h: 0 };
+        for p in text.chars() {
+            if (p as usize) < 127 {
+                let chr = usize::min(p as usize, 127);
+                let mut src = ATLAS[ATLAS_FONT as usize + chr];
+                dst.w = src.w;
+                dst.h = src.h;
+                self.push_rect(gl, dst, src, color);
+                dst.x += dst.w;
+            }
+        }
+    }
+
+    pub fn draw_icon(&mut self, gl: &glow::Context, id: Icon, r: Rect, color: Color) {
+        let src = ATLAS[id as usize];
+        let x = r.x + (r.w - src.w) / 2;
+        let y = r.y + (r.h - src.h) / 2;
+        unsafe {
+            self.push_rect(gl, rect(x, y, src.w, src.h), src, color);
+        }
+    }
+
+    pub fn get_char_width(&self, _font: Font, c: char) -> usize {
+        unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
+    }
+
+    pub fn get_font_height(&self, _font: Font) -> usize {
+        18
+    }
+
+    pub fn set_clip_rect(&mut self, gl: &glow::Context, width: i32, height: i32, rect: Rect) {
+        unsafe {
+            self.width = width as u32;
+            self.height = height as u32;
+            self.flush(gl);
+            gl.scissor(rect.x, height - (rect.y + rect.h), rect.w, rect.h);
+        }
+    }
+
+    pub fn clear(&mut self, gl: &glow::Context, width: i32, height: i32, clr: Color) {
+        unsafe {
+            self.width = width as u32;
+            self.height = height as u32;
+            self.flush(gl);
+            gl.clear_color((clr.r as f32 / 255.0), (clr.g as f32 / 255.0), (clr.b as f32 / 255.0), (clr.a as f32 / 255.0));
+            gl.clear(glow::COLOR_BUFFER_BIT);
+        }
+    }
 }

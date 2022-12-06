@@ -529,51 +529,36 @@ static mut atlas_texture: [libc::c_uchar; 16384] = [
 ];
 static ATLAS: [Rect; 134] = [
     Rect { x: 0, y: 0, w: 0, h: 0 },
-    {
-        let mut init = Rect {
+    Rect {
             x: 88 as libc::c_int,
             y: 68 as libc::c_int,
             w: 16 as libc::c_int,
             h: 16 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 0 as libc::c_int,
             y: 0 as libc::c_int,
             w: 18 as libc::c_int,
             h: 18 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 113 as libc::c_int,
             y: 68 as libc::c_int,
             w: 5 as libc::c_int,
             h: 7 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 118 as libc::c_int,
             y: 68 as libc::c_int,
             w: 7 as libc::c_int,
             h: 5 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 125 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 3 as libc::c_int,
-        };
-        init
-    },
+        },
     Rect { x: 0, y: 0, w: 0, h: 0 },
     Rect { x: 0, y: 0, w: 0, h: 0 },
     Rect { x: 0, y: 0, w: 0, h: 0 },
@@ -606,870 +591,582 @@ static ATLAS: [Rect; 134] = [
     Rect { x: 0, y: 0, w: 0, h: 0 },
     Rect { x: 0, y: 0, w: 0, h: 0 },
     Rect { x: 0, y: 0, w: 0, h: 0 },
-    {
-        let mut init = Rect {
+    Rect {
             x: 84 as libc::c_int,
             y: 68 as libc::c_int,
             w: 2 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 39 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 114 as libc::c_int,
             y: 51 as libc::c_int,
             w: 5 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 34 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 28 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 58 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 103 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 86 as libc::c_int,
             y: 68 as libc::c_int,
             w: 2 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 42 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 45 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 34 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 40 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 48 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 51 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 54 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 124 as libc::c_int,
             y: 34 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 46 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 52 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 58 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 64 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 70 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 76 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 82 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 88 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 94 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 100 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 57 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 60 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 106 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 112 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 118 as libc::c_int,
             y: 34 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 119 as libc::c_int,
             y: 51 as libc::c_int,
             w: 5 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 18 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 41 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 48 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 55 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 111 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 0 as libc::c_int,
             y: 35 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 6 as libc::c_int,
             y: 35 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 119 as libc::c_int,
             y: 0 as libc::c_int,
             w: 8 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 18 as libc::c_int,
             y: 17 as libc::c_int,
             w: 8 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 63 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 66 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 62 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 12 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 28 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 67 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 76 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 69 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 85 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 76 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 18 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 24 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 26 as libc::c_int,
             y: 17 as libc::c_int,
             w: 8 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 83 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 38 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 90 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 30 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 36 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 69 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 124 as libc::c_int,
             y: 51 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 72 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 42 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 15 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 48 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 54 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 97 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 0 as libc::c_int,
             y: 52 as libc::c_int,
             w: 5 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 104 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 60 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 19 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 66 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 111 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 75 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 78 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 72 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 81 as libc::c_int,
             y: 68 as libc::c_int,
             w: 3 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 48 as libc::c_int,
             y: 0 as libc::c_int,
             w: 10 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 118 as libc::c_int,
             y: 17 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 0 as libc::c_int,
             y: 18 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 7 as libc::c_int,
             y: 18 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 14 as libc::c_int,
             y: 34 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 23 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 5 as libc::c_int,
             y: 52 as libc::c_int,
             w: 5 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 27 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 21 as libc::c_int,
             y: 34 as libc::c_int,
             w: 7 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 78 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 94 as libc::c_int,
             y: 0 as libc::c_int,
             w: 9 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 84 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 90 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 10 as libc::c_int,
             y: 68 as libc::c_int,
             w: 5 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 31 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 96 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 35 as libc::c_int,
             y: 68 as libc::c_int,
             w: 4 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 102 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
-    {
-        let mut init = Rect {
+        },
+    Rect {
             x: 108 as libc::c_int,
             y: 51 as libc::c_int,
             w: 6 as libc::c_int,
             h: 17 as libc::c_int,
-        };
-        init
-    },
+        },
 ];
 static mut tex_buf: [GLfloat; 131072] = [0.; 131072];
 static mut vert_buf: [GLfloat; 131072] = [0.; 131072];
@@ -1641,15 +1338,12 @@ pub unsafe extern "C" fn r_draw_rect(mut rect: Rect, mut color: Color) {
 
 #[no_mangle]
 pub unsafe extern "C" fn r_draw_text(text: &str, mut pos: Vec2i, mut color: Color) {
-    let mut dst: Rect = {
-        let mut init = Rect {
+    let mut dst: Rect = Rect {
             x: pos.x,
             y: pos.y,
             w: 0 as libc::c_int,
             h: 0 as libc::c_int,
         };
-        init
-    };
     for p in text.chars() {
         if !(p as libc::c_int & 0xc0 as libc::c_int == 0x80 as libc::c_int) {
             let mut chr: libc::c_int = i32::min(p as i32, 127);
