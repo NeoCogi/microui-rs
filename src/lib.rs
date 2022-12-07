@@ -51,7 +51,6 @@
 // IN THE SOFTWARE.
 //
 use core::ptr;
-use ::libc;
 
 mod fixed_collections;
 pub use crate::fixed_collections::*;
@@ -104,7 +103,8 @@ impl<const N: usize> Default for Pool<N> {
         Self { vec: [PoolItem::default(); N] }
     }
 }
-#[derive(PartialEq)]
+
+#[derive(PartialEq, Copy, Clone)]
 #[repr(u32)]
 pub enum Clip {
     None = 0,
@@ -407,16 +407,54 @@ impl MouseButton {
     }
 }
 
-pub const MU_KEY_RETURN: u32 = 16;
-pub const MU_KEY_BACKSPACE: u32 = 8;
-pub const MU_KEY_ALT: u32 = 4;
-pub const MU_KEY_CTRL: u32 = 2;
-pub const MU_KEY_SHIFT: u32 = 1;
+#[derive(PartialEq, Copy, Clone)]
+#[repr(u32)]
+pub enum KeyMode {
+    Return = 16,
+    Backspace = 8,
+    Alt = 4,
+    Ctrl = 2,
+    Shift = 1,
+    None = 0,
+}
+
+impl KeyMode {
+    pub fn is_none(&self) -> bool {
+        *self == KeyMode::None
+    }
+    pub fn is_return(&self) -> bool {
+        *self as u32 & Self::Return as u32 != 0
+    }
+    pub fn is_backspace(&self) -> bool {
+        *self as u32 & Self::Backspace as u32 != 0
+    }
+    pub fn is_alt(&self) -> bool {
+        *self as u32 & Self::Alt as u32 != 0
+    }
+    pub fn is_ctrl(&self) -> bool {
+        *self as u32 & Self::Ctrl as u32 != 0
+    }
+    pub fn is_shift(&self) -> bool {
+        *self as u32 & Self::Shift as u32 != 0
+    }
+
+    pub fn set(&mut self, km: Self) {
+        let u0 = *self as u32;
+        let u1 = km as u32;
+        *self = unsafe { core::mem::transmute(u0 | u1) }
+    }
+
+    pub fn clear(&mut self, km: Self) {
+        let u0 = *self as u32;
+        let u1 = !(km as u32);
+        *self = unsafe { core::mem::transmute(u0 & u1) }
+    }
+}
 
 #[repr(C)]
 pub struct Context {
-    pub char_width: Option<fn(Font, char) -> usize>,
-    pub font_height: Option<fn(Font) -> usize>,
+    pub char_width: Option<fn(FontId, char) -> usize>,
+    pub font_height: Option<fn(FontId) -> usize>,
     pub draw_frame: Option<fn(&mut Context, Rect, ControlColor) -> ()>,
     pub style: Style,
     pub hover: Id,
@@ -447,8 +485,8 @@ pub struct Context {
     pub scroll_delta: Vec2i,
     pub mouse_down: MouseButton,
     pub mouse_pressed: MouseButton,
-    pub key_down: u32,
-    pub key_pressed: u32,
+    pub key_down: KeyMode,
+    pub key_pressed: KeyMode,
     pub input_text: FixedString<32>,
 }
 
@@ -487,8 +525,8 @@ impl Default for Context {
             scroll_delta: Vec2i::default(),
             mouse_down: MouseButton::None,
             mouse_pressed: MouseButton::None,
-            key_down: 0,
-            key_pressed: 0,
+            key_down: KeyMode::None,
+            key_pressed: KeyMode::None,
             input_text: FixedString::default(),
         }
     }
@@ -556,7 +594,7 @@ pub enum Command {
         color: Color,
     },
     Text {
-        font: Font,
+        font: FontId,
         pos: Vec2i,
         color: Color,
         str_start: usize,
@@ -585,11 +623,18 @@ pub struct Color {
     pub a: u8,
 }
 
-pub type Font = *const libc::c_void;
+pub trait Font {
+    fn name(&self) -> &str;
+    fn get_size(&self) -> usize;
+    fn get_char_size(&self, c: char) -> (usize, usize);
+}
+
+#[derive(Copy, Clone)]
+pub struct FontId(pub usize);
 
 #[derive(Copy, Clone)]
 pub struct Style {
-    pub font: Font,
+    pub font: FontId,
     pub size: Vec2i,
     pub padding: i32,
     pub spacing: i32,
@@ -621,7 +666,7 @@ static UNCLIPPED_RECT: Rect = Rect { x: 0, y: 0, w: 0x1000000, h: 0x1000000 };
 impl Default for Style {
     fn default() -> Self {
         Self {
-            font: 0 as *const libc::c_void,
+            font: FontId(0),
             size: Vec2i { x: 68, y: 10 },
             padding: 5,
             spacing: 4,
@@ -756,7 +801,7 @@ impl Context {
         {
             self.bring_to_front(self.next_hover_root.unwrap());
         }
-        self.key_pressed = 0;
+        self.key_pressed = KeyMode::None;
         self.input_text.clear();
         self.mouse_pressed = MouseButton::None;
         self.scroll_delta = vec2(0, 0);
@@ -990,13 +1035,13 @@ impl Context {
         self.scroll_delta.y += y;
     }
 
-    pub fn input_keydown(&mut self, key: u32) {
-        self.key_pressed |= key;
-        self.key_down |= key;
+    pub fn input_keydown(&mut self, key: KeyMode) {
+        self.key_pressed.set(key);
+        self.key_down.set(key);
     }
 
-    pub fn input_keyup(&mut self, key: u32) {
-        self.key_down &= !key;
+    pub fn input_keyup(&mut self, key: KeyMode) {
+        self.key_down.clear(key);
     }
 
     pub fn input_text(&mut self, text: &str) {
@@ -1055,7 +1100,7 @@ impl Context {
         self.draw_rect(rect(r.x + r.w - 1, r.y, 1, r.h), color);
     }
 
-    pub fn draw_text(&mut self, font: Font, str: &str, pos: Vec2i, color: Color) {
+    pub fn draw_text(&mut self, font: FontId, str: &str, pos: Vec2i, color: Color) {
         let rect: Rect = rect(pos.x, pos.y, self.get_text_width(font, str), self.get_text_height(font, str));
         let clipped = self.check_clip(rect);
         match clipped {
@@ -1120,7 +1165,7 @@ impl Context {
         a.max.y = i32::max(a.max.y, b.max.y);
     }
 
-    pub unsafe fn layout_row_for_layout(layout: &mut Layout, widths: &[i32], height: i32) {
+    pub fn layout_row_for_layout(layout: &mut Layout, widths: &[i32], height: i32) {
         layout.items = widths.len();
         assert!(widths.len() <= 16);
         for i in 0..widths.len() {
@@ -1133,7 +1178,7 @@ impl Context {
 
     pub fn layout_row(&mut self, widths: &[i32], height: i32) {
         let layout = self.get_layout_mut();
-        unsafe { Self::layout_row_for_layout(layout, widths, height) };
+        Self::layout_row_for_layout(layout, widths, height);
     }
 
     pub fn layout_width(&mut self, width: i32) {
@@ -1168,7 +1213,7 @@ impl Context {
             let mut undefined_widths = [0; 16];
             undefined_widths[0..litems as usize].copy_from_slice(&layout.widths[0..litems as usize]);
             if layout.item_index == layout.items {
-                unsafe { Self::layout_row_for_layout(layout, &undefined_widths[0..litems as usize], lsize_y) };
+                Self::layout_row_for_layout(layout, &undefined_widths[0..litems as usize], lsize_y);
             }
             res.x = layout.position.x;
             res.y = layout.position.y;
@@ -1239,7 +1284,7 @@ impl Context {
 
     pub fn draw_control_text(&mut self, str: &str, rect: Rect, colorid: ControlColor, opt: WidgetOption) {
         let mut pos: Vec2i = Vec2i { x: 0, y: 0 };
-        let font: Font = self.style.font;
+        let font = self.style.font;
         let tw = self.get_text_width(font, str);
         self.push_clip_rect(rect);
         pos.y = rect.y + (rect.h - self.get_text_height(font, str)) / 2;
@@ -1286,7 +1331,7 @@ impl Context {
         }
     }
 
-    pub fn get_text_width(&self, font: Font, text: &str) -> i32 {
+    pub fn get_text_width(&self, font: FontId, text: &str) -> i32 {
         let mut res = 0;
         let mut acc = 0;
         for c in text.chars() {
@@ -1300,15 +1345,15 @@ impl Context {
         res as i32
     }
 
-    pub fn get_text_height(&self, font: Font, text: &str) -> i32 {
+    pub fn get_text_height(&self, font: FontId, text: &str) -> i32 {
         let font_height = self.font_height.expect("non-null function pointer")(font);
         let lc = text.lines().count();
         (lc * font_height) as i32
     }
 
     pub fn text(&mut self, text: &str) {
-        let font: Font = self.style.font;
-        let color: Color = self.style.colors[ControlColor::Text as usize];
+        let font = self.style.font;
+        let color = self.style.colors[ControlColor::Text as usize];
         self.layout_begin_column();
         let h = self.font_height.expect("non-null function pointer")(font) as i32;
         self.layout_row(&[-1], h);
@@ -1390,12 +1435,12 @@ impl Context {
                 res.change()
             }
 
-            if self.key_pressed & MU_KEY_BACKSPACE != 0 && len > 0 {
+            if self.key_pressed.is_backspace() && len > 0 {
                 // skip utf-8 continuation bytes
                 buf.pop();
                 res.change();
             }
-            if self.key_pressed & MU_KEY_RETURN != 0 {
+            if self.key_pressed.is_return() {
                 self.set_focus(0);
                 res.submit();
             }
@@ -1420,7 +1465,7 @@ impl Context {
     }
 
     fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
-        if self.mouse_pressed.is_left() && (self.key_down & MU_KEY_SHIFT) != 0 && self.hover == id {
+        if self.mouse_pressed.is_left() && self.key_down.is_shift() && self.hover == id {
             self.number_edit = id;
             self.number_edit_buf.clear();
             self.number_edit_buf.append_real("%.3f", *value);

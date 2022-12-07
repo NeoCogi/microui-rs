@@ -1,5 +1,4 @@
 extern crate sdl2;
-use glow::*;
 mod renderer;
 
 use sdl2::event::{Event, WindowEvent};
@@ -8,11 +7,11 @@ use sdl2::video::GLProfile;
 use crate::renderer::Renderer;
 use microui::*;
 
-pub fn r_get_char_width(_font: Font, c: char) -> usize {
-    unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
+pub fn r_get_char_width(_font: FontId, c: char) -> usize {
+    ATLAS[ATLAS_FONT as usize + c as usize].w as usize
 }
 
-pub fn r_get_font_height(_font: Font) -> usize {
+pub fn r_get_font_height(_font: FontId) -> usize {
     18
 }
 
@@ -23,6 +22,7 @@ struct State<'a> {
     logbuf_updated: bool,
     submit_buf: FixedString<128>,
     ctx: microui::Context,
+    checks: [bool; 3],
 }
 
 #[derive(Copy, Clone)]
@@ -98,6 +98,7 @@ impl<'a> State<'a> {
             logbuf_updated: false,
             submit_buf: FixedString::new(),
             ctx,
+            checks: [false, true, false],
         }
     }
 
@@ -212,12 +213,9 @@ impl<'a> State<'a> {
                     self.ctx.end_treenode();
                 }
                 if !self.ctx.begin_treenode_ex("Test 3", WidgetOption::None).is_none() {
-                    unsafe {
-                        static mut checks: [bool; 3] = [true, false, true];
-                        self.ctx.checkbox("Checkbox 1", &mut checks[0]);
-                        self.ctx.checkbox("Checkbox 2", &mut checks[1]);
-                        self.ctx.checkbox("Checkbox 3", &mut checks[2]);
-                    }
+                    self.ctx.checkbox("Checkbox 1", &mut self.checks[0]);
+                    self.ctx.checkbox("Checkbox 2", &mut self.checks[1]);
+                    self.ctx.checkbox("Checkbox 3", &mut self.checks[2]);
                     self.ctx.end_treenode();
                 }
                 self.ctx.layout_end_column();
@@ -307,9 +305,8 @@ impl<'a> State<'a> {
             self.ctx.end_window();
         }
     }
-    fn uint8_slider(&mut self, value: &mut u8, low: libc::c_int, high: libc::c_int) -> ResourceState {
-        let mut tmp = 0.;
-        tmp = *value as libc::c_float;
+    fn uint8_slider(&mut self, value: &mut u8, low: i32, high: i32) -> ResourceState {
+        let mut tmp = *value as f32;
         self.ctx.push_id_from_ptr(value);
         let res = self
             .ctx
@@ -368,7 +365,9 @@ fn main() {
     let window = video_subsystem.window("Window", 800, 600).opengl().build().unwrap();
 
     // Unlike the other example above, nobody created a context for your window, so you need to create one.
-    let ctx = window.gl_create_context().unwrap();
+
+    // TODO: the rust compiler optimizes this out
+    let _x_ = window.gl_create_context().unwrap();
     let gl = unsafe { glow::Context::from_loader_function(|s| video_subsystem.gl_get_proc_address(s) as *const _) };
 
     debug_assert_eq!(gl_attr.context_profile(), GLProfile::GLES);
@@ -381,20 +380,33 @@ fn main() {
     let mut state = State::new();
 
     'running: loop {
-        unsafe {
-            let (width, height) = window.size();
+        let (width, height) = window.size();
 
-            rd.clear(&gl, width as i32, height as i32, color(state.bg[0] as u8, state.bg[1] as u8, state.bg[2] as u8, 255));
+        rd.clear(
+            &gl,
+            width as i32,
+            height as i32,
+            color(state.bg[0] as u8, state.bg[1] as u8, state.bg[2] as u8, 255),
+        );
 
-            // rd.push_rect(
-            //     &gl,
-            //     microui::rect(0, 0, 256, 256),
-            //     microui::rect(0, 0, 128, 128),
-            //     microui::color(0xFF, 0xFF, 0xFF, 0xFF),
-            // );
-            //
-            // rd.draw_text(&gl, "Hello World", microui::vec2(300, 0), microui::color(0xFF, 0xFF, 0xFF, 0xFF));
-            // rd.flush(&gl);
+        fn map_mouse_button(sdl_mb: sdl2::mouse::MouseButton) -> microui::MouseButton {
+            match sdl_mb {
+                sdl2::mouse::MouseButton::Left => microui::MouseButton::Left,
+                sdl2::mouse::MouseButton::Right => microui::MouseButton::Right,
+                sdl2::mouse::MouseButton::Middle => microui::MouseButton::Middle,
+                _ => microui::MouseButton::None,
+            }
+        }
+
+        fn map_keymode(sdl_km: sdl2::keyboard::Mod, sdl_kc: Option<sdl2::keyboard::Keycode>) -> microui::KeyMode {
+            match (sdl_km, sdl_kc) {
+                (sdl2::keyboard::Mod::LALTMOD, _) | (sdl2::keyboard::Mod::RALTMOD, _) => microui::KeyMode::Alt,
+                (sdl2::keyboard::Mod::LCTRLMOD, _) | (sdl2::keyboard::Mod::RCTRLMOD, _) => microui::KeyMode::Ctrl,
+                (sdl2::keyboard::Mod::LSHIFTMOD, _) | (sdl2::keyboard::Mod::RSHIFTMOD, _) => microui::KeyMode::Shift,
+                (_, Some(sdl2::keyboard::Keycode::Backspace)) => microui::KeyMode::Backspace,
+                (_, Some(sdl2::keyboard::Keycode::Return)) => microui::KeyMode::Return,
+                _ => microui::KeyMode::None,
+            }
         }
 
         for event in event_pump.poll_iter() {
@@ -404,22 +416,23 @@ fn main() {
                 Event::MouseMotion { x, y, .. } => state.ctx.input_mousemove(x, y),
                 Event::MouseWheel { y, .. } => state.ctx.input_scroll(0, y * -30),
                 Event::MouseButtonDown { x, y, mouse_btn, .. } => {
-                    let mb = match mouse_btn {
-                        sdl2::mouse::MouseButton::Left => microui::MouseButton::Left,
-                        sdl2::mouse::MouseButton::Right => microui::MouseButton::Right,
-                        sdl2::mouse::MouseButton::Middle => microui::MouseButton::Middle,
-                        _ => microui::MouseButton::None,
-                    };
+                    let mb = map_mouse_button(mouse_btn);
                     state.ctx.input_mousedown(x, y, mb);
                 }
                 Event::MouseButtonUp { x, y, mouse_btn, .. } => {
-                    let mb = match mouse_btn {
-                        sdl2::mouse::MouseButton::Left => microui::MouseButton::Left,
-                        sdl2::mouse::MouseButton::Right => microui::MouseButton::Right,
-                        sdl2::mouse::MouseButton::Middle => microui::MouseButton::Middle,
-                        _ => microui::MouseButton::None,
-                    };
+                    let mb = map_mouse_button(mouse_btn);
                     state.ctx.input_mouseup(x, y, mb);
+                }
+                Event::KeyDown { keymod, keycode, .. } => {
+                    let km = map_keymode(keymod, keycode);
+                    state.ctx.input_keydown(km);
+                }
+                Event::KeyUp { keymod, keycode, .. } => {
+                    let km = map_keymode(keymod, keycode);
+                    state.ctx.input_keyup(km);
+                }
+                Event::TextInput { text, .. } => {
+                    state.ctx.input_text(text.as_str());
                 }
 
                 _ => {}

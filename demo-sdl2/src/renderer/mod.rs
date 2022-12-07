@@ -51,7 +51,6 @@
 // IN THE SOFTWARE.
 //
 use microui::*;
-use ::libc;
 use glow::*;
 
 const VERTEX_SHADER: &str = "#version 100
@@ -279,7 +278,7 @@ impl Renderer {
         }
     }
 
-    pub fn push_quad_vertices(&mut self, gl: &glow::Context, v0: &Vertex, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
+    fn push_quad_vertices(&mut self, gl: &glow::Context, v0: &Vertex, v1: &Vertex, v2: &Vertex, v3: &Vertex) {
         if self.verts.len() + 4 >= 65536 || self.indices.len() + 6 >= 65536 {
             self.flush(gl);
         }
@@ -342,12 +341,12 @@ impl Renderer {
         self.push_rect(gl, rect, ATLAS[ATLAS_WHITE as usize], color);
     }
 
-    pub fn draw_text(&mut self, gl: &glow::Context, text: &str, mut pos: Vec2i, mut color: Color) {
+    pub fn draw_text(&mut self, gl: &glow::Context, text: &str, pos: Vec2i, color: Color) {
         let mut dst = Rect { x: pos.x, y: pos.y, w: 0, h: 0 };
         for p in text.chars() {
             if (p as usize) < 127 {
                 let chr = usize::min(p as usize, 127);
-                let mut src = ATLAS[ATLAS_FONT as usize + chr];
+                let src = ATLAS[ATLAS_FONT as usize + chr];
                 dst.w = src.w;
                 dst.h = src.h;
                 self.push_rect(gl, dst, src, color);
@@ -360,16 +359,14 @@ impl Renderer {
         let src = ATLAS[id as usize];
         let x = r.x + (r.w - src.w) / 2;
         let y = r.y + (r.h - src.h) / 2;
-        unsafe {
-            self.push_rect(gl, rect(x, y, src.w, src.h), src, color);
-        }
+        self.push_rect(gl, rect(x, y, src.w, src.h), src, color);
     }
 
-    pub fn get_char_width(&self, _font: Font, c: char) -> usize {
-        unsafe { ATLAS[ATLAS_FONT as usize + c as usize].w as usize }
+    pub fn get_char_width(&self, _font: FontId, c: char) -> usize {
+        ATLAS[ATLAS_FONT as usize + c as usize].w as usize
     }
 
-    pub fn get_font_height(&self, _font: Font) -> usize {
+    pub fn get_font_height(&self, _font: FontId) -> usize {
         18
     }
 
@@ -387,7 +384,7 @@ impl Renderer {
             self.width = width as u32;
             self.height = height as u32;
             self.flush(gl);
-            gl.clear_color((clr.r as f32 / 255.0), (clr.g as f32 / 255.0), (clr.b as f32 / 255.0), (clr.a as f32 / 255.0));
+            gl.clear_color(clr.r as f32 / 255.0, clr.g as f32 / 255.0, clr.b as f32 / 255.0, clr.a as f32 / 255.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
         }
     }
