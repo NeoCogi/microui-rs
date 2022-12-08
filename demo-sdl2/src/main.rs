@@ -118,7 +118,7 @@ impl<'a> State<'a> {
             .begin_window_ex(
                 "Demo Window",
                 rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
-                WidgetOption::None,
+                WidgetOption::NONE,
             )
             .is_none()
         {
@@ -130,7 +130,7 @@ impl<'a> State<'a> {
 
             let mut buff = FixedString::<128>::new();
 
-            if !self.ctx.header_ex("Window Info", WidgetOption::None).is_none() {
+            if !self.ctx.header_ex("Window Info", WidgetOption::NONE).is_none() {
                 let win_0 = self.ctx.get_current_container_rect();
                 self.ctx.layout_row(&[54, -1], 0);
                 self.ctx.label("Position:");
@@ -150,69 +150,69 @@ impl<'a> State<'a> {
 
                 self.ctx.label(buff.as_str());
             }
-            if !self.ctx.header_ex("Test Buttons", WidgetOption::Expanded).is_none() {
+            if !self.ctx.header_ex("Test Buttons", WidgetOption::EXPANDED).is_none() {
                 self.ctx.layout_row(&[86, -110, -1], 0);
                 self.ctx.label("Test buttons 1:");
-                if !self.ctx.button_ex("Button 1", Icon::None, WidgetOption::AlignCenter).is_none() {
+                if !self.ctx.button_ex("Button 1", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                     self.write_log("Pressed button 1");
                 }
-                if !self.ctx.button_ex("Button 2", Icon::None, WidgetOption::AlignCenter).is_none() {
+                if !self.ctx.button_ex("Button 2", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                     self.write_log("Pressed button 2");
                 }
                 self.ctx.label("Test buttons 2:");
-                if !self.ctx.button_ex("Button 3", Icon::None, WidgetOption::AlignCenter).is_none() {
+                if !self.ctx.button_ex("Button 3", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                     self.write_log("Pressed button 3");
                 }
-                if !self.ctx.button_ex("Popup", Icon::None, WidgetOption::AlignCenter).is_none() {
+                if !self.ctx.button_ex("Popup", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                     self.ctx.open_popup("Test Popup");
                 }
                 if !self.ctx.begin_popup("Test Popup").is_none() {
-                    if !self.ctx.button_ex("Hello", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("Hello", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("Hello")
                     }
-                    if !self.ctx.button_ex("World", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("World", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("World")
                     }
                     self.ctx.end_popup();
                 }
             }
-            if !self.ctx.header_ex("Tree and Text", WidgetOption::Expanded).is_none() {
+            if !self.ctx.header_ex("Tree and Text", WidgetOption::EXPANDED).is_none() {
                 self.ctx.layout_row(&[140, -1], 0);
                 self.ctx.layout_begin_column();
-                if !self.ctx.begin_treenode_ex("Test 1", WidgetOption::None).is_none() {
-                    if !self.ctx.begin_treenode_ex("Test 1a", WidgetOption::None).is_none() {
+                if !self.ctx.begin_treenode_ex("Test 1", WidgetOption::NONE).is_none() {
+                    if !self.ctx.begin_treenode_ex("Test 1a", WidgetOption::NONE).is_none() {
                         self.ctx.label("Hello");
                         self.ctx.label("world");
                         self.ctx.end_treenode();
                     }
-                    if !self.ctx.begin_treenode_ex("Test 1b", WidgetOption::None).is_none() {
-                        if !self.ctx.button_ex("Button 1", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.begin_treenode_ex("Test 1b", WidgetOption::NONE).is_none() {
+                        if !self.ctx.button_ex("Button 1", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                             self.write_log("Pressed button 1");
                         }
-                        if !self.ctx.button_ex("Button 2", Icon::None, WidgetOption::AlignCenter).is_none() {
+                        if !self.ctx.button_ex("Button 2", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                             self.write_log("Pressed button 2");
                         }
                         self.ctx.end_treenode();
                     }
                     self.ctx.end_treenode();
                 }
-                if !self.ctx.begin_treenode_ex("Test 2", WidgetOption::None).is_none() {
+                if !self.ctx.begin_treenode_ex("Test 2", WidgetOption::NONE).is_none() {
                     self.ctx.layout_row(&[54, 54], 0);
-                    if !self.ctx.button_ex("Button 3", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("Button 3", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("Pressed button 3");
                     }
-                    if !self.ctx.button_ex("Button 4", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("Button 4", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("Pressed button 4");
                     }
-                    if !self.ctx.button_ex("Button 5", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("Button 5", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("Pressed button 5");
                     }
-                    if !self.ctx.button_ex("Button 6", Icon::None, WidgetOption::AlignCenter).is_none() {
+                    if !self.ctx.button_ex("Button 6", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                         self.write_log("Pressed button 6");
                     }
                     self.ctx.end_treenode();
                 }
-                if !self.ctx.begin_treenode_ex("Test 3", WidgetOption::None).is_none() {
+                if !self.ctx.begin_treenode_ex("Test 3", WidgetOption::NONE).is_none() {
                     self.ctx.checkbox("Checkbox 1", &mut self.checks[0]);
                     self.ctx.checkbox("Checkbox 2", &mut self.checks[1]);
                     self.ctx.checkbox("Checkbox 3", &mut self.checks[2]);
@@ -227,7 +227,7 @@ impl<'a> State<'a> {
                 );
                 self.ctx.layout_end_column();
             }
-            if !self.ctx.header_ex("Background Color", WidgetOption::Expanded).is_none() {
+            if !self.ctx.header_ex("Background Color", WidgetOption::EXPANDED).is_none() {
                 self.ctx.layout_row(&[-78, -1], 74);
                 self.ctx.layout_begin_column();
                 self.ctx.layout_row(&[46, -1], 0);
@@ -238,7 +238,7 @@ impl<'a> State<'a> {
                     255 as libc::c_int as Real,
                     0 as libc::c_int as Real,
                     "%.2",
-                    WidgetOption::AlignCenter,
+                    WidgetOption::ALIGN_CENTER,
                 );
                 self.ctx.label("Green:");
                 self.ctx.slider_ex(
@@ -247,7 +247,7 @@ impl<'a> State<'a> {
                     255 as libc::c_int as Real,
                     0 as libc::c_int as Real,
                     "%.2",
-                    WidgetOption::AlignCenter,
+                    WidgetOption::ALIGN_CENTER,
                 );
                 self.ctx.label("Blue:");
                 self.ctx.slider_ex(
@@ -256,7 +256,7 @@ impl<'a> State<'a> {
                     255 as libc::c_int as Real,
                     0 as libc::c_int as Real,
                     "%.2",
-                    WidgetOption::AlignCenter,
+                    WidgetOption::ALIGN_CENTER,
                 );
                 self.ctx.layout_end_column();
                 let r: Rect = self.ctx.layout_next();
@@ -266,16 +266,16 @@ impl<'a> State<'a> {
                 buff.append_int("%02X", self.bg[0] as _);
                 buff.append_int("%02X", self.bg[1] as _);
                 buff.append_int("%02X", self.bg[2] as _);
-                self.ctx.draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::AlignCenter);
+                self.ctx.draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::ALIGN_CENTER);
             }
             self.ctx.end_window();
         }
     }
 
     fn log_window(&mut self) {
-        if !self.ctx.begin_window_ex("Log Window", rect(350, 40, 300, 200), WidgetOption::None).is_none() {
+        if !self.ctx.begin_window_ex("Log Window", rect(350, 40, 300, 200), WidgetOption::NONE).is_none() {
             self.ctx.layout_row(&[-1], -25);
-            self.ctx.begin_panel_ex("Log Output", WidgetOption::None);
+            self.ctx.begin_panel_ex("Log Output", WidgetOption::NONE);
             let mut scroll = self.ctx.get_current_container_scroll();
             let content_size = self.ctx.get_current_container_content_size();
             self.ctx.layout_row(&[-1], -1);
@@ -289,11 +289,11 @@ impl<'a> State<'a> {
 
             let mut submitted = false;
             self.ctx.layout_row(&[-70, -1], 0);
-            if self.ctx.textbox_ex(&mut self.submit_buf, WidgetOption::None).is_submitted() {
+            if self.ctx.textbox_ex(&mut self.submit_buf, WidgetOption::NONE).is_submitted() {
                 self.ctx.set_focus(self.ctx.last_id);
                 submitted = true;
             }
-            if !self.ctx.button_ex("Submit", Icon::None, WidgetOption::AlignCenter).is_none() {
+            if !self.ctx.button_ex("Submit", Icon::None, WidgetOption::ALIGN_CENTER).is_none() {
                 submitted = true;
             }
             if submitted {
@@ -310,7 +310,7 @@ impl<'a> State<'a> {
         self.ctx.push_id_from_ptr(value);
         let res = self
             .ctx
-            .slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, "%.2f", WidgetOption::AlignCenter);
+            .slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, "%.2f", WidgetOption::ALIGN_CENTER);
         *value = tmp as libc::c_uchar;
         self.ctx.pop_id();
         return res;
@@ -321,7 +321,7 @@ impl<'a> State<'a> {
             .begin_window_ex(
                 "Style Editor",
                 rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
-                WidgetOption::None,
+                WidgetOption::NONE,
             )
             .is_none()
         {
@@ -391,21 +391,21 @@ fn main() {
 
         fn map_mouse_button(sdl_mb: sdl2::mouse::MouseButton) -> microui::MouseButton {
             match sdl_mb {
-                sdl2::mouse::MouseButton::Left => microui::MouseButton::Left,
-                sdl2::mouse::MouseButton::Right => microui::MouseButton::Right,
-                sdl2::mouse::MouseButton::Middle => microui::MouseButton::Middle,
-                _ => microui::MouseButton::None,
+                sdl2::mouse::MouseButton::Left => microui::MouseButton::LEFT,
+                sdl2::mouse::MouseButton::Right => microui::MouseButton::RIGHT,
+                sdl2::mouse::MouseButton::Middle => microui::MouseButton::MIDDLE,
+                _ => microui::MouseButton::NONE,
             }
         }
 
         fn map_keymode(sdl_km: sdl2::keyboard::Mod, sdl_kc: Option<sdl2::keyboard::Keycode>) -> microui::KeyMode {
             match (sdl_km, sdl_kc) {
-                (sdl2::keyboard::Mod::LALTMOD, _) | (sdl2::keyboard::Mod::RALTMOD, _) => microui::KeyMode::Alt,
-                (sdl2::keyboard::Mod::LCTRLMOD, _) | (sdl2::keyboard::Mod::RCTRLMOD, _) => microui::KeyMode::Ctrl,
-                (sdl2::keyboard::Mod::LSHIFTMOD, _) | (sdl2::keyboard::Mod::RSHIFTMOD, _) => microui::KeyMode::Shift,
-                (_, Some(sdl2::keyboard::Keycode::Backspace)) => microui::KeyMode::Backspace,
-                (_, Some(sdl2::keyboard::Keycode::Return)) => microui::KeyMode::Return,
-                _ => microui::KeyMode::None,
+                (sdl2::keyboard::Mod::LALTMOD, _) | (sdl2::keyboard::Mod::RALTMOD, _) => microui::KeyMode::ALT,
+                (sdl2::keyboard::Mod::LCTRLMOD, _) | (sdl2::keyboard::Mod::RCTRLMOD, _) => microui::KeyMode::CTRL,
+                (sdl2::keyboard::Mod::LSHIFTMOD, _) | (sdl2::keyboard::Mod::RSHIFTMOD, _) => microui::KeyMode::SHIFT,
+                (_, Some(sdl2::keyboard::Keycode::Backspace)) => microui::KeyMode::BACKSPACE,
+                (_, Some(sdl2::keyboard::Keycode::Return)) => microui::KeyMode::RETURN,
+                _ => microui::KeyMode::NONE,
             }
         }
 

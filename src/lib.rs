@@ -58,6 +58,8 @@ pub use crate::fixed_collections::*;
 mod atlas;
 pub use atlas::*;
 
+use bitflags::*;
+
 #[derive(Copy, Clone)]
 pub struct Pool<const N: usize> {
     vec: [PoolItem; N],
@@ -163,291 +165,147 @@ pub enum Icon {
     None = 0,
 }
 
-#[derive(PartialEq, Copy, Clone)]
-#[repr(u32)]
-pub enum ResourceState {
-    Change = 4,
-    Submit = 2,
-    Active = 1,
-    None = 0,
+bitflags! {
+    pub struct ResourceState : u32 {
+        const CHANGE = 4;
+        const SUBMIT = 2;
+        const ACTIVE = 1;
+        const NONE = 0;
+    }
 }
 
 impl ResourceState {
     pub fn is_changed(&self) -> bool {
-        *self as u32 & ResourceState::Change as u32 != 0
+        self.intersects(Self::CHANGE)
     }
     pub fn is_submitted(&self) -> bool {
-        *self as u32 & ResourceState::Submit as u32 != 0
+        self.intersects(Self::SUBMIT)
     }
     pub fn is_active(&self) -> bool {
-        *self as u32 & ResourceState::Active as u32 != 0
+        self.intersects(Self::ACTIVE)
     }
     pub fn is_none(&self) -> bool {
-        *self as u32 == 0
-    }
-
-    pub fn change(&mut self) {
-        let u0 = *self as u32;
-        let u1 = Self::Change as u32;
-        *self = unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn submit(&mut self) {
-        let u0 = *self as u32;
-        let u1 = Self::Submit as u32;
-        *self = unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn active(&mut self) {
-        let u0 = *self as u32;
-        let u1 = Self::Active as u32;
-        *self = unsafe { core::mem::transmute(u0 | u1) }
+        self.bits == 0
     }
 }
 
-#[derive(PartialEq, Copy, Clone)]
-#[repr(u32)]
-pub enum WidgetOption {
-    Expanded = 4096,
-    Closed = 2048,
-    Popup = 1024,
-    AutoSize = 512,
-    HoldFocus = 256,
-    NoTitle = 128,
-    NoClose = 64,
-    NoScroll = 32,
-    NoResize = 16,
-    NoFrame = 8,
-    NoInteract = 4,
-    AlignRight = 2,
-    AlignCenter = 1,
-    None = 0,
+bitflags! {
+    pub struct WidgetOption : u32 {
+        const EXPANDED = 4096;
+        const CLOSED = 2048;
+        const POPUP= 1024;
+        const AUTO_SIZE = 512;
+        const HOLD_FOCUS = 256;
+        const NO_TITLE = 128;
+        const NO_CLOSE = 64;
+        const NO_SCROLL = 32;
+        const NO_RESIZE = 16;
+        const NO_FRAME = 8;
+        const NO_INTERACT = 4;
+        const ALIGN_RIGHT = 2;
+        const ALIGN_CENTER = 1;
+        const NONE = 0;
+    }
 }
 
 impl WidgetOption {
     pub fn is_expanded(&self) -> bool {
-        *self as u32 & WidgetOption::Expanded as u32 != 0
+        self.intersects(WidgetOption::EXPANDED)
     }
     pub fn is_closed(&self) -> bool {
-        *self as u32 & WidgetOption::Closed as u32 != 0
+        self.intersects(WidgetOption::CLOSED)
     }
     pub fn is_popup(&self) -> bool {
-        *self as u32 & WidgetOption::Popup as u32 != 0
+        self.intersects(WidgetOption::POPUP)
     }
     pub fn is_auto_sizing(&self) -> bool {
-        *self as u32 & WidgetOption::AutoSize as u32 != 0
+        self.intersects(WidgetOption::AUTO_SIZE)
     }
     pub fn is_holding_focus(&self) -> bool {
-        *self as u32 & WidgetOption::HoldFocus as u32 != 0
+        self.intersects(WidgetOption::HOLD_FOCUS)
     }
     pub fn has_no_title(&self) -> bool {
-        *self as u32 & WidgetOption::NoTitle as u32 != 0
+        self.intersects(WidgetOption::NO_TITLE)
     }
     pub fn has_no_close(&self) -> bool {
-        *self as u32 & WidgetOption::NoClose as u32 != 0
+        self.intersects(WidgetOption::NO_CLOSE)
     }
     pub fn has_no_scroll(&self) -> bool {
-        *self as u32 & WidgetOption::NoScroll as u32 != 0
+        self.intersects(WidgetOption::NO_SCROLL)
     }
     pub fn is_fixed(&self) -> bool {
-        *self as u32 & WidgetOption::NoResize as u32 != 0
+        self.intersects(WidgetOption::NO_RESIZE)
     }
     pub fn has_no_frame(&self) -> bool {
-        *self as u32 & WidgetOption::NoFrame as u32 != 0
+        self.intersects(WidgetOption::NO_FRAME)
     }
     pub fn is_not_interactive(&self) -> bool {
-        *self as u32 & WidgetOption::NoInteract as u32 != 0
+        self.intersects(WidgetOption::NO_INTERACT)
     }
     pub fn is_aligned_right(&self) -> bool {
-        *self as u32 & WidgetOption::AlignRight as u32 != 0
+        self.intersects(WidgetOption::ALIGN_RIGHT)
     }
     pub fn is_aligned_center(&self) -> bool {
-        *self as u32 & WidgetOption::AlignCenter as u32 != 0
+        self.intersects(WidgetOption::ALIGN_CENTER)
     }
     pub fn is_none(&self) -> bool {
-        *self as u32 == 0
-    }
-
-    pub fn with_expanded(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Expanded as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_closed(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Closed as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_popup(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Popup as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_auto_size(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::AutoSize as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_hold_focus(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::HoldFocus as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_title(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoTitle as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_close(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoClose as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_scroll(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoScroll as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_resize(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoResize as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_frame(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoFrame as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_no_interaction(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::NoInteract as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_align_center(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::AlignCenter as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_align_right(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::AlignRight as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
+        self.bits == 0
     }
 }
 
-#[derive(PartialEq, Copy, Clone)]
-#[repr(u32)]
-pub enum MouseButton {
-    Middle = 4,
-    Right = 2,
-    Left = 1,
-    None = 0,
+bitflags! {
+    pub struct MouseButton : u32 {
+        const MIDDLE = 4;
+        const RIGHT = 2;
+        const LEFT = 1;
+        const NONE = 0;
+    }
 }
 
 impl MouseButton {
     pub fn is_middle(&self) -> bool {
-        *self as u32 & Self::Middle as u32 != 0
+        self.intersects(Self::MIDDLE)
     }
     pub fn is_right(&self) -> bool {
-        *self as u32 & Self::Right as u32 != 0
+        self.intersects(Self::RIGHT)
     }
     pub fn is_left(&self) -> bool {
-        *self as u32 & Self::Left as u32 != 0
+        self.intersects(Self::LEFT)
     }
     pub fn is_none(&self) -> bool {
-        *self as u32 == 0
-    }
-
-    pub fn with_middle(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Middle as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_right(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Right as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with_left(self) -> Self {
-        let u0 = self as u32;
-        let u1 = Self::Left as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn with(self, btn: Self) -> Self {
-        let u0 = self as u32;
-        let u1 = btn as u32;
-        unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn set(&mut self, btn: Self) {
-        let u0 = *self as u32;
-        let u1 = btn as u32;
-        *self = unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn clear(&mut self, btn: Self) {
-        let u0 = *self as u32;
-        let u1 = !(btn as u32);
-        *self = unsafe { core::mem::transmute(u0 & u1) }
+        self.bits == 0
     }
 }
 
-#[derive(PartialEq, Copy, Clone)]
-#[repr(u32)]
-pub enum KeyMode {
-    Return = 16,
-    Backspace = 8,
-    Alt = 4,
-    Ctrl = 2,
-    Shift = 1,
-    None = 0,
+bitflags! {
+    pub struct KeyMode : u32 {
+        const RETURN = 16;
+        const BACKSPACE = 8;
+        const ALT = 4;
+        const CTRL = 2;
+        const SHIFT = 1;
+        const NONE = 0;
+    }
 }
 
 impl KeyMode {
     pub fn is_none(&self) -> bool {
-        *self == KeyMode::None
+        self.bits == 0
     }
     pub fn is_return(&self) -> bool {
-        *self as u32 & Self::Return as u32 != 0
+        self.intersects(Self::RETURN)
     }
     pub fn is_backspace(&self) -> bool {
-        *self as u32 & Self::Backspace as u32 != 0
+        self.intersects(Self::BACKSPACE)
     }
     pub fn is_alt(&self) -> bool {
-        *self as u32 & Self::Alt as u32 != 0
+        self.intersects(Self::ALT)
     }
     pub fn is_ctrl(&self) -> bool {
-        *self as u32 & Self::Ctrl as u32 != 0
+        self.intersects(Self::CTRL)
     }
     pub fn is_shift(&self) -> bool {
-        *self as u32 & Self::Shift as u32 != 0
-    }
-
-    pub fn set(&mut self, km: Self) {
-        let u0 = *self as u32;
-        let u1 = km as u32;
-        *self = unsafe { core::mem::transmute(u0 | u1) }
-    }
-
-    pub fn clear(&mut self, km: Self) {
-        let u0 = *self as u32;
-        let u1 = !(km as u32);
-        *self = unsafe { core::mem::transmute(u0 & u1) }
+        self.intersects(Self::SHIFT)
     }
 }
 
@@ -523,10 +381,10 @@ impl Default for Context {
             last_mouse_pos: Vec2i::default(),
             mouse_delta: Vec2i::default(),
             scroll_delta: Vec2i::default(),
-            mouse_down: MouseButton::None,
-            mouse_pressed: MouseButton::None,
-            key_down: KeyMode::None,
-            key_pressed: KeyMode::None,
+            mouse_down: MouseButton::NONE,
+            mouse_pressed: MouseButton::NONE,
+            key_down: KeyMode::NONE,
+            key_pressed: KeyMode::NONE,
             input_text: FixedString::default(),
         }
     }
@@ -801,9 +659,9 @@ impl Context {
         {
             self.bring_to_front(self.next_hover_root.unwrap());
         }
-        self.key_pressed = KeyMode::None;
+        self.key_pressed = KeyMode::NONE;
         self.input_text.clear();
-        self.mouse_pressed = MouseButton::None;
+        self.mouse_pressed = MouseButton::NONE;
         self.scroll_delta = vec2(0, 0);
         self.last_mouse_pos = self.mouse_pos;
         let n = self.root_list.len();
@@ -1007,7 +865,7 @@ impl Context {
 
     fn get_container_index(&mut self, name: &str) -> Option<usize> {
         let id = self.get_id_from_str(name);
-        self.get_container_index_intern(id, WidgetOption::None)
+        self.get_container_index_intern(id, WidgetOption::NONE)
     }
 
     pub fn bring_to_front(&mut self, cnt: usize) {
@@ -1021,13 +879,13 @@ impl Context {
 
     pub fn input_mousedown(&mut self, x: i32, y: i32, btn: MouseButton) {
         self.input_mousemove(x, y);
-        self.mouse_down.set(btn);
-        self.mouse_pressed.set(btn);
+        self.mouse_down |= btn;
+        self.mouse_pressed |= btn;
     }
 
     pub fn input_mouseup(&mut self, x: i32, y: i32, btn: MouseButton) {
         self.input_mousemove(x, y);
-        self.mouse_down.clear(btn);
+        self.mouse_down &= !btn;
     }
 
     pub fn input_scroll(&mut self, x: i32, y: i32) {
@@ -1036,12 +894,12 @@ impl Context {
     }
 
     pub fn input_keydown(&mut self, key: KeyMode) {
-        self.key_pressed.set(key);
-        self.key_down.set(key);
+        self.key_pressed |= key;
+        self.key_down |= key;
     }
 
     pub fn input_keyup(&mut self, key: KeyMode) {
-        self.key_down.clear(key);
+        self.key_down &= !key;
     }
 
     pub fn input_text(&mut self, text: &str) {
@@ -1379,11 +1237,11 @@ impl Context {
 
     pub fn label(&mut self, text: &str) {
         let layout = self.layout_next();
-        self.draw_control_text(text, layout, ControlColor::Text, WidgetOption::None);
+        self.draw_control_text(text, layout, ControlColor::Text, WidgetOption::NONE);
     }
 
     pub fn button_ex(&mut self, label: &str, icon: Icon, opt: WidgetOption) -> ResourceState {
-        let mut res = ResourceState::None;
+        let mut res = ResourceState::NONE;
         let id: Id = if label.len() > 0 {
             self.get_id_from_str(label)
         } else {
@@ -1392,7 +1250,7 @@ impl Context {
         let r: Rect = self.layout_next();
         self.update_control(id, r, opt);
         if self.mouse_pressed.is_left() && self.focus == id {
-            res.submit();
+            res |= ResourceState::SUBMIT;
         }
         self.draw_control_frame(id, r, ControlColor::Button, opt);
         if label.len() > 0 {
@@ -1405,44 +1263,44 @@ impl Context {
     }
 
     pub fn checkbox(&mut self, label: &str, state: &mut bool) -> ResourceState {
-        let mut res = ResourceState::None;
+        let mut res = ResourceState::NONE;
         let id: Id = self.get_id_from_ptr(state);
         let mut r: Rect = self.layout_next();
         let box_0: Rect = rect(r.x, r.y, r.h, r.h);
-        self.update_control(id, r, WidgetOption::None);
+        self.update_control(id, r, WidgetOption::NONE);
         if self.mouse_pressed.is_left() && self.focus == id {
-            res.change();
+            res |= ResourceState::CHANGE;
             *state = *state == false;
         }
-        self.draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::None);
+        self.draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::NONE);
         if *state {
             self.draw_icon(Icon::Check, box_0, self.style.colors[ControlColor::Text as usize]);
         }
         r = rect(r.x + box_0.w, r.y, r.w - box_0.w, r.h);
-        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
+        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::NONE);
         return res;
     }
 
     pub fn textbox_raw(&mut self, buf: &mut dyn IString, id: Id, r: Rect, opt: WidgetOption) -> ResourceState {
-        let mut res = ResourceState::None;
-        self.update_control(id, r, opt.with_hold_focus());
+        let mut res = ResourceState::NONE;
+        self.update_control(id, r, opt | WidgetOption::HOLD_FOCUS);
         if self.focus == id {
             let mut len = buf.len();
 
             if self.input_text.len() > 0 && self.input_text.len() + len < buf.capacity() {
                 buf.add_str(self.input_text.as_str());
                 len += self.input_text.len() as usize;
-                res.change()
+                res |= ResourceState::CHANGE
             }
 
             if self.key_pressed.is_backspace() && len > 0 {
                 // skip utf-8 continuation bytes
                 buf.pop();
-                res.change();
+                res |= ResourceState::CHANGE
             }
             if self.key_pressed.is_return() {
                 self.set_focus(0);
-                res.submit();
+                res |= ResourceState::SUBMIT;
             }
         }
         self.draw_control_frame(id, r, ControlColor::Base, opt);
@@ -1473,7 +1331,7 @@ impl Context {
 
         if self.number_edit == id {
             let mut temp = self.number_edit_buf.clone();
-            let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::None);
+            let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::NONE);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != id {
                 let mut ascii = [0u8; 32];
@@ -1487,10 +1345,10 @@ impl Context {
                 *value = v as Real;
                 self.number_edit = 0;
             } else {
-                return ResourceState::Active;
+                return ResourceState::ACTIVE;
             }
         }
-        return ResourceState::None;
+        return ResourceState::NONE;
     }
 
     pub fn textbox_ex(&mut self, buf: &mut dyn IString, opt: WidgetOption) -> ResourceState {
@@ -1500,7 +1358,7 @@ impl Context {
     }
 
     pub fn slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
-        let mut res = ResourceState::None;
+        let mut res = ResourceState::NONE;
         let last = *value;
         let mut v = last;
         let id = self.get_id_from_ptr(value);
@@ -1524,7 +1382,7 @@ impl Context {
         };
         *value = v;
         if last != v {
-            res.change();
+            res |= ResourceState::CHANGE;
         }
         self.draw_control_frame(id, base, ControlColor::Base, opt);
         let w = self.style.thumb_size;
@@ -1538,7 +1396,7 @@ impl Context {
     }
 
     pub fn number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
-        let mut res = ResourceState::None;
+        let mut res = ResourceState::NONE;
         let id: Id = self.get_id_from_ptr(value);
         let base: Rect = self.layout_next();
         let last: Real = *value;
@@ -1550,7 +1408,7 @@ impl Context {
             *value += self.mouse_delta.x as Real * step;
         }
         if *value != last {
-            res.change();
+            res |= ResourceState::CHANGE;
         }
         self.draw_control_frame(id, base, ControlColor::Base, opt);
         let mut buff = FixedString::<64>::new();
@@ -1566,7 +1424,7 @@ impl Context {
         let mut active = idx.is_some() as i32;
         let expanded = if opt.is_expanded() { (active == 0) as i32 } else { active };
         let mut r = self.layout_next();
-        self.update_control(id, r, WidgetOption::None);
+        self.update_control(id, r, WidgetOption::NONE);
         active ^= (self.mouse_pressed.is_left() && self.focus == id) as i32;
         if idx.is_some() {
             if active != 0 {
@@ -1583,7 +1441,7 @@ impl Context {
                 (self.draw_frame).expect("non-null function pointer")(self, r, ControlColor::ButtonHover);
             }
         } else {
-            self.draw_control_frame(id, r, ControlColor::Button, WidgetOption::None);
+            self.draw_control_frame(id, r, ControlColor::Button, WidgetOption::NONE);
         }
         self.draw_icon(
             if expanded != 0 { Icon::Expanded } else { Icon::Collapsed },
@@ -1592,8 +1450,8 @@ impl Context {
         );
         r.x += r.h - self.style.padding;
         r.w -= r.h - self.style.padding;
-        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::None);
-        return if expanded != 0 { ResourceState::Active } else { ResourceState::None };
+        self.draw_control_text(label, r, ControlColor::Text, WidgetOption::NONE);
+        return if expanded != 0 { ResourceState::ACTIVE } else { ResourceState::NONE };
     }
 
     pub fn header_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
@@ -1637,7 +1495,7 @@ impl Context {
             let mut base = body;
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
-            self.update_control(id, base, WidgetOption::None);
+            self.update_control(id, base, WidgetOption::NONE);
             if self.focus == id && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
@@ -1664,7 +1522,7 @@ impl Context {
             let mut base_0 = body;
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
-            self.update_control(id_0, base_0, WidgetOption::None);
+            self.update_control(id_0, base_0, WidgetOption::NONE);
             if self.focus == id_0 && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
@@ -1722,7 +1580,7 @@ impl Context {
         let id = self.get_id_from_str(title);
         let cnt_id = self.get_container_index_intern(id, opt);
         if cnt_id.is_none() || !self.containers[cnt_id.unwrap()].open {
-            return ResourceState::None;
+            return ResourceState::NONE;
         }
         self.id_stack.push(id);
 
@@ -1792,7 +1650,7 @@ impl Context {
             self.containers[cnt_id.unwrap()].open = false;
         }
         self.push_clip_rect(self.containers[cnt_id.unwrap()].body);
-        return ResourceState::Active;
+        return ResourceState::ACTIVE;
     }
 
     pub fn end_window(&mut self) {
@@ -1810,12 +1668,8 @@ impl Context {
     }
 
     pub fn begin_popup(&mut self, name: &str) -> ResourceState {
-        let opt = WidgetOption::Popup
-            .with_auto_size()
-            .with_no_resize()
-            .with_no_scroll()
-            .with_no_title()
-            .with_closed();
+        let opt =
+            WidgetOption::POPUP | WidgetOption::AUTO_SIZE | WidgetOption::NO_RESIZE | WidgetOption::NO_SCROLL | WidgetOption::NO_TITLE | WidgetOption::CLOSED;
         return self.begin_window_ex(name, rect(0, 0, 0, 0), opt);
     }
 

@@ -58,6 +58,9 @@ pub trait IVec<T: Default + Copy> {
 
 pub fn quick_sort_by<T, F: Fn(&T, &T) -> Ordering>(arr: &mut [T], f: F) {
     let len = arr.len();
+    if len == 0 {
+        return;
+    }
     _quick_sort(arr, 0, (len - 1) as isize, &f);
 }
 
