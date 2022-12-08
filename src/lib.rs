@@ -315,9 +315,9 @@ pub struct Context {
     pub font_height: Option<fn(FontId) -> usize>,
     pub draw_frame: Option<fn(&mut Context, Rect, ControlColor) -> ()>,
     pub style: Style,
-    pub hover: Id,
-    pub focus: Id,
-    pub last_id: Id,
+    pub hover: Option<Id>,
+    pub focus: Option<Id>,
+    pub last_id: Option<Id>,
     pub last_rect: Rect,
     pub last_zindex: i32,
     pub updated_focus: bool,
@@ -326,7 +326,7 @@ pub struct Context {
     pub next_hover_root: Option<usize>,
     pub scroll_target: Option<usize>,
     pub number_edit_buf: FixedString<127>,
-    pub number_edit: Id,
+    pub number_edit: Option<Id>,
     pub command_list: FixedVec<Command, 4096>,
     pub root_list: FixedVec<usize, 32>,
     pub container_stack: FixedVec<usize, 32>,
@@ -355,9 +355,9 @@ impl Default for Context {
             font_height: None,
             draw_frame: None,
             style: Style::default(),
-            hover: 0,
-            focus: 0,
-            last_id: 0,
+            hover: None,
+            focus: None,
+            last_id: None,
             last_rect: Rect::default(),
             last_zindex: 0,
             updated_focus: false,
@@ -366,7 +366,7 @@ impl Default for Context {
             next_hover_root: None,
             scroll_target: None,
             number_edit_buf: FixedString::default(),
-            number_edit: 0,
+            number_edit: None,
             command_list: FixedVec::default(),
             root_list: FixedVec::default(),
             container_stack: FixedVec::default(),
@@ -402,7 +402,8 @@ struct PoolItem {
     pub last_update: usize,
 }
 
-pub type Id = u32;
+#[derive(Default, Copy, Clone, Eq, PartialEq)]
+pub struct Id(u32);
 
 #[derive(Default, Copy, Clone)]
 pub struct Container {
@@ -600,21 +601,21 @@ fn hash_u32(hash_0: &mut Id, orig_id: u32) {
     let bytes = orig_id.to_be_bytes();
     for b in bytes {
         let fresh1 = b;
-        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
+        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
     }
 }
 
 fn hash_str(hash_0: &mut Id, s: &str) {
     for c in s.chars() {
         let fresh1 = c as i32;
-        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
+        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
     }
 }
 
 fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
     for c in s {
         let fresh1 = *c as i32;
-        *hash_0 = (*hash_0 ^ fresh1 as u32).wrapping_mul(16777619 as u32);
+        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
     }
 }
 
@@ -649,7 +650,7 @@ impl Context {
             self.containers[self.scroll_target.unwrap()].scroll.y += self.scroll_delta.y;
         }
         if !self.updated_focus {
-            self.focus = 0;
+            self.focus = None;
         }
         self.updated_focus = false;
         if !self.mouse_pressed.is_none()
@@ -701,7 +702,7 @@ impl Context {
         }
     }
 
-    pub fn set_focus(&mut self, id: Id) {
+    pub fn set_focus(&mut self, id: Option<Id>) {
         self.focus = id;
         self.updated_focus = true;
     }
@@ -709,32 +710,32 @@ impl Context {
     pub fn get_id_u32(&mut self, orig_id: u32) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as Id,
+            None => Id(2166136261),
         };
         hash_u32(&mut res, orig_id);
-        self.last_id = res;
+        self.last_id = Some(res);
         return res;
     }
 
     pub fn get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as Id,
+            None => Id(2166136261),
         };
         let ptr = orig_id as *const T as *const u8 as usize;
         let bytes = ptr.to_le_bytes();
         hash_bytes(&mut res, &bytes);
-        self.last_id = res;
+        self.last_id = Some(res);
         return res;
     }
 
     pub fn get_id_from_str(&mut self, s: &str) -> Id {
         let mut res: Id = match self.id_stack.top() {
             Some(id) => *id,
-            None => 2166136261 as Id,
+            None => Id(2166136261),
         };
         hash_str(&mut res, s);
-        self.last_id = res;
+        self.last_id = Some(res);
         return res;
     }
 
@@ -1132,9 +1133,9 @@ impl Context {
             return;
         }
 
-        if self.focus == id {
+        if self.focus == Some(id) {
             colorid.focus()
-        } else if self.hover == id {
+        } else if self.hover == Some(id) {
             colorid.hover()
         }
         (self.draw_frame).expect("non-null function pointer")(self, rect, colorid);
@@ -1163,28 +1164,28 @@ impl Context {
 
     pub fn update_control(&mut self, id: Id, rect: Rect, opt: WidgetOption) {
         let mouseover = self.mouse_over(rect);
-        if self.focus == id {
+        if self.focus == Some(id) {
             self.updated_focus = true;
         }
         if opt.is_not_interactive() {
             return;
         }
         if mouseover && self.mouse_down.is_none() {
-            self.hover = id;
+            self.hover = Some(id);
         }
-        if self.focus == id {
+        if self.focus == Some(id) {
             if !self.mouse_pressed.is_none() && !mouseover {
-                self.set_focus(0);
+                self.set_focus(None);
             }
             if self.mouse_down.is_none() && !opt.is_holding_focus() {
-                self.set_focus(0);
+                self.set_focus(None);
             }
         }
-        if self.hover == id {
+        if self.hover == Some(id) {
             if !self.mouse_pressed.is_none() {
-                self.set_focus(id);
+                self.set_focus(Some(id));
             } else if !mouseover {
-                self.hover = 0;
+                self.hover = None;
             }
         }
     }
@@ -1249,7 +1250,7 @@ impl Context {
         };
         let r: Rect = self.layout_next();
         self.update_control(id, r, opt);
-        if self.mouse_pressed.is_left() && self.focus == id {
+        if self.mouse_pressed.is_left() && self.focus == Some(id) {
             res |= ResourceState::SUBMIT;
         }
         self.draw_control_frame(id, r, ControlColor::Button, opt);
@@ -1268,7 +1269,7 @@ impl Context {
         let mut r: Rect = self.layout_next();
         let box_0: Rect = rect(r.x, r.y, r.h, r.h);
         self.update_control(id, r, WidgetOption::NONE);
-        if self.mouse_pressed.is_left() && self.focus == id {
+        if self.mouse_pressed.is_left() && self.focus == Some(id) {
             res |= ResourceState::CHANGE;
             *state = *state == false;
         }
@@ -1284,7 +1285,7 @@ impl Context {
     pub fn textbox_raw(&mut self, buf: &mut dyn IString, id: Id, r: Rect, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::NONE;
         self.update_control(id, r, opt | WidgetOption::HOLD_FOCUS);
-        if self.focus == id {
+        if self.focus == Some(id) {
             let mut len = buf.len();
 
             if self.input_text.len() > 0 && self.input_text.len() + len < buf.capacity() {
@@ -1299,12 +1300,12 @@ impl Context {
                 res |= ResourceState::CHANGE
             }
             if self.key_pressed.is_return() {
-                self.set_focus(0);
+                self.set_focus(None);
                 res |= ResourceState::SUBMIT;
             }
         }
         self.draw_control_frame(id, r, ControlColor::Base, opt);
-        if self.focus == id {
+        if self.focus == Some(id) {
             let color = self.style.colors[ControlColor::Text as usize];
             let font = self.style.font;
             let textw = self.get_text_width(font, buf.as_str());
@@ -1323,17 +1324,17 @@ impl Context {
     }
 
     fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
-        if self.mouse_pressed.is_left() && self.key_down.is_shift() && self.hover == id {
-            self.number_edit = id;
+        if self.mouse_pressed.is_left() && self.key_down.is_shift() && self.hover == Some(id) {
+            self.number_edit = Some(id);
             self.number_edit_buf.clear();
             self.number_edit_buf.append_real("%.3f", *value);
         }
 
-        if self.number_edit == id {
+        if self.number_edit == Some(id) {
             let mut temp = self.number_edit_buf.clone();
             let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::NONE);
             self.number_edit_buf = temp;
-            if res.is_submitted() || self.focus != id {
+            if res.is_submitted() || self.focus != Some(id) {
                 let mut ascii = [0u8; 32];
                 let mut i = 0;
                 for c in self.number_edit_buf.as_str().chars() {
@@ -1343,7 +1344,7 @@ impl Context {
                 ascii[i] = '\0' as u8;
                 let v = unsafe { libc::strtod(ascii.as_ptr() as *const libc::c_char, ptr::null_mut() as *mut *mut libc::c_char) };
                 *value = v as Real;
-                self.number_edit = 0;
+                self.number_edit = None;
             } else {
                 return ResourceState::ACTIVE;
             }
@@ -1367,7 +1368,7 @@ impl Context {
             return res;
         }
         self.update_control(id, base, opt);
-        if self.focus == id && (!self.mouse_down.is_none() | self.mouse_pressed.is_left()) {
+        if self.focus == Some(id) && (!self.mouse_down.is_none() | self.mouse_pressed.is_left()) {
             v = low + (self.mouse_pos.x - base.x) as Real * (high - low) / base.w as Real;
             if step != 0. {
                 v = (v + step / 2 as Real) / step * step;
@@ -1404,7 +1405,7 @@ impl Context {
             return res;
         }
         self.update_control(id, base, opt);
-        if self.focus == id && self.mouse_down.is_left() {
+        if self.focus == Some(id) && self.mouse_down.is_left() {
             *value += self.mouse_delta.x as Real * step;
         }
         if *value != last {
@@ -1425,7 +1426,7 @@ impl Context {
         let expanded = if opt.is_expanded() { (active == 0) as i32 } else { active };
         let mut r = self.layout_next();
         self.update_control(id, r, WidgetOption::NONE);
-        active ^= (self.mouse_pressed.is_left() && self.focus == id) as i32;
+        active ^= (self.mouse_pressed.is_left() && self.focus == Some(id)) as i32;
         if idx.is_some() {
             if active != 0 {
                 self.treenode_pool.update(idx.unwrap(), self.frame);
@@ -1437,7 +1438,7 @@ impl Context {
         }
 
         if is_treenode {
-            if self.hover == id {
+            if self.hover == Some(id) {
                 (self.draw_frame).expect("non-null function pointer")(self, r, ControlColor::ButtonHover);
             }
         } else {
@@ -1460,9 +1461,9 @@ impl Context {
 
     pub fn begin_treenode_ex(&mut self, label: &str, opt: WidgetOption) -> ResourceState {
         let res = self.header(label, true, opt);
-        if res.is_active() {
+        if res.is_active() && self.last_id.is_some() {
             self.get_layout_mut().indent += self.style.indent;
-            self.id_stack.push(self.last_id);
+            self.id_stack.push(self.last_id.unwrap());
         }
         return res;
     }
@@ -1496,7 +1497,7 @@ impl Context {
             base.x = body.x + body.w;
             base.w = self.style.scrollbar_size;
             self.update_control(id, base, WidgetOption::NONE);
-            if self.focus == id && self.mouse_down.is_left() {
+            if self.focus == Some(id) && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.y += self.mouse_delta.y * cs.y / base.h;
             }
             self.containers[cnt_id].scroll.y = Self::clamp(self.containers[cnt_id].scroll.y, 0, maxscroll);
@@ -1510,7 +1511,7 @@ impl Context {
             };
             thumb.y += self.containers[cnt_id].scroll.y * (base.h - thumb.h) / maxscroll;
             (self.draw_frame).expect("non-null function pointer")(self, thumb, ControlColor::ScrollThumb);
-            if !self.mouse_over(body) {
+            if self.mouse_over(body) {
                 self.scroll_target = Some(cnt_id);
             }
         } else {
@@ -1523,7 +1524,7 @@ impl Context {
             base_0.y = body.y + body.h;
             base_0.h = self.style.scrollbar_size;
             self.update_control(id_0, base_0, WidgetOption::NONE);
-            if self.focus == id_0 && self.mouse_down.is_left() {
+            if self.focus == Some(id_0) && self.mouse_down.is_left() {
                 self.containers[cnt_id].scroll.x += self.mouse_delta.x * cs.x / base_0.w;
             }
             self.containers[cnt_id].scroll.x = Self::clamp(self.containers[cnt_id].scroll.x, 0, maxscroll_0);
@@ -1537,7 +1538,7 @@ impl Context {
             };
             thumb_0.x += self.containers[cnt_id].scroll.x * (base_0.w - thumb_0.w) / maxscroll_0;
             (self.draw_frame).expect("non-null function pointer")(self, thumb_0, ControlColor::ScrollThumb);
-            if !self.mouse_over(body) {
+            if self.mouse_over(body) {
                 self.scroll_target = Some(cnt_id);
             }
         } else {
@@ -1603,7 +1604,7 @@ impl Context {
                 let id = self.get_id_from_str("!title");
                 self.update_control(id, tr, opt);
                 self.draw_control_text(title, tr, ControlColor::TitleText, opt);
-                if id == self.focus && self.mouse_down.is_left() {
+                if Some(id) == self.focus && self.mouse_down.is_left() {
                     self.containers[cnt_id.unwrap()].rect.x += self.mouse_delta.x;
                     self.containers[cnt_id.unwrap()].rect.y += self.mouse_delta.y;
                 }
@@ -1616,7 +1617,7 @@ impl Context {
                 tr.w -= r.w;
                 self.draw_icon(Icon::Close, r, self.style.colors[ControlColor::TitleText as usize]);
                 self.update_control(id, r, opt);
-                if self.mouse_pressed.is_left() && id == self.focus {
+                if self.mouse_pressed.is_left() && Some(id) == self.focus {
                     self.containers[cnt_id.unwrap()].open = false;
                 }
             }
@@ -1627,7 +1628,7 @@ impl Context {
             let id_2 = self.get_id_from_str("!resize");
             let r_0 = rect(r.x + r.w - sz, r.y + r.h - sz, sz, sz);
             self.update_control(id_2, r_0, opt);
-            if id_2 == self.focus && self.mouse_down.is_left() {
+            if Some(id_2) == self.focus && self.mouse_down.is_left() {
                 self.containers[cnt_id.unwrap()].rect.w = if 96 > self.containers[cnt_id.unwrap()].rect.w + self.mouse_delta.x {
                     96
                 } else {
@@ -1679,7 +1680,7 @@ impl Context {
 
     pub fn begin_panel_ex(&mut self, name: &str, opt: WidgetOption) {
         self.push_id_from_str(name);
-        let cnt_id = self.get_container_index_intern(self.last_id, opt);
+        let cnt_id = self.get_container_index_intern(self.last_id.unwrap(), opt);
         let rect = self.layout_next();
         self.containers[cnt_id.unwrap()].rect = rect;
         if !opt.has_no_frame() {
