@@ -570,10 +570,10 @@ pub fn expand_rect(r: Rect, n: i32) -> Rect {
 }
 
 pub fn intersect_rects(r1: Rect, r2: Rect) -> Rect {
-    let x1 = if r1.x > r2.x { r1.x } else { r2.x };
-    let y1 = if r1.y > r2.y { r1.y } else { r2.y };
-    let mut x2 = if r1.x + r1.w < r2.x + r2.w { r1.x + r1.w } else { r2.x + r2.w };
-    let mut y2 = if r1.y + r1.h < r2.y + r2.h { r1.y + r1.h } else { r2.y + r2.h };
+    let x1 = i32::max(r1.x, r2.x);
+    let y1 = i32::max(r1.y, r2.y);
+    let mut x2 = i32::min(r1.x + r1.w, r2.x + r2.w);
+    let mut y2 = i32::min(r1.y + r1.h, r2.y + r2.h);
     if x2 < x1 {
         x2 = x1;
     }
@@ -597,25 +597,26 @@ pub fn draw_frame(ctx: &mut Context, rect: Rect, colorid: ControlColor) {
     }
 }
 
+fn hash_step(h: u32, n: u32) -> u32 {
+    (h ^ n).wrapping_mul(16777619 as u32)
+}
+
 fn hash_u32(hash_0: &mut Id, orig_id: u32) {
     let bytes = orig_id.to_be_bytes();
     for b in bytes {
-        let fresh1 = b;
-        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
+        *hash_0 = Id(hash_step(hash_0.0, b as u32));
     }
 }
 
 fn hash_str(hash_0: &mut Id, s: &str) {
     for c in s.chars() {
-        let fresh1 = c as i32;
-        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
+        *hash_0 = Id(hash_step(hash_0.0, c as u32));
     }
 }
 
 fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
     for c in s {
-        let fresh1 = *c as i32;
-        *hash_0 = Id((hash_0.0 ^ fresh1 as u32).wrapping_mul(16777619 as u32));
+        *hash_0 = Id(hash_step(hash_0.0, *c as u32));
     }
 }
 
