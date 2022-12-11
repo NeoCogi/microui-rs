@@ -6,6 +6,7 @@ edition = "2021"
 readme = "README.md"
 license = "BSD-3-Clause"
 description = "MicroUI (immediate mode GUI) library in pure rust"
+repository = "https://github.com/NeoCogi/microui-rs"
 
 [lib]
 name ="microui"
