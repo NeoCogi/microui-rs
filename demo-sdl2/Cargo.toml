@@ -10,3 +10,13 @@ sdl2 = "0.35.2"
 microui = {path = ".."}
 glow = "0.11.2"
 libc = "0.2.138"
+
+[profile.release]
+panic = 'abort'
+opt-level = "z"
+overflow-checks = false
+debug-assertions = false
+lto = true
+incremental = false
+rpath=false
+codegen-units=1

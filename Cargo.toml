@@ -1,7 +1,7 @@
 [package]
 name = "microui"
 authors = ["Wael El Oraiby"]
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -12,15 +12,6 @@ repository = "https://github.com/NeoCogi/microui-rs"
 name ="microui"
 
 [dependencies]
-libc = "0.2.137"
+libc = "0.2.138"
 bitflags = "1.3.2"
 
-[profile.release]
-panic = 'abort'
-opt-level = "z"
-overflow-checks = false
-debug-assertions = false
-lto = true
-incremental = false
-rpath=false
-codegen-units=1
