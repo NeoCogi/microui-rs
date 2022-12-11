@@ -1,7 +1,7 @@
 [package]
 name = "microui"
 authors = ["Wael El Oraiby"]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 readme = "README.md"
 license = "BSD-3-Clause"
