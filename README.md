@@ -1,4 +1,5 @@
 # Rxi's Microui Port to Rust
+[![Crate](https://img.shields.io/crates/v/microui.svg)](https://crates.io/crates/microui)
 
 This a port of Rxi's MicroUI to Rust language. 
 We tried to keep the usage pattern as close to the original as possible, but also as idiomatic to Rust as possible. By no mean this library should be considered complete.
