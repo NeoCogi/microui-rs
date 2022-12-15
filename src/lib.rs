@@ -1343,7 +1343,7 @@ impl Context {
                     i += 1;
                 }
                 ascii[i] = '\0' as u8;
-                *value = strtod::strtod(simdutf8::basic::from_utf8(&ascii).unwrap_or_default()).unwrap_or_default() as Real;
+                *value = fast_float::parse(core::str::from_utf8(&ascii).unwrap_or_default()).unwrap_or_default();
                 self.number_edit = None;
             } else {
                 return ResourceState::ACTIVE;
