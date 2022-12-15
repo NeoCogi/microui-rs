@@ -225,20 +225,20 @@ pub trait IString {
 
     fn append_real(&mut self, fmt: &str, v: f32) {
         assert!(self.capacity() - self.len() >= 32);
-        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().as_bytes() {
+        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
             match ch {
-                0 => break,
-                _ => self.push(*ch as char),
+                '\0' => break,
+                _ => self.push(ch),
             }
         }
     }
 
     fn append_int(&mut self, fmt: &str, v: i32) {
         assert!(self.capacity() - self.len() >= 32);
-        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().as_bytes() {
+        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
             match ch {
-                0 => break,
-                _ => self.push(*ch as char),
+                '\0' => break,
+                _ => self.push(ch),
             }
         }
     }
