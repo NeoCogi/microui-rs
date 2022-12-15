@@ -623,7 +623,7 @@ fn hash_bytes(hash_0: &mut Id, s: &[u8]) {
 impl Context {
     pub fn new() -> Self {
         let mut s = Self::default();
-        s.draw_frame = Some(draw_frame as fn(&mut Context, Rect, ControlColor) -> ());
+        s.draw_frame = Some(draw_frame);
         s.style = Style::default();
         s
     }
