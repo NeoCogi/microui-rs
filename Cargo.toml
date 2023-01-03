@@ -9,9 +9,9 @@ description = "MicroUI (immediate mode GUI) library in pure rust"
 repository = "https://github.com/NeoCogi/microui-rs"
 
 [lib]
-name ="microui"
+name = "microui"
 
 [dependencies]
-libc = "0.2.138"
 bitflags = "1.3.2"
-
+sprintf = "0.1"
+fast-float = { version = "0.2", default-features = false }

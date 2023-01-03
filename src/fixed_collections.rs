@@ -225,48 +225,20 @@ pub trait IString {
 
     fn append_real(&mut self, fmt: &str, v: f32) {
         assert!(self.capacity() - self.len() >= 32);
-        unsafe {
-            let mut fmt_ascii = [0u8; 32];
-            let mut i = 0;
-            for c in fmt.chars() {
-                fmt_ascii[i] = c as u8;
-                i += 1;
-            }
-            fmt_ascii[i] = 0;
-
-            let mut number_ascii = [0u8; 32];
-            let number_ptr = number_ascii.as_mut_ptr();
-            libc::sprintf(number_ptr as *mut libc::c_char, fmt_ascii.as_ptr() as *const libc::c_char, v as f64);
-            for c in 0..number_ascii.len() {
-                if number_ascii[c] != 0 {
-                    self.push(number_ascii[c] as char);
-                } else {
-                    break;
-                }
+        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
+            match ch {
+                '\0' => break,
+                _ => self.push(ch),
             }
         }
     }
 
     fn append_int(&mut self, fmt: &str, v: i32) {
         assert!(self.capacity() - self.len() >= 32);
-        unsafe {
-            let mut fmt_ascii = [0u8; 32];
-            let mut i = 0;
-            for c in fmt.chars() {
-                fmt_ascii[i] = c as u8;
-                i += 1;
-            }
-            fmt_ascii[i] = 0;
-
-            let mut number_ascii = [0u8; 32];
-            let number_ptr = number_ascii.as_mut_ptr();
-            libc::sprintf(number_ptr as *mut libc::c_char, fmt_ascii.as_ptr() as *const libc::c_char, v);
-            for c in 0..number_ascii.len() {
-                if number_ascii[c] != 0 {
-                    self.push(number_ascii[c] as char);
-                } else {
-                    break;
-                }
+        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
+            match ch {
+                '\0' => break,
+                _ => self.push(ch),
             }
         }
     }

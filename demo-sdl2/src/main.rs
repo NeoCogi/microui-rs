@@ -113,18 +113,10 @@ impl<'a> State<'a> {
     }
 
     fn test_window(&mut self) {
-        if !self
-            .ctx
-            .begin_window_ex(
-                "Demo Window",
-                rect(40 as libc::c_int, 40 as libc::c_int, 300 as libc::c_int, 450 as libc::c_int),
-                WidgetOption::NONE,
-            )
-            .is_none()
-        {
+        if !self.ctx.begin_window_ex("Demo Window", rect(40, 40, 300, 450), WidgetOption::NONE).is_none() {
             let mut win = self.ctx.get_current_container_rect();
-            win.w = if win.w > 240 as libc::c_int { win.w } else { 240 as libc::c_int };
-            win.h = if win.h > 300 as libc::c_int { win.h } else { 300 as libc::c_int };
+            win.w = if win.w > 240 { win.w } else { 240 };
+            win.h = if win.h > 300 { win.h } else { 300 };
 
             self.ctx.set_current_container_rect(&win);
 
@@ -232,32 +224,14 @@ impl<'a> State<'a> {
                 self.ctx.layout_begin_column();
                 self.ctx.layout_row(&[46, -1], 0);
                 self.ctx.label("Red:");
-                self.ctx.slider_ex(
-                    &mut self.bg[0],
-                    0 as libc::c_int as Real,
-                    255 as libc::c_int as Real,
-                    0 as libc::c_int as Real,
-                    "%.2",
-                    WidgetOption::ALIGN_CENTER,
-                );
+                self.ctx
+                    .slider_ex(&mut self.bg[0], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
                 self.ctx.label("Green:");
-                self.ctx.slider_ex(
-                    &mut self.bg[1],
-                    0 as libc::c_int as Real,
-                    255 as libc::c_int as Real,
-                    0 as libc::c_int as Real,
-                    "%.2",
-                    WidgetOption::ALIGN_CENTER,
-                );
+                self.ctx
+                    .slider_ex(&mut self.bg[1], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
                 self.ctx.label("Blue:");
-                self.ctx.slider_ex(
-                    &mut self.bg[2],
-                    0 as libc::c_int as Real,
-                    255 as libc::c_int as Real,
-                    0 as libc::c_int as Real,
-                    "%.2",
-                    WidgetOption::ALIGN_CENTER,
-                );
+                self.ctx
+                    .slider_ex(&mut self.bg[2], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
                 self.ctx.layout_end_column();
                 let r: Rect = self.ctx.layout_next();
                 self.ctx.draw_rect(r, color(self.bg[0] as u8, self.bg[1] as u8, self.bg[2] as u8, 255));
@@ -310,32 +284,24 @@ impl<'a> State<'a> {
         self.ctx.push_id_from_ptr(value);
         let res = self
             .ctx
-            .slider_ex(&mut tmp, low as Real, high as Real, 0 as libc::c_int as Real, "%.2f", WidgetOption::ALIGN_CENTER);
-        *value = tmp as libc::c_uchar;
+            .slider_ex(&mut tmp, low as Real, high as Real, 0 as Real, "%.2f", WidgetOption::ALIGN_CENTER);
+        *value = tmp as u8;
         self.ctx.pop_id();
         return res;
     }
     fn style_window(&mut self) {
-        if !self
-            .ctx
-            .begin_window_ex(
-                "Style Editor",
-                rect(350 as libc::c_int, 250 as libc::c_int, 300 as libc::c_int, 240 as libc::c_int),
-                WidgetOption::NONE,
-            )
-            .is_none()
-        {
-            let sw: libc::c_int = (self.ctx.get_current_container_body().w as libc::c_double * 0.14f64) as libc::c_int;
+        if !self.ctx.begin_window_ex("Style Editor", rect(350, 250, 300, 240), WidgetOption::NONE).is_none() {
+            let sw = (self.ctx.get_current_container_body().w as f64 * 0.14) as i32;
             self.ctx.layout_row(&[80, sw, sw, sw, sw, -1], 0);
             let mut i = 0;
             while self.label_colors[i].label.len() > 0 {
                 self.ctx.label(self.label_colors[i].label);
                 unsafe {
                     let color = self.ctx.style.colors.as_mut_ptr().offset(i as isize);
-                    self.uint8_slider(&mut (*color).r, 0 as libc::c_int, 255 as libc::c_int);
-                    self.uint8_slider(&mut (*color).g, 0 as libc::c_int, 255 as libc::c_int);
-                    self.uint8_slider(&mut (*color).b, 0 as libc::c_int, 255 as libc::c_int);
-                    self.uint8_slider(&mut (*color).a, 0 as libc::c_int, 255 as libc::c_int);
+                    self.uint8_slider(&mut (*color).r, 0, 255);
+                    self.uint8_slider(&mut (*color).g, 0, 255);
+                    self.uint8_slider(&mut (*color).b, 0, 255);
+                    self.uint8_slider(&mut (*color).a, 0, 255);
                 }
                 let next_layout = self.ctx.layout_next();
                 self.ctx.draw_rect(next_layout, self.ctx.style.colors[i]);

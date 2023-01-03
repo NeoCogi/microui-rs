@@ -9,7 +9,6 @@ edition = "2021"
 sdl2 = "0.35.2"
 microui = {path = ".."}
 glow = "0.11.2"
-libc = "0.2.138"
 
 [profile.release]
 panic = 'abort'

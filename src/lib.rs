@@ -51,7 +51,6 @@
 // IN THE SOFTWARE.
 //
 #![no_std]
-use core::ptr;
 
 mod fixed_collections;
 pub use crate::fixed_collections::*;
@@ -1344,8 +1343,7 @@ impl Context {
                     i += 1;
                 }
                 ascii[i] = '\0' as u8;
-                let v = unsafe { libc::strtod(ascii.as_ptr() as *const libc::c_char, ptr::null_mut() as *mut *mut libc::c_char) };
-                *value = v as Real;
+                *value = fast_float::parse(core::str::from_utf8(&ascii).unwrap_or_default()).unwrap_or_default();
                 self.number_edit = None;
             } else {
                 return ResourceState::ACTIVE;
