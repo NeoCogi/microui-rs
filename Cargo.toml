@@ -1,12 +1,13 @@
 [package]
 name = "microui"
 authors = ["Wael El Oraiby"]
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 readme = "README.md"
 license = "BSD-3-Clause"
 description = "MicroUI (immediate mode GUI) library in pure rust"
 repository = "https://github.com/NeoCogi/microui-rs"
+categories = [ "no-std", "ui", "microui", "rendering" ]
 
 [lib]
 name = "microui"
