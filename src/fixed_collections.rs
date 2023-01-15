@@ -54,6 +54,8 @@ pub trait IVec<T: Default + Copy> {
             self.push(e.clone());
         }
     }
+
+    fn reverse(&mut self);
 }
 
 pub fn quick_sort_by<T, F: Fn(&T, &T) -> Ordering>(arr: &mut [T], f: F) {
@@ -164,6 +166,16 @@ impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
         assert!((index as usize) < N);
         &mut self.items[index as usize]
     }
+
+    fn reverse(&mut self) {
+        let mut tmp = T::default();
+        let len = self.len();
+        for i in 0..len / 2 {
+            let tmp = self.items[i];
+            self.items[i] = self.items[len - 1 - i];
+            self.items[len - 1 - i] = tmp;
+        }
+    }
 }
 
 impl<T: Default + Copy, const N: usize> Index<usize> for FixedVec<T, N> {
@@ -211,6 +223,11 @@ impl<const N: usize> core::fmt::Write for FixedVec<char, N> {
     }
 }
 
+const DIGITS: [char; 32] = [
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
+    'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+];
+
 pub trait IString {
     fn push(&mut self, c: char);
     fn pop(&mut self);
@@ -223,23 +240,87 @@ pub trait IString {
     fn capacity(&self) -> usize;
     fn add_str(&mut self, s: &str);
 
-    fn append_real(&mut self, fmt: &str, v: f32) {
+    fn append_real(&mut self, precision: usize, f: f64) {
         assert!(self.capacity() - self.len() >= 32);
-        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
-            match ch {
-                '\0' => break,
-                _ => self.push(ch),
+        let mut int_str = FixedVec::<char, 64>::default();
+        let mut c = 0;
+        let mut i = (f.signum() * f) as usize;
+        while i != 0 {
+            int_str.push(DIGITS[i % 10]);
+            i /= 10;
+            c += 1;
+        }
+
+        if int_str.len() == 0 {
+            int_str.push('0');
+        }
+
+        if f < 0.0 {
+            int_str.push('-');
+        }
+
+        int_str.reverse();
+
+        let mut pow_10 = 1;
+        for i in 0..precision {
+            pow_10 *= 10;
+        }
+
+        // i2 = i * 10^p
+        // d2 = f * 10^p
+        // i = 10^p + (d2 - i2) <- needed so we can get the number of leading 0 right
+        let int2_part = ((f.signum() * f) as usize) * pow_10;
+        let mut dec2_part = pow_10 + ((f.signum() * f) * (pow_10 as f64)) as usize - int2_part;
+
+        if dec2_part == pow_10 || precision == 0 {
+            for i in 0..int_str.len() {
+                self.push(int_str[i]);
             }
+            return;
+        }
+
+        int_str.push('.');
+
+        let mut dec_str = FixedVec::<char, 64>::default();
+        for _ in 0..precision {
+            dec_str.push(DIGITS[dec2_part % 10]);
+            dec2_part /= 10;
+            c += 1;
+        }
+
+        dec_str.reverse();
+
+        for i in 0..int_str.len() {
+            self.push(int_str[i]);
+        }
+
+        for i in 0..dec_str.len() {
+            self.push(dec_str[i]);
         }
     }
 
-    fn append_int(&mut self, fmt: &str, v: i32) {
+    // base should be <= 32
+    fn append_int(&mut self, base: usize, leading_zeros: usize, v: i32) {
         assert!(self.capacity() - self.len() >= 32);
-        for ch in sprintf::sprintf!(fmt, v).unwrap_or_default().chars() {
-            match ch {
-                '\0' => break,
-                _ => self.push(ch),
-            }
+        assert!(base <= 32);
+        let mut int_str = FixedVec::<char, 64>::default();
+        let mut v2 = (v.signum() * v) as usize;
+        while v2 != 0 {
+            int_str.push(DIGITS[v2 % base]);
+            v2 /= base;
+        }
+
+        for _ in int_str.len()..leading_zeros {
+            int_str.push('0');
+        }
+
+        if v < 0 {
+            int_str.push('-');
+        }
+
+        int_str.reverse();
+        for i in 0..int_str.len() {
+            self.push(int_str[i]);
         }
     }
 }
@@ -352,5 +433,65 @@ impl<const N: usize> Index<core::ops::Range<usize>> for FixedString<N> {
     type Output = str;
     fn index(&self, index: core::ops::Range<usize>) -> &Self::Output {
         unsafe { core::str::from_utf8_unchecked(&self.vec.as_slice()[index.start..index.end]) }
+    }
+}
+
+fn is_digit(ch: char) -> bool {
+    let c = ch as usize;
+    c >= '0' as usize && c <= '9' as usize
+}
+
+fn digit_to_num(ch: char) -> i32 {
+    ch as i32 - '0' as i32
+}
+
+pub fn parse_decimal(s: &str) -> Result<f64, ()> {
+    let mut sign = 1.0;
+    let mut p = s.chars().peekable();
+    match p.peek() {
+        Some('+') => {
+            p.next();
+        }
+        Some('-') => {
+            p.next();
+            sign = -1.0
+        }
+        Some(c) if is_digit(*c) => (),
+        _ => return Err(()),
+    }
+
+    // consume the leading zeros
+    'zeros: loop {
+        match p.peek() {
+            Some('0') => {
+                p.next();
+            }
+            _ => break 'zeros,
+        }
+    }
+
+    let mut int_part = 0;
+
+    'int_part: loop {
+        match p.next() {
+            Some(c) if is_digit(c) => int_part = int_part * 10 + digit_to_num(c),
+            Some('.') => break 'int_part,
+            None => return Ok((int_part as f64) * sign),
+            _ => return Err(()),
+        }
+    }
+
+    let mut decimal_part = 0.0;
+    let mut power = 10.0;
+    loop {
+        match p.next() {
+            Some(c) if is_digit(c) => {
+                decimal_part += digit_to_num(c) as f64 / power;
+                power *= 10.0;
+            }
+
+            None => return Ok((int_part as f64) * sign + decimal_part),
+            _ => return Err(()),
+        }
     }
 }

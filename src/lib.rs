@@ -52,6 +52,10 @@
 //
 #![no_std]
 
+extern crate std;
+use std::f32;
+use std::f64;
+
 mod fixed_collections;
 pub use crate::fixed_collections::*;
 
@@ -1324,11 +1328,11 @@ impl Context {
         return res;
     }
 
-    fn number_textbox(&mut self, value: &mut Real, r: Rect, id: Id) -> ResourceState {
+    fn number_textbox(&mut self, precision: usize, value: &mut Real, r: Rect, id: Id) -> ResourceState {
         if self.mouse_pressed.is_left() && self.key_down.is_shift() && self.hover == Some(id) {
             self.number_edit = Some(id);
             self.number_edit_buf.clear();
-            self.number_edit_buf.append_real("%.3f", *value);
+            self.number_edit_buf.append_real(precision, *value as f64);
         }
 
         if self.number_edit == Some(id) {
@@ -1336,14 +1340,13 @@ impl Context {
             let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::NONE);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != Some(id) {
-                let mut ascii = [0u8; 32];
-                let mut i = 0;
-                for c in self.number_edit_buf.as_str().chars() {
-                    ascii[i] = c as u8;
-                    i += 1;
+                match parse_decimal(self.number_edit_buf.as_str()) {
+                    Ok(v) => {
+                        *value = v as Real;
+                        self.number_edit = None;
+                    }
+                    _ => (),
                 }
-                ascii[i] = '\0' as u8;
-                *value = fast_float::parse(core::str::from_utf8(&ascii).unwrap_or_default()).unwrap_or_default();
                 self.number_edit = None;
             } else {
                 return ResourceState::ACTIVE;
@@ -1358,13 +1361,13 @@ impl Context {
         return self.textbox_raw(buf, id, r, opt);
     }
 
-    pub fn slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+    pub fn slider_ex(&mut self, value: &mut Real, low: Real, high: Real, step: Real, precision: usize, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::NONE;
         let last = *value;
         let mut v = last;
         let id = self.get_id_from_ptr(value);
         let base = self.layout_next();
-        if !self.number_textbox(&mut v, base, id).is_none() {
+        if !self.number_textbox(precision, &mut v, base, id).is_none() {
             return res;
         }
         self.update_control(id, base, opt);
@@ -1391,17 +1394,17 @@ impl Context {
         let thumb = rect(base.x + x, base.y, w, base.h);
         self.draw_control_frame(id, thumb, ControlColor::Button, opt);
         let mut buff = FixedString::<64>::new();
-        buff.append_real(fmt, *value);
+        buff.append_real(precision, *value as f64);
         self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }
 
-    pub fn number_ex(&mut self, value: &mut Real, step: Real, fmt: &str, opt: WidgetOption) -> ResourceState {
+    pub fn number_ex(&mut self, value: &mut Real, step: Real, precision: usize, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::NONE;
         let id: Id = self.get_id_from_ptr(value);
         let base: Rect = self.layout_next();
         let last: Real = *value;
-        if !self.number_textbox(value, base, id).is_none() {
+        if !self.number_textbox(precision, value, base, id).is_none() {
             return res;
         }
         self.update_control(id, base, opt);
@@ -1413,7 +1416,7 @@ impl Context {
         }
         self.draw_control_frame(id, base, ControlColor::Base, opt);
         let mut buff = FixedString::<64>::new();
-        buff.append_real(fmt, *value);
+        buff.append_real(precision, *value as f64);
         self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
         return res;
     }

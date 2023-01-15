@@ -128,17 +128,17 @@ impl<'a> State<'a> {
                 self.ctx.label("Position:");
 
                 buff.clear();
-                buff.append_int("%d", win_0.x);
+                buff.append_int(10, 0, win_0.x);
                 buff.add_str(", ");
-                buff.append_int("%d", win_0.y);
+                buff.append_int(10, 0, win_0.y);
 
                 self.ctx.label(buff.as_str());
                 buff.clear();
                 self.ctx.label("Size:");
 
-                buff.append_int("%d", win_0.w);
+                buff.append_int(10, 0, win_0.w);
                 buff.add_str(", ");
-                buff.append_int("%d", win_0.h);
+                buff.append_int(10, 0, win_0.h);
 
                 self.ctx.label(buff.as_str());
             }
@@ -225,21 +225,21 @@ impl<'a> State<'a> {
                 self.ctx.layout_row(&[46, -1], 0);
                 self.ctx.label("Red:");
                 self.ctx
-                    .slider_ex(&mut self.bg[0], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
+                    .slider_ex(&mut self.bg[0], 0 as Real, 255 as Real, 0 as Real, 0, WidgetOption::ALIGN_CENTER);
                 self.ctx.label("Green:");
                 self.ctx
-                    .slider_ex(&mut self.bg[1], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
+                    .slider_ex(&mut self.bg[1], 0 as Real, 255 as Real, 0 as Real, 0, WidgetOption::ALIGN_CENTER);
                 self.ctx.label("Blue:");
                 self.ctx
-                    .slider_ex(&mut self.bg[2], 0 as Real, 255 as Real, 0 as Real, "%.2", WidgetOption::ALIGN_CENTER);
+                    .slider_ex(&mut self.bg[2], 0 as Real, 255 as Real, 0 as Real, 0, WidgetOption::ALIGN_CENTER);
                 self.ctx.layout_end_column();
                 let r: Rect = self.ctx.layout_next();
                 self.ctx.draw_rect(r, color(self.bg[0] as u8, self.bg[1] as u8, self.bg[2] as u8, 255));
                 let mut buff = FixedString::<128>::new();
                 buff.add_str("#");
-                buff.append_int("%02X", self.bg[0] as _);
-                buff.append_int("%02X", self.bg[1] as _);
-                buff.append_int("%02X", self.bg[2] as _);
+                buff.append_int(16, 2, self.bg[0] as _);
+                buff.append_int(16, 2, self.bg[1] as _);
+                buff.append_int(16, 2, self.bg[2] as _);
                 self.ctx.draw_control_text(buff.as_str(), r, ControlColor::Text, WidgetOption::ALIGN_CENTER);
             }
             self.ctx.end_window();
@@ -284,7 +284,7 @@ impl<'a> State<'a> {
         self.ctx.push_id_from_ptr(value);
         let res = self
             .ctx
-            .slider_ex(&mut tmp, low as Real, high as Real, 0 as Real, "%.2f", WidgetOption::ALIGN_CENTER);
+            .slider_ex(&mut tmp, low as Real, high as Real, 0 as Real, 0, WidgetOption::ALIGN_CENTER);
         *value = tmp as u8;
         self.ctx.pop_id();
         return res;

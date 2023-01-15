@@ -31,6 +31,15 @@ $ cargo run
 
 ![random](https://github.com/NeoCogi/microui-rs/raw/master/res/microui.png)
 
+If you want to build the smallest executable:
+
+```
+$ cd demo-sdl2
+$ cargo +nightly run --release -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --target x86_64-unknown-linux-gnu
+```
+
+This will give you a `127K` executable (with std)
+
 ## Caveats
 We used `strtod` and `sprintf`. The reason for that:
 1. `format_args` and derivatives don't support custom run time formatting
