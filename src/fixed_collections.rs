@@ -168,7 +168,6 @@ impl<T: Default + Copy, const N: usize> IVec<T> for FixedVec<T, N> {
     }
 
     fn reverse(&mut self) {
-        let mut tmp = T::default();
         let len = self.len();
         for i in 0..len / 2 {
             let tmp = self.items[i];
@@ -243,12 +242,10 @@ pub trait IString {
     fn append_real(&mut self, precision: usize, f: f64) {
         assert!(self.capacity() - self.len() >= 32);
         let mut int_str = FixedVec::<char, 64>::default();
-        let mut c = 0;
         let mut i = (f.signum() * f) as usize;
         while i != 0 {
             int_str.push(DIGITS[i % 10]);
             i /= 10;
-            c += 1;
         }
 
         if int_str.len() == 0 {
@@ -262,7 +259,7 @@ pub trait IString {
         int_str.reverse();
 
         let mut pow_10 = 1;
-        for i in 0..precision {
+        for _ in 0..precision {
             pow_10 *= 10;
         }
 
@@ -285,7 +282,6 @@ pub trait IString {
         for _ in 0..precision {
             dec_str.push(DIGITS[dec2_part % 10]);
             dec2_part /= 10;
-            c += 1;
         }
 
         dec_str.reverse();
