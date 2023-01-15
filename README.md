@@ -41,7 +41,4 @@ $ cargo +nightly run --release -Z build-std=std,panic_abort -Z build-std-feature
 This will give you a `127K` executable (with std)
 
 ## Caveats
-We used `strtod` and `sprintf`. The reason for that:
-1. `format_args` and derivatives don't support custom run time formatting
-2. Keep the size down with `no_std`. Note that is possible to use `format_args!` to achieve similar behaviour at the cost of more bytes (~`110k`). We opt to remove this from the release for now.
-
+We opt to use our own implementations for parsing/serializing decimals (not general purpose floats). The decimal representation is stored as float. This is not a general purpose floating point parser/serializer and the algorithm is rather naive. Keep that in mind!
