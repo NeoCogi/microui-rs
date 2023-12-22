@@ -25,20 +25,10 @@ Otherwise, we have done the following:
 ## Demo
 Clone and build the demo (SDL2 & glow) / Tested on linux:
 ```
-$ cd demo-sdl2
-$ cargo run
+$ cargo run --example demo-sdl2
 ```
 
 ![random](https://github.com/NeoCogi/microui-rs/raw/master/res/microui.png)
-
-If you want to build the smallest executable:
-
-```
-$ cd demo-sdl2
-$ cargo +nightly run --release -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --target x86_64-unknown-linux-gnu
-```
-
-This will give you a `127K` executable (with std)
 
 ## Caveats
 We opt to use our own implementations for parsing/serializing decimals (not general purpose floats). The decimal representation is stored as float. This is not a general purpose floating point parser/serializer and the algorithm is rather naive. Keep that in mind!
