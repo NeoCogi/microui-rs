@@ -189,11 +189,12 @@ impl ResourceState {
         self.intersects(Self::ACTIVE)
     }
     pub fn is_none(&self) -> bool {
-        self.bits == 0
+        self.bits() == 0
     }
 }
 
 bitflags! {
+    #[derive(Copy, Clone)]
     pub struct WidgetOption : u32 {
         const EXPANDED = 4096;
         const CLOSED = 2048;
@@ -253,11 +254,12 @@ impl WidgetOption {
         self.intersects(WidgetOption::ALIGN_CENTER)
     }
     pub fn is_none(&self) -> bool {
-        self.bits == 0
+        self.bits() == 0
     }
 }
 
 bitflags! {
+    #[derive(Copy, Clone)]
     pub struct MouseButton : u32 {
         const MIDDLE = 4;
         const RIGHT = 2;
@@ -277,11 +279,12 @@ impl MouseButton {
         self.intersects(Self::LEFT)
     }
     pub fn is_none(&self) -> bool {
-        self.bits == 0
+        self.bits() == 0
     }
 }
 
 bitflags! {
+    #[derive(Copy, Clone)]
     pub struct KeyMode : u32 {
         const RETURN = 16;
         const BACKSPACE = 8;
@@ -294,7 +297,7 @@ bitflags! {
 
 impl KeyMode {
     pub fn is_none(&self) -> bool {
-        self.bits == 0
+        self.bits() == 0
     }
     pub fn is_return(&self) -> bool {
         self.intersects(Self::RETURN)
