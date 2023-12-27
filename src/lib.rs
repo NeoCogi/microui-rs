@@ -1224,8 +1224,8 @@ impl Context {
         self.layout_begin_column();
         let h = self.font_height.expect("non-null function pointer")(font) as i32;
         self.layout_row(&[-1], h);
-        let mut r = self.layout_next();
         for line in text.lines() {
+            let mut r = self.layout_next();
             let mut rx = r.x;
             let words = line.split_inclusive(' ');
             for w in words {
@@ -1239,7 +1239,6 @@ impl Context {
                     rx = r.x;
                 }
             }
-            r = self.layout_next();
         }
         self.layout_end_column();
     }
